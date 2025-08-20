@@ -1,0 +1,158 @@
+#!/usr/bin/env tsx
+
+import fs from 'fs';
+import path from 'path';
+import { Keypair } from '@solana/web3.js';
+
+export interface CliArgs {
+  wallet?: string;
+  inputToken?: string;
+  outputToken?: string;
+  amount?: number;
+  slippage?: number;
+  tokenName?: string;
+  tokenSymbol?: string;
+  tokenDescription?: string;
+  imagePath?: string;
+  initialBuyAmount?: number;
+  poolKey?: string;
+  lpTokenAmount?: number;
+  help?: boolean;
+}
+
+export function parseArgs(): CliArgs {
+  const args: CliArgs = {};
+  const argv = process.argv.slice(2);
+  
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    
+    switch (arg) {
+      case '--wallet':
+      case '-w':
+        args.wallet = argv[++i];
+        break;
+      case '--input-token':
+      case '-i':
+        args.inputToken = argv[++i];
+        break;
+      case '--output-token':
+      case '-o':
+        args.outputToken = argv[++i];
+        break;
+      case '--amount':
+      case '-a':
+        args.amount = parseFloat(argv[++i]);
+        break;
+      case '--slippage':
+      case '-s':
+        args.slippage = parseInt(argv[++i]);
+        break;
+      case '--token-name':
+      case '-n':
+        args.tokenName = argv[++i];
+        break;
+      case '--token-symbol':
+      case '-y':
+        args.tokenSymbol = argv[++i];
+        break;
+      case '--token-description':
+      case '-d':
+        args.tokenDescription = argv[++i];
+        break;
+      case '--image-path':
+      case '-p':
+        args.imagePath = argv[++i];
+        break;
+      case '--initial-buy':
+      case '-b':
+        args.initialBuyAmount = parseFloat(argv[++i]);
+        break;
+      case '--pool-key':
+      case '-k':
+        args.poolKey = argv[++i];
+        break;
+      case '--lp-amount':
+      case '-l':
+        args.lpTokenAmount = parseFloat(argv[++i]);
+        break;
+      case '--help':
+      case '-h':
+        args.help = true;
+        break;
+    }
+  }
+  
+  return args;
+}
+
+export function loadWallet(walletPath?: string): Keypair {
+  const defaultWalletPath = path.join(process.cwd(), 'wallets', 'creator-wallet.json');
+  const finalWalletPath = walletPath || defaultWalletPath;
+  
+  try {
+    const walletData = JSON.parse(fs.readFileSync(finalWalletPath, 'utf8'));
+    return Keypair.fromSecretKey(Uint8Array.from(walletData));
+  } catch (error) {
+    throw new Error(`Failed to load wallet from ${finalWalletPath}: ${error}`);
+  }
+}
+
+export function loadTokenInfo(tokenPath?: string): any {
+  const defaultTokenPath = path.join(process.cwd(), 'wallets', 'token-info.json');
+  const finalTokenPath = tokenPath || defaultTokenPath;
+  
+  try {
+    return JSON.parse(fs.readFileSync(finalTokenPath, 'utf8'));
+  } catch (error) {
+    throw new Error(`Failed to load token info from ${finalTokenPath}: ${error}`);
+  }
+}
+
+export function saveTokenInfo(tokenInfo: any, outputPath?: string): void {
+  const defaultOutputPath = path.join(process.cwd(), 'wallets', 'token-info.json');
+  const finalOutputPath = outputPath || defaultOutputPath;
+  
+  try {
+    // Ensure the directory exists
+    const dir = path.dirname(finalOutputPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    fs.writeFileSync(finalOutputPath, JSON.stringify(tokenInfo, null, 2));
+    console.log(`💾 Token info saved to ${finalOutputPath}`);
+  } catch (error) {
+    throw new Error(`Failed to save token info to ${finalOutputPath}: ${error}`);
+  }
+}
+
+export function printUsage(scriptName: string, options: string[] = []): void {
+  console.log(`Usage: npm run ${scriptName} [options]`);
+  console.log('');
+  console.log('Options:');
+  console.log('  -w, --wallet <path>           Path to wallet JSON file');
+  console.log('  -i, --input-token <path>      Path to input token JSON file');
+  console.log('  -o, --output-token <path>     Path to output token JSON file');
+  console.log('  -a, --amount <number>         Amount for buy/sell operations');
+  console.log('  -s, --slippage <number>       Slippage tolerance in basis points');
+  console.log('  -n, --token-name <string>     Token name for creation');
+  console.log('  -y, --token-symbol <string>   Token symbol for creation');
+  console.log('  -d, --token-description <string> Token description for creation');
+  console.log('  -p, --image-path <path>       Path to token image');
+  console.log('  -b, --initial-buy <number>    Initial buy amount for token creation');
+  console.log('  -k, --pool-key <string>       Pool key for AMM operations');
+  console.log('  -l, --lp-amount <number>      LP token amount for liquidity operations');
+  console.log('  -h, --help                    Show this help message');
+  
+  if (options.length > 0) {
+    console.log('');
+    console.log('Script-specific options:');
+    options.forEach(option => console.log(`  ${option}`));
+  }
+  
+  console.log('');
+  console.log('Examples:');
+  console.log(`  npm run ${scriptName} --amount 0.1 --slippage 1000`);
+  console.log(`  npm run ${scriptName} --wallet ./my-wallet.json --input-token ./my-token.json`);
+}

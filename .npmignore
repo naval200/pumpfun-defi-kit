@@ -1,0 +1,59 @@
+# Source code
+src/
+cli/
+tests/
+debug/
+
+# Development-only code
+src/dev-only/
+
+# Development files
+.env
+.env.*
+*.log
+coverage/
+.nyc_output/
+
+# Build artifacts
+*.tsbuildinfo
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation - Keep essential docs for LLMs
+docs/
+*.md
+!README.md
+!docs/amm-usage.md
+!docs/pool-creation-guide.md
+!docs/pumpsdk-documentation.md
+!docs/pumpswap-documentation.md
+
+# Configuration files
+.eslintrc.js
+.prettierrc
+jest.config.js
+tsconfig.json
+
+# Development dependencies
+node_modules/
+
+# Test files
+*.test.ts
+*.spec.ts
+setup.ts
+
+# Debug and example files
+working_transaciton.txt
+commands.txt

@@ -1,0 +1,51 @@
+# PumpFun Solana Development Rules
+
+## Project Overview
+This is a PumpFun token creation and trading experiment on Solana devnet using TypeScript.
+
+## Key Technologies
+- **PumpFun SDK**: @pump-fun/pump-swap-sdk for token creation and trading
+- **Solana Kit**: @solana/kit for modern Solana interactions
+- **Devnet**: All operations should target Solana devnet
+- **TypeScript**: Strict typing and modern ES6+ features
+
+## Code Standards
+- Use TypeScript with strict mode
+- Prefer async/await over promises
+- Use proper error handling with try/catch
+- Include comprehensive JSDoc comments
+- Use meaningful variable names
+- Follow Solana best practices for transaction handling
+
+## Architecture Patterns
+- Separate concerns: token creation, trading, utilities
+- Use environment variables for configuration
+- Implement proper logging and error reporting
+- Handle Solana network congestion with dynamic priority fees
+- Support both bonding curve and AMM trading modes
+
+## Key Concepts
+- **Bonding Curve**: Mathematical formula for token pricing
+- **AMM**: Automated Market Maker for liquidity
+- **Priority Fees**: Dynamic calculation based on network conditions
+- **Devnet**: Solana's development network for testing
+
+## File Structure
+- `src/` - Source code
+- `cli/` - Executable scripts
+- `utils/` - Utility functions
+- `types/` - TypeScript type definitions
+- `config/` - Configuration files
+
+## Solana Specific
+- Always use proper commitment levels
+- Handle RPC rate limiting gracefully
+- Implement proper transaction confirmation
+- Use recent blockhash for transactions
+- Consider network congestion when setting fees
+
+## Testing
+- Test on devnet before mainnet
+- Use proper test wallets
+- Validate all transaction outcomes
+- Test both success and failure scenarios
