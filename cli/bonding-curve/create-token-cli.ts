@@ -2,6 +2,7 @@
 
 import { Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { createPumpFunToken } from '../../src/bonding-curve/createToken';
+import { deriveBondingCurveAddress } from '../../src/bonding-curve/helper';
 import { parseArgs, loadWallet, saveTokenInfo, printUsage } from '../cli-args';
 
 /**
@@ -71,7 +72,6 @@ export async function createToken() {
       const tokenAddress = createResult.mint || mint.publicKey.toString();
       
       // Derive bonding curve address from mint (this is how it works in PumpFun)
-      const { deriveBondingCurveAddress } = await import('../../src/bonding-curve/helper.js');
       const [bondingCurveAddress] = deriveBondingCurveAddress(mint.publicKey);
 
       console.log(`✅ Token created successfully!`);

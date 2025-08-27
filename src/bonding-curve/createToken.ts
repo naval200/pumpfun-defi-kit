@@ -9,7 +9,7 @@ import { buyPumpFunToken } from './buy';
 import { TokenConfig, CreateTokenResult } from './types';
 import { sendAndConfirmRawTransaction, getExplorerUrl } from '../utils/transaction';
 import { getGlobalPDA, isGlobalAccountInitialized, initializeGlobalAccount } from './helper';
-import { PUMP_PROGRAM_ID } from './constants.js';
+import { PUMP_PROGRAM_ID } from './constants';
 
 import { SimpleWallet } from '../utils/wallet';
 import IDL from '../idl/pump_program.json';

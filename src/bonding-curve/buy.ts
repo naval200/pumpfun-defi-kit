@@ -6,17 +6,18 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import BN from 'bn.js';
-import { getOrCreateAssociatedTokenAccount } from './createAccount.js';
+import { getOrCreateAssociatedTokenAccount } from './createAccount';
 import { deriveBondingCurveAddress, getAllRequiredPDAsForBuy } from './helper';
 import {
+  BUY_INSTRUCTION_DISCRIMINATOR,
   PUMP_PROGRAM_ID,
   FEE_RECIPIENT,
-  GLOBAL_VOLUME_ACCUMULATOR,
   TOKEN_PROGRAM_ID,
   SYSTEM_PROGRAM_ID,
-  BUY_INSTRUCTION_DISCRIMINATOR,
+  GLOBAL_VOLUME_ACCUMULATOR,
 } from './constants';
-import { debugLog, log, logError, logSuccess, logSignature } from '../utils/debug';
+import { debugLog, log, logError, logSignature, logSuccess } from '../utils/debug';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 
 /**
  * Create complete buy instruction with robust PDA resolution
@@ -44,8 +45,6 @@ async function createCompleteBuyInstruction(
   } = getAllRequiredPDAsForBuy(programId, mint, buyer);
 
   // Get associated token addresses
-  const { getAssociatedTokenAddressSync } = await import('@solana/spl-token');
-
   const associatedBondingCurve = getAssociatedTokenAddressSync(
     mint,
     bondingCurvePDA,

@@ -18,7 +18,7 @@ import {
   USER_VOLUME_ACCUMULATOR_SEED,
   EVENT_AUTHORITY_SEED,
   COMPUTE_BUDGET_INSTRUCTIONS,
-} from './constants.js';
+} from './constants';
 import { log, logWarning, logSuccess } from '../utils/debug';
 
 // ============================================================================

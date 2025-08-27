@@ -1,5 +1,8 @@
 import { Connection, PublicKey } from '@solana/web3.js';
+import { PUMP_PROGRAM_ID } from '../bonding-curve/constants';
+import { deriveBondingCurveAddress } from '../bonding-curve/helper';
 import { log, debugLog, logWarning } from './debug';
+import { PumpAmmSdk, PUMP_AMM_PROGRAM_ID, poolPda, canonicalPumpPoolPda } from '@pump-fun/pump-swap-sdk';
 
 /**
  * Check if a token has graduated from bonding curve to AMM
@@ -58,11 +61,6 @@ async function checkAMMPoolExistence(
   try {
     debugLog(`🔍 Checking for AMM pools...`);
 
-    // Import the SDK constants and utilities
-    const { PUMP_AMM_PROGRAM_ID, poolPda, canonicalPumpPoolPda } = await import(
-      '@pump-fun/pump-swap-sdk'
-    );
-
     debugLog(`🔍 Using SDK program ID: ${PUMP_AMM_PROGRAM_ID}`);
 
     // Strategy 1: Try to find the canonical pool (index 0)
@@ -72,7 +70,6 @@ async function checkAMMPoolExistence(
       debugLog(`   📍 Canonical pool address: ${canonicalPoolKey.toString()}`);
 
       // Check if this pool exists by trying to fetch it
-      const { PumpAmmSdk } = await import('@pump-fun/pump-swap-sdk');
       const pumpAmmSdk = new PumpAmmSdk(connection);
 
       try {
@@ -94,7 +91,6 @@ async function checkAMMPoolExistence(
       try {
         debugLog(`   🔍 Trying pool index ${index}...`);
 
-        const { PumpAmmSdk } = await import('@pump-fun/pump-swap-sdk');
         const pumpAmmSdk = new PumpAmmSdk(connection);
         const owner = pumpAmmSdk.globalConfigKey();
         const quoteMint = new PublicKey('So11111111111111111111111111111111111111112'); // SOL
@@ -160,12 +156,10 @@ async function checkAMMPoolLiquidity(
     debugLog(`💧 Checking AMM pool liquidity...`);
 
     // Import the SDK
-    const { PumpAmmSdk } = await import('@pump-fun/pump-swap-sdk');
     const pumpAmmSdk = new PumpAmmSdk(connection);
 
     // Try to find and check the canonical pool
     try {
-      const { canonicalPumpPoolPda } = await import('@pump-fun/pump-swap-sdk');
       const [canonicalPoolKey] = canonicalPumpPoolPda(tokenMint);
 
       const pool = await pumpAmmSdk.fetchPool(canonicalPoolKey);
@@ -196,10 +190,6 @@ async function checkBondingCurveStatus(
 ): Promise<boolean> {
   try {
     debugLog(`📈 Checking bonding curve status...`);
-
-    // Import bonding curve constants and helpers
-    const { PUMP_PROGRAM_ID } = await import('../bonding-curve/constants.js');
-    const { deriveBondingCurveAddress } = await import('../bonding-curve/helper.js');
 
     // Derive bonding curve PDA
     const [bondingCurvePDA] = deriveBondingCurveAddress(tokenMint);

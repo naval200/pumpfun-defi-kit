@@ -1,4 +1,4 @@
-import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
+import { PumpAmmSdk, PUMP_AMM_PROGRAM_ID, poolPda, canonicalPumpPoolPda } from '@pump-fun/pump-swap-sdk';
 import { Connection, PublicKey, LAMPORTS_PER_SOL, TransactionInstruction } from '@solana/web3.js';
 import BN from 'bn.js';
 import { debugLog, log, logError, logWarning } from '../utils/debug';
@@ -64,11 +64,6 @@ export async function findPoolsForToken(
 ): Promise<PublicKey[]> {
   try {
     debugLog(`🔍 Searching for AMM pools for token: ${tokenMint.toString()}`);
-
-    // Import the SDK constants and utilities
-    const { PUMP_AMM_PROGRAM_ID, poolPda, canonicalPumpPoolPda } = await import(
-      '@pump-fun/pump-swap-sdk'
-    );
 
     debugLog(`🔍 Using SDK program ID: ${PUMP_AMM_PROGRAM_ID}`);
 

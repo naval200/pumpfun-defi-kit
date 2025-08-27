@@ -6,7 +6,7 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import BN from 'bn.js';
-import { getOrCreateAssociatedTokenAccount } from './createAccount.js';
+import { getOrCreateAssociatedTokenAccount } from './createAccount';
 import {
   deriveBondingCurveAddress,
   getAllRequiredPDAsForBuy, // Can reuse this for sell
@@ -19,6 +19,7 @@ import {
   SELL_INSTRUCTION_DISCRIMINATOR,
 } from './constants';
 import { debugLog, log, logError, logSignature, logSuccess } from '../utils/debug';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 
 /**
  * Create complete sell instruction with robust PDA resolution
@@ -37,8 +38,6 @@ async function createCompleteSellInstruction(
     getAllRequiredPDAsForBuy(programId, mint, seller);
 
   // Get associated token addresses
-  const { getAssociatedTokenAddressSync } = await import('@solana/spl-token');
-
   const associatedBondingCurve = getAssociatedTokenAddressSync(
     mint,
     bondingCurvePDA,
@@ -113,7 +112,6 @@ async function getUserTokenBalance(
   mint: PublicKey
 ): Promise<number> {
   try {
-    const { getAssociatedTokenAddressSync } = await import('@solana/spl-token');
     const userATA = getAssociatedTokenAddressSync(mint, wallet, false);
 
     const tokenAccount = await connection.getTokenAccountBalance(userATA);

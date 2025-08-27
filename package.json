@@ -22,7 +22,6 @@
     "url": "https://github.com/naval200/pumpfun-defi-kit/issues"
   },
   "homepage": "https://github.com/naval200/pumpfun-defi-kit#readme",
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
