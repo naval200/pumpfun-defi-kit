@@ -1,5 +1,5 @@
 {
-  "name": "@pumpfun/defi-kit",
+  "name": "@pump-fun/defikit",
   "version": "1.0.0",
   "description": "A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM support",
   "keywords": [
