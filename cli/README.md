@@ -12,12 +12,12 @@ cli/
 │   ├── create-pool-or-use-existing-cli.ts # Create or use existing pool
 │   ├── info-cli.ts        # Get AMM pool information
 │   └── liquidity-cli.ts   # Add/remove liquidity
-├── bc/                     # Bonding Curve operations
+├── bonding-curve/          # Bonding Curve operations
 │   ├── buy-cli.ts         # Buy tokens via bonding curve
 │   ├── create-token-cli.ts # Create new token
-│   ├── sdk-buy-cli.ts     # Buy using PumpFun SDK
 │   └── sell-cli.ts        # Sell tokens via bonding curve
-└──  cli-args.ts        # Command-line
+├── send-token-cli.ts       # Send tokens between addresses
+└── cli-args.ts            # Command-line argument utilities
 ```
 
 ## Quick Start
@@ -58,6 +58,15 @@ npm run cli:amm-create-pool -- \
   --output-token ./wallets/my-token-with-pool.json
 ```
 
+### 5. Send Tokens
+```bash
+# Send tokens to another address (creates recipient account if needed)
+tsx cli/send-token-cli.ts <recipient_address> <mint_address> 1000
+
+# Send tokens without creating recipient account
+tsx cli/send-token-cli.ts <recipient_address> <mint_address> 1000 false
+```
+
 ## Common Options
 
 All CLI commands support these common options:
@@ -92,6 +101,14 @@ All CLI commands support these common options:
 | `--pool-key` | `-k` | Specific pool key to use | ❌ |
 | `--lp-amount` | `-l` | LP token amount for liquidity operations | ❌ |
 
+### Send Token (`send-token-cli.ts`)
+| Argument | Description | Required |
+|----------|-------------|----------|
+| `recipient_address` | Public key of the recipient | ✅ |
+| `mint_address` | Public key of the token mint | ✅ |
+| `amount` | Amount of tokens to send (in smallest unit) | ✅ |
+| `create_account` | Whether to create recipient account if needed | ❌ (default: true) |
+
 ## Examples
 
 ### Create and Trade a Token
@@ -120,6 +137,18 @@ npm run cli:amm-buy -- \
   --amount 0.05 \
   --input-token ./wallets/test-token-with-pool.json \
   --wallet ./wallets/creator-wallet.json
+```
+
+### Send Tokens Between Addresses
+```bash
+# Send 1000 tokens to an existing account
+tsx cli/send-token-cli.ts 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 1000
+
+# Send tokens without creating recipient account
+tsx cli/send-token-cli.ts 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 1000 false
+
+# Send tokens with explicit account creation
+tsx cli/send-token-cli.ts 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 1000 true
 ```
 
 ### Using Different Wallets and Token Files
@@ -185,3 +214,4 @@ npm run help
 - Default slippage is 1000 basis points (10%) for bonding curve, 100 basis points (1%) for AMM
 - Wallet files should contain the private key as an array of numbers
 - Token info files are automatically created and updated by the CLI commands
+- The send-token CLI works with both bonding curve and AMM tokens since they are standard SPL tokens

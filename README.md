@@ -11,6 +11,7 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 🔐 **Wallet Integration**: Seamless integration with Solana wallets
 - 📱 **TypeScript Support**: Full TypeScript support with comprehensive type definitions
 - 🧪 **Devnet Ready**: Test on Solana devnet before mainnet deployment
+- 📤 **Token Transfer**: Send tokens between wallets with automatic account creation
 
 ## Installation
 
@@ -99,6 +100,53 @@ const ammBuyResult = await buyFromPool({
   amount: 500000,
   network: 'devnet',
 });
+```
+
+### Sending Tokens
+
+```typescript
+import { sendTokenWithAccountCreation } from '@pumpfun/defi-kit';
+
+// Send tokens to another wallet
+const transferResult = await sendTokenWithAccountCreation(
+  connection,
+  senderWallet,
+  recipientAddress,
+  tokenMint,
+  BigInt(1000) // 1000 tokens
+);
+
+if (transferResult.success) {
+  console.log('Transfer successful:', transferResult.signature);
+  console.log('Recipient account:', transferResult.recipientAccount);
+}
+```
+
+## Testing
+
+The library has been thoroughly tested on Solana devnet with real transactions:
+
+### ✅ Send Functionality Tested
+
+- **Token Transfer**: Successfully sent 1000 TCT tokens between wallets
+- **Account Creation**: Automatically created recipient token accounts
+- **Transaction Confirmation**: All transactions confirmed on Solana devnet
+- **Balance Verification**: Transfer amounts verified and balances updated
+
+**Test Transaction**: [View on Solana Explorer](https://explorer.solana.com/tx/tbVkBnQyM2MRZic9VVoBJwXtTW6U9LRYMEPfJ1QWcaMt214tKESjY5hEEg1xXoQ4ee3ZoQKmJcENBX7U5hdVVJZ?cluster=devnet)
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test suite
+npm test -- tests/sendToken.test.ts
+
+# Run CLI tests
+tsx cli/check-wallet-balances.ts
+tsx cli/bonding-curve/buy-cli.ts --amount 0.01 --input-token wallets/token-info-2.json --wallet wallets/creator-wallet.json
 ```
 
 ## API Reference

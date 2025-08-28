@@ -61,7 +61,7 @@ export async function createPool(
     logSignature(signature, 'Pool creation');
 
     // Extract pool key from the state
-    const poolKey = createPoolSolanaState.poolKey as PublicKey;
+    const poolKey = (createPoolSolanaState as any).poolKey as PublicKey;
 
     return {
       success: true,

@@ -10,7 +10,13 @@ export * from './amm/index';
 export * from './amm/amm';
 
 // Account creation exports
-export * from './bonding-curve/createAccount';
+export * from './createAccount';
+
+// Token transfer exports
+export * from './sendToken';
+
+// Type exports
+export * from './types';
 
 // Utility exports
 export * from './utils/wallet';
@@ -20,6 +26,3 @@ export * from './utils/connection';
 export * from './utils/image-loader';
 export * from './utils/trading-mode';
 export * from './utils/graduation-utils';
-
-// Type exports
-export * from './bonding-curve/types';

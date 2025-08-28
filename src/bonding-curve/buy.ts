@@ -6,7 +6,7 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import BN from 'bn.js';
-import { getOrCreateAssociatedTokenAccount } from './createAccount';
+import { getOrCreateAssociatedTokenAccount } from '../createAccount';
 import { deriveBondingCurveAddress, getAllRequiredPDAsForBuy } from './helper';
 import {
   BUY_INSTRUCTION_DISCRIMINATOR,

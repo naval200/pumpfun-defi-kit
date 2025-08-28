@@ -1,4 +1,9 @@
-import { PumpAmmSdk, PUMP_AMM_PROGRAM_ID, poolPda, canonicalPumpPoolPda } from '@pump-fun/pump-swap-sdk';
+import {
+  PumpAmmSdk,
+  PUMP_AMM_PROGRAM_ID,
+  poolPda,
+  canonicalPumpPoolPda,
+} from '@pump-fun/pump-swap-sdk';
 import { Connection, PublicKey, LAMPORTS_PER_SOL, TransactionInstruction } from '@solana/web3.js';
 import BN from 'bn.js';
 import { debugLog, log, logError, logWarning } from '../utils/debug';
@@ -15,7 +20,7 @@ export async function getPoolCreationData(
   baseIn: number,
   quoteIn: number
 ): Promise<{
-  createPoolSolanaState: any; // Using any for SDK compatibility
+  createPoolSolanaState: unknown; // Using unknown for SDK compatibility
   createPoolInstructions: TransactionInstruction[];
   initialPoolPrice: Promise<BN>;
 }> {
