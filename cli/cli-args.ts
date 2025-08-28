@@ -17,6 +17,10 @@ export interface CliArgs {
   initialBuyAmount?: number;
   poolKey?: string;
   lpTokenAmount?: number;
+  feePayer?: string;
+  recipient?: string;
+  mint?: string;
+  createAccount?: boolean;
   help?: boolean;
 }
 
@@ -76,6 +80,22 @@ export function parseArgs(): CliArgs {
       case '-l':
         args.lpTokenAmount = parseFloat(argv[++i]);
         break;
+      case '--fee-payer':
+      case '-f':
+        args.feePayer = argv[++i];
+        break;
+      case '--recipient':
+      case '-r':
+        args.recipient = argv[++i];
+        break;
+      case '--mint':
+      case '-m':
+        args.mint = argv[++i];
+        break;
+      case '--create-account':
+      case '-c':
+        args.createAccount = true;
+        break;
       case '--help':
       case '-h':
         args.help = true;
@@ -95,6 +115,17 @@ export function loadWallet(walletPath?: string): Keypair {
     return Keypair.fromSecretKey(Uint8Array.from(walletData));
   } catch (error) {
     throw new Error(`Failed to load wallet from ${finalWalletPath}: ${error}`);
+  }
+}
+
+export function loadFeePayerWallet(feePayerPath?: string): Keypair | null {
+  if (!feePayerPath) return null;
+  
+  try {
+    const walletData = JSON.parse(fs.readFileSync(feePayerPath, 'utf8'));
+    return Keypair.fromSecretKey(Uint8Array.from(walletData));
+  } catch (error) {
+    throw new Error(`Failed to load fee payer wallet from ${feePayerPath}: ${error}`);
   }
 }
 
@@ -143,6 +174,10 @@ export function printUsage(scriptName: string, options: string[] = []): void {
   console.log('  -b, --initial-buy <number>    Initial buy amount for token creation');
   console.log('  -k, --pool-key <string>       Pool key for AMM operations');
   console.log('  -l, --lp-amount <number>      LP token amount for liquidity operations');
+  console.log('  -f, --fee-payer <path>        Path to fee payer wallet JSON file');
+  console.log('  -r, --recipient <string>      Recipient address for token transfer');
+  console.log('  -m, --mint <string>           Mint address for token creation');
+  console.log('  -c, --create-account          Create a new account for the token');
   console.log('  -h, --help                    Show this help message');
   
   if (options.length > 0) {

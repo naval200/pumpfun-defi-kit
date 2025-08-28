@@ -6,7 +6,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import { debugLog, logSuccess, logSignature, logError } from './utils/debug';
-import { sendAndConfirmTransaction } from './utils/transaction';
+import { sendAndConfirmTransaction, sendAndConfirmTransactionWithFeePayer } from './utils/transaction';
 import { createAssociatedTokenAccount } from './createAccount';
 
 /**
@@ -20,6 +20,7 @@ import { createAssociatedTokenAccount } from './createAccount';
  * @param amount - Amount of tokens to send
  * @param allowOwnerOffCurve - Whether to allow owner off curve (default: false)
  * @param createRecipientAccount - Whether to create recipient account if needed (default: true)
+ * @param feePayer - Optional Keypair for the fee payer (if different from sender)
  * @returns Promise resolving to transfer result object
  */
 export async function sendToken(
@@ -29,7 +30,8 @@ export async function sendToken(
   mint: PublicKey,
   amount: bigint,
   allowOwnerOffCurve: boolean = false,
-  createRecipientAccount: boolean = true
+  createRecipientAccount: boolean = true,
+  feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
   try {
     debugLog(
@@ -108,9 +110,22 @@ export async function sendToken(
 
     // Send and confirm the transfer transaction
     debugLog(`📡 Sending transfer transaction...`);
-    const transferResult = await sendAndConfirmTransaction(connection, transferTx, [sender], {
-      preflightCommitment: 'confirmed',
-    });
+    
+    let transferResult;
+    if (feePayer) {
+      debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
+      transferResult = await sendAndConfirmTransactionWithFeePayer(
+        connection,
+        transferTx,
+        [sender], // signers
+        feePayer, // fee payer
+        { preflightCommitment: 'confirmed' }
+      );
+    } else {
+      transferResult = await sendAndConfirmTransaction(connection, transferTx, [sender], {
+        preflightCommitment: 'confirmed',
+      });
+    }
 
     if (!transferResult.success) {
       return {
@@ -162,7 +177,8 @@ export async function sendTokenWithAccountCreation(
   recipient: PublicKey,
   mint: PublicKey,
   amount: bigint,
-  allowOwnerOffCurve: boolean = false
+  allowOwnerOffCurve: boolean = false,
+  feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
   return sendToken(
     connection,
@@ -171,7 +187,8 @@ export async function sendTokenWithAccountCreation(
     mint,
     amount,
     allowOwnerOffCurve,
-    true
+    true,
+    feePayer
   );
 }
 
@@ -185,7 +202,8 @@ export async function sendTokenToExistingAccount(
   recipient: PublicKey,
   mint: PublicKey,
   amount: bigint,
-  allowOwnerOffCurve: boolean = false
+  allowOwnerOffCurve: boolean = false,
+  feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
   return sendToken(
     connection,
@@ -194,7 +212,8 @@ export async function sendTokenToExistingAccount(
     mint,
     amount,
     allowOwnerOffCurve,
-    false
+    false,
+    feePayer
   );
 }
 

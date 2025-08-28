@@ -2,7 +2,7 @@
 
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { buyPumpFunToken } from '../../src/bonding-curve/buy';
-import { parseArgs, loadWallet, loadTokenInfo, printUsage } from '../cli-args';
+import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
 
 /**
  * Buy PumpFun tokens via bonding curve with configurable parameters
@@ -16,6 +16,7 @@ export async function buyToken() {
       '  --slippage <number>         Slippage tolerance in basis points (default: 1000)',
       '  --input-token <path>        Path to token info JSON file',
       '  --wallet <path>             Path to wallet JSON file',
+      '  --fee-payer <path>          Path to fee payer wallet JSON file (optional)',
     ]);
     return;
   }
@@ -43,8 +44,12 @@ export async function buyToken() {
     // Setup connection and wallet
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const wallet = loadWallet(args.wallet);
+    const feePayer = loadFeePayerWallet(args.feePayer);
 
     console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
+    if (feePayer) {
+      console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
+    }
 
     // Check wallet balance
     const balance = await connection.getBalance(wallet.publicKey);
@@ -62,7 +67,8 @@ export async function buyToken() {
       wallet,
       new PublicKey(tokenInfo.mint),
       args.amount,
-      args.slippage || 1000
+      args.slippage || 1000,
+      feePayer || undefined
     );
 
     if (result) {

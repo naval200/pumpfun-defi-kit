@@ -1,19 +1,19 @@
 #!/usr/bin/env tsx
 
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { buyTokens } from '../../src/amm/buy';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { sellTokens } from '../../src/amm/sell';
 import { findPoolsForToken } from '../../src/amm/amm';
 import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
 
 /**
- * Buy tokens via AMM with configurable parameters
+ * Sell tokens via AMM with configurable parameters
  */
-export async function buyTokensAMM() {
+export async function sellTokensAMM() {
   const args = parseArgs();
 
   if (args.help) {
-    printUsage('cli:amm-buy', [
-      '  --amount <number>           Amount of SOL to spend (required)',
+    printUsage('cli:amm-sell', [
+      '  --amount <number>           Amount of tokens to sell (required)',
       '  --slippage <number>         Slippage tolerance in basis points (default: 100)',
       '  --input-token <path>        Path to token info JSON file',
       '  --wallet <path>             Path to wallet JSON file',
@@ -26,13 +26,13 @@ export async function buyTokensAMM() {
   // Validate required arguments
   if (!args.amount || args.amount <= 0) {
     console.error('❌ Error: --amount is required and must be greater than 0');
-    printUsage('cli:amm-buy');
+    printUsage('cli:amm-sell');
     return;
   }
 
-  console.log('🛒 Buying Tokens via AMM');
+  console.log('💸 Selling Tokens via AMM');
   console.log('==========================');
-  console.log(`Amount: ${args.amount} SOL`);
+  console.log(`Amount: ${args.amount} tokens`);
   console.log(`Slippage: ${args.slippage || 100} basis points (${(args.slippage || 100) / 100}%)`);
 
   try {
@@ -49,15 +49,6 @@ export async function buyTokensAMM() {
     console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
     if (feePayer) {
       console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
-    }
-
-    // Check wallet balance
-    const balance = await connection.getBalance(wallet.publicKey);
-    console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-
-    if (balance < args.amount * LAMPORTS_PER_SOL) {
-      console.log(`❌ Insufficient balance. Need at least ${args.amount} SOL`);
-      return;
     }
 
     let poolKey: PublicKey;
@@ -83,9 +74,9 @@ export async function buyTokensAMM() {
       console.log(`🏊 Using pool: ${poolKey.toString()}`);
     }
 
-    // Execute buy
-    console.log(`\n🔄 Executing AMM buy of ${args.amount} SOL worth of tokens...`);
-    const buyResult = await buyTokens(
+    // Execute sell
+    console.log(`\n🔄 Executing AMM sell of ${args.amount} tokens...`);
+    const sellResult = await sellTokens(
       connection,
       wallet,
       poolKey,
@@ -94,12 +85,12 @@ export async function buyTokensAMM() {
       feePayer || undefined
     );
 
-    if (buyResult.success) {
-      console.log('✅ AMM buy successful!');
-      console.log(`📊 Transaction signature: ${buyResult.signature}`);
-      console.log(`🪙 Tokens received: ${buyResult.baseAmount}`);
+    if (sellResult.success) {
+      console.log('✅ AMM sell successful!');
+      console.log(`📊 Transaction signature: ${sellResult.signature}`);
+      console.log(`💰 SOL received: ${sellResult.quoteAmount}`);
     } else {
-      console.log(`❌ AMM buy failed: ${buyResult.error}`);
+      console.log(`❌ AMM sell failed: ${sellResult.error}`);
     }
   } catch (error) {
     console.error(`❌ Error: ${error}`);
@@ -117,5 +108,5 @@ export async function buyTokensAMM() {
 
 // Run if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  buyTokensAMM().catch(console.error);
+  sellTokensAMM().catch(console.error);
 }

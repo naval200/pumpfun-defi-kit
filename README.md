@@ -16,6 +16,7 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 📤 **Token Transfer**: Send tokens between wallets with automatic account creation
 - 🎯 **Graduation Support**: Check token graduation status and requirements
 - 🔧 **CLI Tools**: Comprehensive command-line interface for all operations
+- 💸 **Fee Payer Support**: Optional separate fee payer wallets for treasury operations and batch transactions
 
 ## Project Structure
 
@@ -106,6 +107,81 @@ const buyResult = await buyToken({
 
 console.log('Tokens purchased:', buyResult.tokensReceived);
 ```
+
+### Selling Tokens (Bonding Curve)
+
+```typescript
+import { sellToken } from './src';
+
+const sellResult = await sellToken({
+  connection,
+  wallet,
+  tokenMint,
+  amount: 1000,
+  network: 'devnet',
+});
+
+console.log('Sale successful:', sellResult.signature);
+```
+
+### Fee Payer Support
+
+The library now supports optional fee payer wallets, allowing you to separate the wallet that pays transaction fees from the wallet that owns the tokens:
+
+```typescript
+import { buyToken, sendToken } from './src';
+
+// Treasury wallet pays fees for user operations
+const treasuryWallet = loadWallet('./wallets/treasury.json');
+const userWallet = loadWallet('./wallets/user.json');
+
+// Buy tokens with treasury covering fees
+const buyResult = await buyToken({
+  connection,
+  wallet: userWallet,        // User owns the tokens
+  tokenMint,
+  amount: 0.1,
+  network: 'devnet',
+  feePayer: treasuryWallet  // Treasury pays the fees
+});
+
+// Send tokens with treasury covering fees
+const sendResult = await sendToken({
+  connection,
+  sender: userWallet,        // User owns the tokens
+  recipient: recipientAddress,
+  mint: tokenMint,
+  amount: 1000,
+  feePayer: treasuryWallet  // Treasury pays the fees
+});
+```
+
+**CLI Usage:**
+
+```bash
+# Buy tokens with separate fee payer
+npm run cli:bc-buy \
+  --amount 0.1 \
+  --input-token ./wallets/token-info.json \
+  --wallet ./wallets/user-wallet.json \
+  --fee-payer ./wallets/treasury-wallet.json
+
+# Send tokens with separate fee payer
+npm run cli:send-token \
+  --recipient <RECIPIENT_ADDRESS> \
+  --mint <TOKEN_MINT> \
+  --amount 1000 \
+  --wallet ./wallets/sender-wallet.json \
+  --fee-payer ./wallets/treasury-wallet.json
+```
+
+**Use Cases:**
+- **Treasury Operations**: Central wallet covers fees for multiple users
+- **Batch Transactions**: Efficient bulk operations with single fee payer
+- **Relayer Services**: Service covers costs for user transactions
+- **Gasless UX**: Users don't need SOL for transaction fees
+
+For detailed fee payer documentation, see [docs/fee-payer-usage.md](docs/fee-payer-usage.md).
 
 ### AMM Trading
 
@@ -371,6 +447,7 @@ npm run cli:amm:add-only -- --help          # Add liquidity only
 
 # Utility Commands
 npm run cli:graduation-check                # Check token graduation status
+npm run cli:send-token -- --help           # Send tokens between wallets
 npm run help                                # Show all available CLI commands
 ```
 

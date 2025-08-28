@@ -18,6 +18,7 @@ import {
 } from './constants';
 import { debugLog, log, logError, logSignature, logSuccess } from '../utils/debug';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
 
 /**
  * Create complete buy instruction with robust PDA resolution
@@ -135,7 +136,8 @@ export async function buyPumpFunToken(
   wallet: Keypair,
   mint: PublicKey,
   solAmount: number,
-  slippageBasisPoints: number = 1000
+  slippageBasisPoints: number = 1000,
+  feePayer?: Keypair
 ): Promise<string> {
   log('🏗️ Setting up associated token accounts for buy...');
 
@@ -190,34 +192,56 @@ export async function buyPumpFunToken(
 
       const transaction = new Transaction().add(buyInstruction);
 
-      // Set recent blockhash and fee payer
-      const { blockhash } = await connection.getLatestBlockhash('confirmed');
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = wallet.publicKey;
+      // Use the new fee payer transaction utility
+      if (feePayer) {
+        debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
+        const signature = await sendAndConfirmTransactionWithFeePayer(
+          connection,
+          transaction,
+          [wallet], // signers
+          feePayer, // fee payer
+          { preflightCommitment: 'confirmed' }
+        );
+        
+        if (!signature.success) {
+          throw new Error(`Transaction failed: ${signature.error}`);
+        }
+        
+        logSuccess('Buy transaction confirmed successfully!');
+        log(`💰 Purchased tokens for ${solAmount} SOL`);
+        logSignature(signature.signature!, 'Buy');
+        return signature.signature!;
+      } else {
+        // Fallback to original method for backward compatibility
+        // Set recent blockhash and fee payer
+        const { blockhash } = await connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
 
-      // Sign the transaction
-      transaction.sign(wallet);
+        // Sign the transaction
+        transaction.sign(wallet);
 
-      // Send transaction
-      debugLog(`📡 Sending transaction (attempt ${attempts}/${maxAttempts})...`);
-      const signature = await connection.sendRawTransaction(transaction.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-      });
+        // Send transaction
+        debugLog(`📡 Sending transaction (attempt ${attempts}/${maxAttempts})...`);
+        const signature = await connection.sendRawTransaction(transaction.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+        });
 
-      // Wait for confirmation
-      await connection.confirmTransaction(
-        {
-          signature,
-          ...(await connection.getLatestBlockhash('confirmed')),
-        },
-        'confirmed'
-      );
+        // Wait for confirmation
+        await connection.confirmTransaction(
+          {
+            signature,
+            ...(await connection.getLatestBlockhash('confirmed')),
+          },
+          'confirmed'
+        );
 
-      logSuccess('Buy transaction confirmed successfully!');
-      log(`💰 Purchased tokens for ${solAmount} SOL`);
-      logSignature(signature, 'Buy');
-      return signature;
+        logSuccess('Buy transaction confirmed successfully!');
+        log(`💰 Purchased tokens for ${solAmount} SOL`);
+        logSignature(signature, 'Buy');
+        return signature;
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logError(`Transaction attempt ${attempts} failed: ${errorMessage}`);

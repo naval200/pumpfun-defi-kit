@@ -20,6 +20,7 @@ import {
 } from './constants';
 import { debugLog, log, logError, logSignature, logSuccess } from '../utils/debug';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
 
 /**
  * Create complete sell instruction with robust PDA resolution
@@ -128,13 +129,15 @@ async function getUserTokenBalance(
  * @param wallet - Keypair for the seller wallet
  * @param mint - PublicKey of the token mint to sell
  * @param tokenAmount - Amount of tokens to sell (in token units)
+ * @param feePayer - Optional Keypair for the fee payer (if different from wallet)
  * @returns Promise resolving to transaction signature
  */
 export async function sellPumpFunToken(
   connection: Connection,
   wallet: Keypair,
   mint: PublicKey,
-  tokenAmount: number
+  tokenAmount: number,
+  feePayer?: Keypair
 ): Promise<string> {
   log('💸 Setting up sell transaction...');
 
@@ -200,39 +203,66 @@ export async function sellPumpFunToken(
 
       const transaction = new Transaction().add(sellInstruction);
 
-      // Set recent blockhash and fee payer
-      const { blockhash } = await connection.getLatestBlockhash('confirmed');
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = wallet.publicKey;
+      // Use the new fee payer transaction utility
+      if (feePayer) {
+        debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
+        const signature = await sendAndConfirmTransactionWithFeePayer(
+          connection,
+          transaction,
+          [wallet], // signers
+          feePayer, // fee payer
+          { preflightCommitment: 'confirmed' }
+        );
+        
+        if (!signature.success) {
+          throw new Error(`Transaction failed: ${signature.error}`);
+        }
+        
+        logSuccess('Sell transaction confirmed successfully!');
+        log(`💸 Sold ${tokenAmount} tokens`);
+        logSignature(signature.signature!, 'Sell');
 
-      // Sign the transaction
-      transaction.sign(wallet);
+        // Show updated balance
+        const newBalance = await getUserTokenBalance(connection, wallet.publicKey, mint);
+        debugLog(`💰 New token balance: ${newBalance} tokens`);
 
-      // Send transaction
-      debugLog(`📡 Sending sell transaction (attempt ${attempts}/${maxAttempts})...`);
-      const signature = await connection.sendRawTransaction(transaction.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-      });
+        return signature.signature!;
+      } else {
+        // Fallback to original method for backward compatibility
+        // Set recent blockhash and fee payer
+        const { blockhash } = await connection.getLatestBlockhash('confirmed');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = wallet.publicKey;
 
-      // Wait for confirmation
-      await connection.confirmTransaction(
-        {
-          signature,
-          ...(await connection.getLatestBlockhash('confirmed')),
-        },
-        'confirmed'
-      );
+        // Sign the transaction
+        transaction.sign(wallet);
 
-      logSuccess('Sell transaction confirmed successfully!');
-      log(`💸 Sold ${tokenAmount} tokens`);
-      logSignature(signature, 'Sell');
+        // Send transaction
+        debugLog(`📡 Sending sell transaction (attempt ${attempts}/${maxAttempts})...`);
+        const signature = await connection.sendRawTransaction(transaction.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+        });
 
-      // Show updated balance
-      const newBalance = await getUserTokenBalance(connection, wallet.publicKey, mint);
-      debugLog(`💰 New token balance: ${newBalance} tokens`);
+        // Wait for confirmation
+        await connection.confirmTransaction(
+          {
+            signature,
+            ...(await connection.getLatestBlockhash('confirmed')),
+          },
+          'confirmed'
+        );
 
-      return signature;
+        logSuccess('Sell transaction confirmed successfully!');
+        log(`💸 Sold ${tokenAmount} tokens`);
+        logSignature(signature, 'Sell');
+
+        // Show updated balance
+        const newBalance = await getUserTokenBalance(connection, wallet.publicKey, mint);
+        debugLog(`💰 New token balance: ${newBalance} tokens`);
+
+        return signature;
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logError(`Transaction attempt ${attempts} failed: ${errorMessage}`);

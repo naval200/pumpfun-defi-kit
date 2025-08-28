@@ -7,10 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Enhanced Send Token CLI**: Added comprehensive token transfer functionality with fee payer support
+- **Fee Payer Integration**: Support for separate fee payer wallets in token transfers
+- **Automatic Account Creation**: CLI automatically creates recipient token accounts when needed
+- **Transaction Confirmation**: Enhanced transaction handling with explorer links and balance verification
+
+### Enhanced
+- **CLI Infrastructure**: Improved command-line argument parsing and validation
+- **Error Handling**: Better error messages and validation for CLI commands
+- **Documentation**: Updated CLI documentation with comprehensive examples and usage
+
 ### Removed
 - `getGlobalAccount` function from `src/bonding-curve/helper.ts` - was unused placeholder implementation
-
-### Added
 
 - Initial release of @pumpfun/defi-kit library
 - Comprehensive PumpFun token creation and trading functionality

@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
-import { sendTransaction } from '../utils/transaction';
+import { sendTransaction, sendTransactionWithFeePayer } from '../utils/transaction';
 import { retryWithBackoff } from '../utils/retry';
 import BN from 'bn.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
@@ -13,7 +13,8 @@ export async function buyTokens(
   wallet: Keypair,
   poolKey: PublicKey,
   quoteAmount: number,
-  slippage: number = 1
+  slippage: number = 1,
+  feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; baseAmount?: number; error?: string }> {
   try {
     log(`💰 Buying tokens from pool: ${poolKey.toString()}`);
@@ -64,7 +65,12 @@ export async function buyTokens(
     debugLog('📤 Sending buy transaction...');
     const signature = await retryWithBackoff(
       async () => {
-        return await sendTransaction(connection, wallet, instructions);
+        if (feePayer) {
+          debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
+          return await sendTransactionWithFeePayer(connection, wallet, instructions, feePayer);
+        } else {
+          return await sendTransaction(connection, wallet, instructions);
+        }
       },
       3,
       2000

@@ -101,13 +101,15 @@ All CLI commands support these common options:
 | `--pool-key` | `-k` | Specific pool key to use | ❌ |
 | `--lp-amount` | `-l` | LP token amount for liquidity operations | ❌ |
 
-### Send Token (`send-token-cli.ts`)
+### Send Token (`cli:send-token`)
 | Argument | Description | Required |
 |----------|-------------|----------|
-| `recipient_address` | Public key of the recipient | ✅ |
-| `mint_address` | Public key of the token mint | ✅ |
-| `amount` | Amount of tokens to send (in smallest unit) | ✅ |
-| `create_account` | Whether to create recipient account if needed | ❌ (default: true) |
+| `--recipient` | Public key of the recipient | ✅ |
+| `--mint` | Public key of the token mint | ✅ |
+| `--amount` | Amount of tokens to send (in smallest unit) | ✅ |
+| `--wallet` | Path to source wallet JSON file | ❌ (default: creator-wallet.json) |
+| `--fee-payer` | Path to fee payer wallet JSON file | ❌ (optional) |
+| `--create-account` | Whether to create recipient account if needed | ❌ (default: true) |
 
 ## Examples
 
@@ -142,13 +144,16 @@ npm run cli:amm-buy -- \
 ### Send Tokens Between Addresses
 ```bash
 # Send 1000 tokens to an existing account
-tsx cli/send-token-cli.ts 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 1000
+npm run cli:send-token -- --recipient 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU --mint 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU --amount 1000
+
+# Send with specific wallet and fee payer
+npm run cli:send-token -- --recipient 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU --mint 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU --amount 1000 --wallet wallets/trading-wallet.json --fee-payer wallets/treasury-wallet.json
 
 # Send tokens without creating recipient account
-tsx cli/send-token-cli.ts 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 1000 false
+npm run cli:send-token -- --recipient 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU --mint 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU --amount 1000 --create-account false
 
 # Send tokens with explicit account creation
-tsx cli/send-token-cli.ts 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU 1000 true
+npm run cli:send-token -- --recipient 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU --mint 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU --amount 1000 --create-account true
 ```
 
 ### Using Different Wallets and Token Files
@@ -201,6 +206,7 @@ Get help for any command:
 npm run cli:bc-create-token -- --help
 npm run cli:amm-buy -- --help
 npm run cli:bc-buy -- --help
+npm run cli:send-token -- --help
 ```
 
 View all available commands:
