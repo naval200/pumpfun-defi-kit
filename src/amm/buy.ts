@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
 import { sendTransaction, sendTransactionWithFeePayer } from '../utils/transaction';
 import { retryWithBackoff } from '../utils/retry';
 import BN from 'bn.js';
@@ -94,6 +94,79 @@ export async function buyTokens(
       errorMessage = (error as Error).toString();
     }
 
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
+ * Create signed AMM buy transaction without submitting it
+ * Returns the signed transaction for batch processing
+ */
+export async function createSignedAmmBuyTransaction(
+  connection: Connection,
+  wallet: Keypair,
+  poolKey: PublicKey,
+  quoteAmount: number,
+  slippage: number = 1,
+  feePayer?: Keypair,
+  blockhash?: string
+): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
+  try {
+    debugLog(`🔧 Creating signed AMM buy transaction for ${quoteAmount} SOL`);
+    debugLog(`🎯 Target pool: ${poolKey.toString()}`);
+    debugLog(`📊 Slippage: ${slippage}%`);
+
+    // Initialize SDKs directly
+    const pumpAmmSdk = new PumpAmmSdk(connection);
+
+    // Get swap state
+    debugLog('🔍 Getting swap state...');
+    const swapSolanaState = await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey);
+
+    // Create buy instructions
+    debugLog('📝 Creating buy instructions...');
+    const quoteAmountBN = new BN(quoteAmount);
+    const instructions = await pumpAmmSdk.buyQuoteInput(swapSolanaState, quoteAmountBN, slippage);
+
+    // Create transaction
+    const transaction = new Transaction();
+    instructions.forEach(instruction => transaction.add(instruction));
+
+    // Set recent blockhash
+    // Use provided blockhash for batch operations, or get new one if not provided
+    if (blockhash) {
+      transaction.recentBlockhash = blockhash;
+    } else {
+      const { blockhash: newBlockhash } = await connection.getLatestBlockhash('confirmed');
+      transaction.recentBlockhash = newBlockhash;
+    }
+    
+    // Set fee payer (use feePayer if provided, otherwise use wallet)
+    transaction.feePayer = feePayer ? feePayer.publicKey : wallet.publicKey;
+
+    // Sign the transaction
+    // For batch transactions, the fee payer signs all transactions
+    // The main wallet signs if it's different from the fee payer
+    if (feePayer && feePayer.publicKey.toString() !== wallet.publicKey.toString()) {
+      transaction.sign(wallet, feePayer);
+    } else {
+      transaction.sign(wallet);
+    }
+
+    debugLog('✅ Signed AMM buy transaction created successfully');
+    
+    return {
+      success: true,
+      transaction,
+    };
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError(`Failed to create signed AMM buy transaction: ${errorMessage}`);
+    
     return {
       success: false,
       error: errorMessage,

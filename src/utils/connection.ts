@@ -1,18 +1,12 @@
 import { Connection, Keypair, PublicKey, clusterApiUrl } from '@solana/web3.js';
 import { config } from 'dotenv';
 import { log, logWarning } from './debug';
+import type { ConnectionConfig } from '../@types';
 
 // Load environment variables
 config();
 
-/**
- * Solana connection configuration
- */
-export interface ConnectionConfig {
-  rpcUrl: string;
-  wsUrl: string;
-  network: 'mainnet' | 'devnet';
-}
+// ConnectionConfig moved to src/@types.ts
 
 /**
  * Default devnet configuration

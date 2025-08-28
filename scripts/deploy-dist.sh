@@ -26,7 +26,7 @@ fi
 echo "📁 Found dist folder with contents:"
 ls -la dist/
 
-DIST_FILES="dist/ docs/ package.json README.md LICENSE"
+DIST_FILES="dist/ docs/ examples/ package.json README.md LICENSE"
 
 tar -czf .dist.tar.gz $DIST_FILES >/dev/null
 

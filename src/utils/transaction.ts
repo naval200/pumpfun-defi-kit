@@ -8,35 +8,26 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import { log, logSuccess, logSignature, logError } from './debug';
+import type {
+  TransactionOptions,
+  TransactionWithFeePayerOptions,
+  TransactionResult,
+} from '../@types';
 
 /**
  * Transaction sending options with sensible defaults
  */
-export interface TransactionOptions {
-  skipPreflight?: boolean;
-  preflightCommitment?: Commitment;
-  maxRetries?: number;
-  retryDelay?: number;
-  computeUnitLimit?: number;
-  computeUnitPrice?: number;
-}
+// TransactionOptions moved to src/@types.ts
 
 /**
  * Transaction options with fee payer support
  */
-export interface TransactionWithFeePayerOptions extends TransactionOptions {
-  feePayer?: PublicKey;
-}
+// TransactionWithFeePayerOptions moved to src/@types.ts
 
 /**
  * Result of a transaction operation
  */
-export interface TransactionResult {
-  success: boolean;
-  signature?: string;
-  error?: string;
-  slot?: number;
-}
+// TransactionResult moved to src/@types.ts
 
 /**
  * Default transaction options

@@ -21,6 +21,11 @@ export interface CliArgs {
   recipient?: string;
   mint?: string;
   createAccount?: boolean;
+  operations?: string;
+  maxParallel?: number;
+  retryFailed?: boolean;
+  delayBetween?: number;
+  dryRun?: boolean;
   help?: boolean;
 }
 
@@ -95,6 +100,21 @@ export function parseArgs(): CliArgs {
       case '--create-account':
       case '-c':
         args.createAccount = true;
+        break;
+      case '--operations':
+        args.operations = argv[++i];
+        break;
+      case '--max-parallel':
+        args.maxParallel = parseInt(argv[++i]);
+        break;
+      case '--retry-failed':
+        args.retryFailed = true;
+        break;
+      case '--delay-between':
+        args.delayBetween = parseInt(argv[++i]);
+        break;
+      case '--dry-run':
+        args.dryRun = true;
         break;
       case '--help':
       case '-h':
@@ -178,6 +198,11 @@ export function printUsage(scriptName: string, options: string[] = []): void {
   console.log('  -r, --recipient <string>      Recipient address for token transfer');
   console.log('  -m, --mint <string>           Mint address for token creation');
   console.log('  -c, --create-account          Create a new account for the token');
+  console.log('  --operations <path>           Path to JSON file containing batch operations');
+  console.log('  --max-parallel <number>       Maximum parallel transactions for batch operations');
+  console.log('  --retry-failed                Retry failed transactions in batch mode');
+  console.log('  --delay-between <ms>          Delay between transaction batches in milliseconds');
+  console.log('  --dry-run                     Show what would be executed without running');
   console.log('  -h, --help                    Show this help message');
   
   if (options.length > 0) {

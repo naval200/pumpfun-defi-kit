@@ -15,8 +15,11 @@ export * from './createAccount';
 // Token transfer exports
 export * from './sendToken';
 
+// Batch transactions exports
+export * from './batchTransactions';
+
 // Type exports
-export * from './types';
+export * from './@types';
 
 // Utility exports
 export * from './utils/wallet';

@@ -289,6 +289,88 @@ export async function sellPumpFunToken(
 }
 
 /**
+ * Create signed sell transaction without submitting it
+ * Returns the signed transaction for batch processing
+ */
+export async function createSignedSellTransaction(
+  connection: Connection,
+  wallet: Keypair,
+  mint: PublicKey,
+  tokenAmount: number,
+  slippageBasisPoints: number = 1000,
+  feePayer?: Keypair,
+  blockhash?: string
+): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
+  try {
+    debugLog(`🔧 Creating signed sell transaction for ${tokenAmount} tokens`);
+    debugLog(`🎯 Target mint: ${mint.toString()}`);
+    debugLog(`📊 Slippage: ${slippageBasisPoints} basis points`);
+
+    // Get all required PDAs
+    const { globalPDA, bondingCurvePDA, creatorVaultPDA, eventAuthorityPDA } =
+      getAllRequiredPDAsForBuy(PUMP_PROGRAM_ID, mint, wallet.publicKey);
+
+    // Get associated token addresses
+    const associatedBondingCurve = getAssociatedTokenAddressSync(
+      mint,
+      bondingCurvePDA,
+      true // allowOwnerOffCurve for program accounts
+    );
+
+    const associatedUser = getAssociatedTokenAddressSync(mint, wallet.publicKey, false);
+
+    // Create complete sell instruction
+    debugLog('📝 Creating complete sell instruction...');
+    const sellInstruction = await createCompleteSellInstruction(
+      PUMP_PROGRAM_ID,
+      wallet.publicKey,
+      mint,
+      new BN(tokenAmount)
+    );
+
+    // Create transaction
+    const transaction = new Transaction().add(sellInstruction);
+
+    // Set recent blockhash
+    // Use provided blockhash for batch operations, or get new one if not provided
+    if (blockhash) {
+      transaction.recentBlockhash = blockhash;
+    } else {
+      const { blockhash: newBlockhash } = await connection.getLatestBlockhash('confirmed');
+      transaction.recentBlockhash = newBlockhash;
+    }
+    
+    // Set fee payer (use feePayer if provided, otherwise use wallet)
+    transaction.feePayer = feePayer ? feePayer.publicKey : wallet.publicKey;
+
+    // Sign the transaction
+    // For batch transactions, the fee payer signs all transactions
+    // The main wallet signs if it's different from the fee payer
+    if (feePayer && feePayer.publicKey.toString() !== wallet.publicKey.toString()) {
+      transaction.sign(wallet, feePayer);
+    } else {
+      transaction.sign(wallet);
+    }
+
+    debugLog('✅ Signed sell transaction created successfully');
+    
+    return {
+      success: true,
+      transaction,
+    };
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError(`Failed to create signed sell transaction: ${errorMessage}`);
+    
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+}
+
+/**
  * Sell all tokens for a specific mint
  */
 export async function sellAllPumpFunTokens(

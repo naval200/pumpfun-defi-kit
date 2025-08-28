@@ -21,6 +21,64 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
 
 /**
+ * Common setup for buy operations - gets PDAs and ensures ATAs exist
+ */
+async function setupBuyOperation(
+  connection: Connection,
+  wallet: Keypair,
+  mint: PublicKey,
+  feePayer?: Keypair
+): Promise<{ 
+  success: boolean; 
+  pdas?: any; 
+  associatedBondingCurve?: PublicKey; 
+  associatedUser?: PublicKey; 
+  error?: string 
+}> {
+  try {
+    // Get all required PDAs
+    const pdas = getAllRequiredPDAsForBuy(PUMP_PROGRAM_ID, mint, wallet.publicKey);
+
+    // Get associated token addresses
+    const associatedBondingCurve = getAssociatedTokenAddressSync(
+      mint,
+      pdas.bondingCurvePDA,
+      true // allowOwnerOffCurve for program accounts
+    );
+
+    const associatedUser = getAssociatedTokenAddressSync(mint, wallet.publicKey, false);
+
+    // Ensure bonding curve ATA exists
+    debugLog('🔧 Ensuring bonding curve ATA exists...');
+    const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
+      connection,
+      wallet,
+      pdas.bondingCurvePDA,
+      mint,
+      true // allowOwnerOffCurve
+    );
+
+    if (!bondingCurveAtaResult.success) {
+      throw new Error(`Failed to create bonding curve ATA: ${bondingCurveAtaResult.error}`);
+    }
+    debugLog(`✅ Bonding curve ATA ready: ${bondingCurveAtaResult.account.toString()}`);
+
+    return {
+      success: true,
+      pdas,
+      associatedBondingCurve,
+      associatedUser
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      error: errorMessage
+    };
+  }
+}
+
+/**
  * Create complete buy instruction with robust PDA resolution
  */
 async function createCompleteBuyInstruction(
@@ -28,14 +86,16 @@ async function createCompleteBuyInstruction(
   buyer: PublicKey,
   mint: PublicKey,
   solAmount: BN,
-  maxSlippageBasisPoints: number = 1000
+  maxSlippageBasisPoints: number = 1000,
+  pdas: any,
+  associatedBondingCurve: PublicKey,
+  associatedUser: PublicKey
 ): Promise<TransactionInstruction> {
   // Calculate parameters
   const expectedTokenAmount = new BN(100000000); // Reasonable estimate
   const maxSolCost = solAmount.mul(new BN(10000 + maxSlippageBasisPoints)).div(new BN(10000));
   const trackVolume = true; // Enable volume tracking
 
-  // Get all required PDAs
   const {
     globalPDA,
     bondingCurvePDA,
@@ -43,16 +103,7 @@ async function createCompleteBuyInstruction(
     eventAuthorityPDA,
     globalVolumeAccumulatorPDA,
     userVolumeAccumulatorPDA,
-  } = getAllRequiredPDAsForBuy(programId, mint, buyer);
-
-  // Get associated token addresses
-  const associatedBondingCurve = getAssociatedTokenAddressSync(
-    mint,
-    bondingCurvePDA,
-    true // allowOwnerOffCurve for program accounts
-  );
-
-  const associatedUser = getAssociatedTokenAddressSync(mint, buyer, false);
+  } = pdas;
 
   debugLog('🔧 Creating complete buy instruction with all required accounts:');
   debugLog(`   0. Global: ${globalPDA.toString()}`);
@@ -182,12 +233,21 @@ export async function buyPumpFunToken(
     debugLog(`📡 Creating complete buy transaction (attempt ${attempts}/${maxAttempts})...`);
 
     try {
+      // Setup the buy operation (get PDAs and ensure ATAs exist)
+      const setupResult = await setupBuyOperation(connection, wallet, mint, feePayer);
+      if (!setupResult.success) {
+        throw new Error(`Setup failed: ${setupResult.error}`);
+      }
+
       const buyInstruction = await createCompleteBuyInstruction(
         PUMP_PROGRAM_ID,
         wallet.publicKey,
         mint,
         new BN(solAmount * 1e9), // Convert SOL to lamports
-        slippageBasisPoints
+        slippageBasisPoints,
+        setupResult.pdas!,
+        setupResult.associatedBondingCurve!,
+        setupResult.associatedUser!
       );
 
       const transaction = new Transaction().add(buyInstruction);
@@ -265,4 +325,83 @@ export async function buyPumpFunToken(
   }
 
   throw new Error('Transaction failed after maximum attempts');
+}
+
+/**
+ * Create signed buy transaction without submitting it
+ * Returns the signed transaction for batch processing
+ */
+export async function createSignedBuyTransaction(
+  connection: Connection,
+  wallet: Keypair,
+  mint: PublicKey,
+  solAmount: number,
+  slippageBasisPoints: number = 1000,
+  feePayer?: Keypair,
+  blockhash?: string
+): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
+  try {
+    debugLog(`🔧 Creating signed buy transaction for ${solAmount} SOL`);
+    debugLog(`🎯 Target mint: ${mint.toString()}`);
+    debugLog(`📊 Slippage: ${slippageBasisPoints} basis points`);
+
+    // Setup the buy operation (get PDAs and ensure ATAs exist)
+    const setupResult = await setupBuyOperation(connection, wallet, mint, feePayer);
+    if (!setupResult.success) {
+      throw new Error(`Setup failed: ${setupResult.error}`);
+    }
+
+    // Create complete buy instruction
+    debugLog('📝 Creating complete buy instruction...');
+    const buyInstruction = await createCompleteBuyInstruction(
+      PUMP_PROGRAM_ID,
+      wallet.publicKey,
+      mint,
+      new BN(solAmount * 1e9), // Convert SOL to lamports
+      slippageBasisPoints,
+      setupResult.pdas!,
+      setupResult.associatedBondingCurve!,
+      setupResult.associatedUser!
+    );
+
+    // Create transaction
+    const transaction = new Transaction().add(buyInstruction);
+
+    // Set recent blockhash
+    // Use provided blockhash for batch operations, or get new one if not provided
+    if (blockhash) {
+      transaction.recentBlockhash = blockhash;
+    } else {
+      const { blockhash: newBlockhash } = await connection.getLatestBlockhash('confirmed');
+      transaction.recentBlockhash = newBlockhash;
+    }
+    
+    // Set fee payer (use feePayer if provided, otherwise use wallet)
+    transaction.feePayer = feePayer ? feePayer.publicKey : wallet.publicKey;
+
+    // Sign the transaction
+    // For batch transactions, the fee payer signs all transactions
+    // The main wallet signs if it's different from the fee payer
+    if (feePayer && feePayer.publicKey.toString() !== wallet.publicKey.toString()) {
+      transaction.sign(wallet, feePayer);
+    } else {
+      transaction.sign(wallet);
+    }
+
+    debugLog('✅ Signed buy transaction created successfully');
+    
+    return {
+      success: true,
+      transaction,
+    };
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError(`Failed to create signed buy transaction: ${errorMessage}`);
+    
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 }

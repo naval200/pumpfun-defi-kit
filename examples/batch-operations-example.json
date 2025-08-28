@@ -1,0 +1,74 @@
+[
+  {
+    "type": "transfer",
+    "id": "transfer-1",
+    "description": "Send 100 tokens to user A",
+    "params": {
+      "recipient": "11111111111111111111111111111111",
+      "mint": "22222222222222222222222222222222",
+      "amount": "100000000",
+      "createAccount": true
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "transfer-2",
+    "description": "Send 50 tokens to user B",
+    "params": {
+      "recipient": "33333333333333333333333333333333",
+      "mint": "22222222222222222222222222222222",
+      "amount": "50000000",
+      "createAccount": false
+    }
+  },
+  {
+    "type": "buy-amm",
+    "id": "buy-amm-1",
+    "description": "Buy tokens from AMM pool 1",
+    "params": {
+      "poolKey": "44444444444444444444444444444444",
+      "amount": 0.1,
+      "slippage": 1
+    }
+  },
+  {
+    "type": "buy-amm",
+    "id": "buy-amm-2",
+    "description": "Buy tokens from AMM pool 2",
+    "params": {
+      "poolKey": "55555555555555555555555555555555",
+      "amount": 0.05,
+      "slippage": 2
+    }
+  },
+  {
+    "type": "sell-amm",
+    "id": "sell-amm-1",
+    "description": "Sell tokens to AMM pool 1",
+    "params": {
+      "poolKey": "44444444444444444444444444444444",
+      "amount": 1000,
+      "slippage": 1
+    }
+  },
+  {
+    "type": "buy-bonding-curve",
+    "id": "buy-bc-1",
+    "description": "Buy tokens via bonding curve",
+    "params": {
+      "mint": "66666666666666666666666666666666",
+      "amount": 0.1,
+      "slippage": 1000
+    }
+  },
+  {
+    "type": "sell-bonding-curve",
+    "id": "sell-bc-1",
+    "description": "Sell tokens via bonding curve",
+    "params": {
+      "mint": "66666666666666666666666666666666",
+      "amount": 500,
+      "slippage": 1000
+    }
+  }
+]
