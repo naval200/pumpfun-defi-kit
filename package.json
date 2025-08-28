@@ -1,0 +1,107 @@
+{
+  "name": "@pump-fun/defikit",
+  "version": "1.0.0",
+  "description": "A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM support",
+  "keywords": [
+    "solana",
+    "pumpfun",
+    "defi",
+    "trading",
+    "amm",
+    "bonding-curve",
+    "tokens",
+    "blockchain"
+  ],
+  "license": "MIT",
+  "author": "Naval Saini <naval200@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/naval200/pumpfun-defi-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/naval200/pumpfun-defi-kit/issues"
+  },
+  "homepage": "https://github.com/naval200/pumpfun-defi-kit#readme",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "docs/amm-usage.md",
+    "docs/pool-creation-guide.md",
+    "docs/pumpsdk-documentation.md",
+    "docs/pumpswap-documentation.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:clean": "rm -rf dist && npm run build",
+    "dev": "tsx src/index.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "prepublishOnly": "npm run build:clean",
+    "prepack": "npm run build:clean",
+    "postinstall": "echo 'Package installed successfully! Run npm run help to see available CLI commands.'",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "check-format": "prettier --check src/**/*.ts",
+    "deploy:dist": "bash scripts/deploy-dist.sh",
+    "help": "echo 'Available CLI commands:' && echo '  Bonding Curve (BC):' && echo '    npm run cli:bc:create-token -- --help' && echo '    npm run cli:bc:buy -- --help' && echo '    npm run cli:bc:sell -- --help' && echo '    npm run cli:bc:sdk-buy -- --help' && echo '  AMM:' && echo '    npm run cli:amm:buy -- --help' && echo '    npm run cli:amm:create-pool -- --help' && echo '    npm run cli:amm:info -- --help' && echo '    npm run cli:amm:liquidity -- --help' && echo '  Utilities:' && echo '    npm run cli:graduation-check' && echo '  Deployment:' && echo '    npm run deploy:dist' && echo '    npm run deploy:dist:shell'",
+    "cli:curve:create-token": "tsx cli/bonding-curve/create-token-cli.ts",
+    "cli:curve:buy": "tsx cli/bonding-curve/buy-cli.ts",
+    "cli:curve:sell": "tsx cli/bonding-curve/sell-cli.ts",
+    "cli:curve:sdk-buy": "tsx cli/bonding-curve/sdk-buy-cli.ts",
+    "cli:amm:buy": "tsx cli/amm/buy-cli.ts",
+    "cli:amm:create-pool": "tsx cli/amm/create-pool-cli.ts",
+    "cli:amm:create-pool-or-use": "tsx cli/amm/create-pool-or-use-existing-cli.ts",
+    "cli:amm:info": "tsx cli/amm/info-cli.ts",
+    "cli:amm:liquidity": "tsx cli/amm/liquidity-cli.ts",
+    "cli:amm:add-only": "tsx cli/amm/liquidity-cli.ts --add-only",
+    "cli:graduation-check": "tsx cli/graduation-check-cli.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@pump-fun/pump-swap-sdk": "^1.6.1",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.95.4",
+    "@types/bignumber.js": "^4.0.3",
+    "bignumber.js": "^9.3.1",
+    "dotenv": "^16.4.5",
+    "fetch-blob": "^4.0.0",
+    "undici": "^7.14.0"
+  },
+  "devDependencies": {
+    "@types/bn.js": "^5.2.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jest": "^28.14.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "husky": "^9.0.11",
+    "jest": "^29.5.0",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
+    "pumpdotfun-sdk": "^1.4.2",
+    "ts-jest": "^29.1.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
