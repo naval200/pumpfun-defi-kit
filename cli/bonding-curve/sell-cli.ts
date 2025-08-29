@@ -32,9 +32,7 @@ export async function sellToken() {
   debugLog('💸 Selling PumpFun Tokens via Bonding Curve');
   debugLog('============================================');
   debugLog(`Amount: ${args.amount} tokens`);
-  debugLog(
-    `Slippage: ${args.slippage || 1000} basis points (${(args.slippage || 1000) / 100}%)`
-  );
+  debugLog(`Slippage: ${args.slippage || 1000} basis points (${(args.slippage || 1000) / 100}%)`);
 
   try {
     // Load token information

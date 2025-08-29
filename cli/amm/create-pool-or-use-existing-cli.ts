@@ -1,9 +1,4 @@
-import { 
-  Connection, 
-  PublicKey, 
-  Keypair,
-  LAMPORTS_PER_SOL
-} from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { createPool } from '../../src/amm/createPool';
 import { getPoolInfo } from '../../src/amm/info';
 import fs from 'fs';
@@ -19,13 +14,13 @@ async function testCreatePoolOrUseExisting() {
     console.log('🚀 Starting AMM Pool Creation/Usage Test...\n');
 
     // Setup connection and wallet
-    const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     console.log('✅ Connected to Solana devnet');
-    
+
     // Load test wallet from file
     const walletPath = path.join(process.cwd(), 'wallets', 'creator-wallet.json');
     let wallet: Keypair;
-    
+
     try {
       const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
       wallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
@@ -34,11 +29,11 @@ async function testCreatePoolOrUseExisting() {
       console.error('❌ Failed to load test wallet:', error);
       return;
     }
-    
+
     // Check wallet balance
     const balance = await connection.getBalance(wallet.publicKey);
     console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-    
+
     if (balance < 0.1 * LAMPORTS_PER_SOL) {
       console.log('⚠️ Wallet balance is low. Need at least 0.1 SOL for testing.');
       return;
@@ -54,21 +49,23 @@ async function testCreatePoolOrUseExisting() {
     console.log('✅ Token info loaded:', {
       name: tokenInfo.name,
       symbol: tokenInfo.symbol,
-      mint: tokenInfo.mint
+      mint: tokenInfo.mint,
     });
 
     // Check if pool already exists
     if (tokenInfo.poolKey) {
       console.log(`🏊 Pool already exists: ${tokenInfo.poolKey}`);
       console.log(`📅 Created: ${tokenInfo.poolCreatedAt}`);
-      console.log(`📊 Config: ${tokenInfo.poolConfig.baseAmount} ${tokenInfo.symbol} + ${tokenInfo.poolConfig.quoteAmount} SOL`);
-      
+      console.log(
+        `📊 Config: ${tokenInfo.poolConfig.baseAmount} ${tokenInfo.symbol} + ${tokenInfo.poolConfig.quoteAmount} SOL`
+      );
+
       // Test if the existing pool is accessible
       try {
         console.log('\n🔍 Testing existing pool accessibility...');
         const poolKey = new PublicKey(tokenInfo.poolKey);
         const poolInfo = await getPoolInfo(connection, wallet, poolKey);
-        
+
         console.log('✅ Existing pool is accessible!');
         console.log('📊 Current Pool Information:');
         console.log(`   Pool Key: ${poolInfo.poolKey}`);
@@ -77,15 +74,14 @@ async function testCreatePoolOrUseExisting() {
         console.log(`   Base Reserves: ${poolInfo.baseReserves}`);
         console.log(`   Quote Reserves: ${poolInfo.quoteReserves}`);
         console.log(`   Creator: ${poolInfo.creator}`);
-        
+
         console.log('\n🎉 Pool is ready for AMM operations!');
         console.log('💡 You can now run:');
         console.log('   npm run test:amm:info');
         console.log('   npm run test:amm:liquidity');
         console.log('   npm run test:amm:add-only');
-        
+
         return;
-        
       } catch (error) {
         console.log('⚠️ Existing pool is not accessible, will try to create new one...');
         console.log('Error:', error.message);
@@ -95,11 +91,11 @@ async function testCreatePoolOrUseExisting() {
     // Define pool parameters
     const baseMint = new PublicKey(tokenInfo.mint); // Your token
     const quoteMint = new PublicKey('So11111111111111111111111111111111111111112'); // SOL (wrapped SOL)
-    
+
     // Pool amounts (adjust these based on your needs)
     const baseIn = 1000000; // 1M tokens (assuming 6 decimals)
     const quoteIn = 0.1; // 0.1 SOL
-    
+
     console.log('\n📊 Pool Creation Parameters:');
     console.log(`Base Token (${tokenInfo.symbol}): ${baseIn} tokens`);
     console.log(`Quote Token (SOL): ${quoteIn} SOL`);
@@ -121,7 +117,7 @@ async function testCreatePoolOrUseExisting() {
       console.log('\n🎉 Pool created successfully!');
       console.log(`Pool Key: ${result.poolKey?.toString()}`);
       console.log(`Transaction: ${result.signature}`);
-      
+
       // Update token-info.json with pool information
       const updatedTokenInfo = {
         ...tokenInfo,
@@ -131,24 +127,22 @@ async function testCreatePoolOrUseExisting() {
         poolConfig: {
           baseAmount: baseIn,
           quoteAmount: quoteIn,
-          poolIndex: 0
-        }
+          poolIndex: 0,
+        },
       };
 
       // Write updated token info back to file
       fs.writeFileSync(tokenInfoPath, JSON.stringify(updatedTokenInfo, null, 2));
       console.log('✅ Updated token-info.json with pool information');
-      
+
       console.log('\n🎉 Pool is ready for AMM operations!');
       console.log('💡 You can now run:');
       console.log('   npm run test:amm:info');
       console.log('   npm run test:amm:liquidity');
       console.log('   npm run test:amm:add-only');
-      
     } else {
       console.log('\n❌ Pool creation failed:', result.error);
     }
-    
   } catch (error) {
     console.error('❌ Error during pool creation/usage test:', error);
   }

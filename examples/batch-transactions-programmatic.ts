@@ -5,7 +5,7 @@
  * This shows the clean, simple interface for executing multiple operations
  */
 
-import { 
+import {
   executePumpFunBatch as batchTransactions,
   validatePumpFunBatchOperations as validateBatchOperations,
 } from '../src/batch';
@@ -22,8 +22,8 @@ const exampleOperations: BatchOperation[] = [
     description: 'Send 0.01 SOL to recipient X',
     params: {
       recipient: '11111111111111111111111111111111',
-      lamports: 10000000
-    }
+      lamports: 10000000,
+    },
   },
   {
     type: 'transfer',
@@ -33,8 +33,8 @@ const exampleOperations: BatchOperation[] = [
       recipient: '11111111111111111111111111111111',
       mint: '22222222222222222222222222222222',
       amount: '100000000',
-      createAccount: true
-    }
+      createAccount: true,
+    },
   },
   {
     type: 'buy-amm',
@@ -44,8 +44,8 @@ const exampleOperations: BatchOperation[] = [
       poolKey: '33333333333333333333333333333333',
       quoteAmount: 10000000,
       slippage: 1,
-      assumeAccountsExist: true
-    }
+      assumeAccountsExist: true,
+    },
   },
   {
     type: 'sell-amm',
@@ -54,8 +54,8 @@ const exampleOperations: BatchOperation[] = [
     params: {
       poolKey: '44444444444444444444444444444444',
       amount: 1000,
-      slippage: 1
-    }
+      slippage: 1,
+    },
   },
   {
     type: 'sell-bonding-curve',
@@ -64,9 +64,9 @@ const exampleOperations: BatchOperation[] = [
     params: {
       mint: '66666666666666666666666666666666',
       amount: 500,
-      slippage: 1000
-    }
-  }
+      slippage: 1000,
+    },
+  },
 ];
 
 /**
@@ -75,63 +75,57 @@ const exampleOperations: BatchOperation[] = [
 async function main() {
   console.log('🚀 Batch Transactions API Example');
   console.log('==================================');
-  
+
   try {
     // Setup connection (devnet for testing)
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-    
+
     // In a real scenario, you would load these from wallet files
     const wallet = Keypair.generate(); // Replace with actual wallet
     const feePayer = Keypair.generate(); // Replace with actual fee payer
-    
+
     console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
     console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
-    
+
     // Validate operations before execution
     console.log('\n🔍 Validating operations...');
     const validation = validateBatchOperations(exampleOperations);
-    
+
     if (!validation.valid) {
       console.error('❌ Operations validation failed:');
       validation.errors.forEach(error => console.error(`  - ${error}`));
       return;
     }
-    
+
     console.log('✅ All operations are valid');
-    
+
     // Display operations summary
     console.log('\n📋 Operations to execute:');
     exampleOperations.forEach((op, index) => {
       console.log(`  ${index + 1}. [${op.type.toUpperCase()}] ${op.description}`);
       console.log(`     ID: ${op.id}`);
     });
-    
+
     // Execute batch transactions
     console.log('\n🚀 Executing batch transactions...');
-    
-    const results = await batchTransactions(
-      connection,
-      wallet,
-      exampleOperations,
-      feePayer,
-      {
-        maxParallel: 2,        // Execute 2 operations at a time
-        delayBetween: 1500,    // 1.5 second delay between batches
-        retryFailed: true      // Retry failed operations
-      }
-    );
-    
+
+    const results = await batchTransactions(connection, wallet, exampleOperations, feePayer, {
+      maxParallel: 2, // Execute 2 operations at a time
+      delayBetween: 1500, // 1.5 second delay between batches
+      retryFailed: true, // Retry failed operations
+    });
+
     // Display results
     console.log('\n📊 Execution Results:');
     console.log('======================');
-    
+
     const successful = results.filter(r => r.success);
     const failed = results.filter(r => !r.success);
-    
+
     console.log(`✅ Successful: ${successful.length}`);
     console.log(`❌ Failed: ${failed.length}`);
     console.log(`📈 Success Rate: ${((successful.length / results.length) * 100).toFixed(1)}%`);
-    
+
     if (successful.length > 0) {
       console.log('\n✅ Successful Operations:');
       successful.forEach(result => {
@@ -143,7 +137,7 @@ async function main() {
         }
       });
     }
-    
+
     if (failed.length > 0) {
       console.log('\n❌ Failed Operations:');
       failed.forEach(result => {
@@ -151,9 +145,8 @@ async function main() {
         console.log(`    Error: ${result.error}`);
       });
     }
-    
+
     console.log('\n🎉 Batch execution complete!');
-    
   } catch (error) {
     console.error('❌ Error executing batch transactions:', error);
   }
@@ -164,7 +157,7 @@ async function main() {
  */
 function createDynamicOperations(): BatchOperation[] {
   const operations: BatchOperation[] = [];
-  
+
   // Add multiple transfers
   for (let i = 0; i < 3; i++) {
     operations.push({
@@ -175,11 +168,11 @@ function createDynamicOperations(): BatchOperation[] {
         recipient: `recipient${i + 1}11111111111111111111111111111111`,
         mint: '22222222222222222222222222222222',
         amount: '50000000',
-        createAccount: true
-      }
+        createAccount: true,
+      },
     });
   }
-  
+
   // Add AMM operations
   operations.push({
     type: 'sell-amm',
@@ -188,10 +181,10 @@ function createDynamicOperations(): BatchOperation[] {
     params: {
       poolKey: '44444444444444444444444444444444',
       amount: 500,
-      slippage: 2
-    }
+      slippage: 2,
+    },
   });
-  
+
   return operations;
 }
 
@@ -204,7 +197,7 @@ async function executeConditionalBatch(
   feePayer: Keypair
 ): Promise<void> {
   console.log('\n🔄 Executing conditional batch...');
-  
+
   // First batch: transfers
   const transferOperations: BatchOperation[] = [
     {
@@ -215,11 +208,11 @@ async function executeConditionalBatch(
         recipient: '11111111111111111111111111111111',
         mint: '22222222222222222222222222222222',
         amount: '100000000',
-        createAccount: true
-      }
-    }
+        createAccount: true,
+      },
+    },
   ];
-  
+
   const transferResults = await batchTransactions(
     connection,
     wallet,
@@ -227,11 +220,11 @@ async function executeConditionalBatch(
     feePayer,
     { maxParallel: 1 }
   );
-  
+
   // Check if first operation succeeded
   if (transferResults[0]?.success) {
     console.log('✅ First transfer succeeded, proceeding with additional operations...');
-    
+
     // Add more operations based on success
     const additionalOperations: BatchOperation[] = [
       {
@@ -241,11 +234,11 @@ async function executeConditionalBatch(
         params: {
           poolKey: '44444444444444444444444444444444',
           amount: 1000,
-          slippage: 1
-        }
-      }
+          slippage: 1,
+        },
+      },
     ];
-    
+
     const additionalResults = await batchTransactions(
       connection,
       wallet,
@@ -253,7 +246,7 @@ async function executeConditionalBatch(
       feePayer,
       { maxParallel: 1 }
     );
-    
+
     console.log('📊 Additional operations completed:', additionalResults.length);
   } else {
     console.log('❌ First transfer failed, skipping additional operations');
@@ -265,8 +258,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch(console.error);
 }
 
-export { 
-  exampleOperations, 
-  createDynamicOperations, 
-  executeConditionalBatch 
-};
+export { exampleOperations, createDynamicOperations, executeConditionalBatch };

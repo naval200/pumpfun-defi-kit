@@ -1,13 +1,11 @@
-// Main exports
-export * from './bonding-curve/createToken';
-export * from './bonding-curve/buy';
-export * from './bonding-curve/sell';
-
-// Bonding curve price exports moved to PumpFunSDK
+// Bonding curve exports
+export * from './bonding-curve';
 
 // AMM exports
-export * from './amm/index';
-export * from './amm/amm';
+export * from './amm';
+
+// Batch exports
+export * from './batch';
 
 // Account creation exports
 export * from './createAccount';
@@ -17,9 +15,6 @@ export * from './sendToken';
 
 // SOL transfer exports
 export * from './sendSol';
-
-// Batch transactions exports
-export * from './batch';
 
 // Type exports
 export * from './@types';

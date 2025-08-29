@@ -22,10 +22,10 @@ Examples:
 function parseArgs() {
   const args: any = {};
   const argv = process.argv.slice(2);
-  
+
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    
+
     switch (arg) {
       case '--help':
       case '-h':
@@ -39,7 +39,7 @@ function parseArgs() {
         break;
     }
   }
-  
+
   return args;
 }
 
@@ -48,7 +48,7 @@ function parseArgs() {
  */
 async function main() {
   const args = parseArgs();
-  
+
   if (args.help) {
     showHelp();
     return;
@@ -58,11 +58,11 @@ async function main() {
     console.log('🚀 Starting Token Graduation Status Check...\n');
 
     // Setup connection to devnet
-    const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     console.log('✅ Connected to Solana devnet');
-    
+
     let tokenMint: PublicKey;
-    
+
     // If mint is provided via args, use it directly
     if (args.mint) {
       tokenMint = new PublicKey(args.mint);
@@ -73,7 +73,9 @@ async function main() {
       const tokenInfoPath = args.inputToken || path.join(process.cwd(), 'token-info.json');
       if (!fs.existsSync(tokenInfoPath)) {
         console.log(`❌ Token info file not found: ${tokenInfoPath}`);
-        console.log('💡 Please provide --mint or create a token first with: npm run cli:curve:create-token');
+        console.log(
+          '💡 Please provide --mint or create a token first with: npm run cli:curve:create-token'
+        );
         return;
       }
 
@@ -81,11 +83,11 @@ async function main() {
       console.log('✅ Token info loaded:', {
         name: tokenInfo.name,
         symbol: tokenInfo.symbol,
-        mint: tokenInfo.mint
+        mint: tokenInfo.mint,
       });
-      
+
       tokenMint = new PublicKey(tokenInfo.mint);
-      
+
       // Check if token has a pool key (indicates AMM creation)
       if (tokenInfo.poolKey) {
         console.log(`🏊 Token has AMM pool: ${tokenInfo.poolKey}`);
@@ -98,25 +100,25 @@ async function main() {
     }
 
     console.log('\n🔍 Checking graduation status...');
-    
+
     // Method 1: Simple graduation check
     const isGraduated = await checkGraduationStatus(connection, tokenMint);
     console.log(`\n🎯 Graduation Status: ${isGraduated ? '✅ GRADUATED' : '❌ NOT GRADUATED'}`);
-    
+
     // Method 2: Detailed graduation analysis
     console.log('\n📊 Performing detailed graduation analysis...');
     const analysis = await getGraduationAnalysis(connection, tokenMint);
-    
+
     console.log('\n📋 Detailed Graduation Analysis:');
     console.log(`   Graduated: ${analysis.isGraduated ? '✅ Yes' : '❌ No'}`);
     console.log(`   Has AMM Pools: ${analysis.hasAMMPools ? '✅ Yes' : '❌ No'}`);
     console.log(`   Sufficient Liquidity: ${analysis.hasSufficientLiquidity ? '✅ Yes' : '❌ No'}`);
     console.log(`   Bonding Curve Active: ${analysis.bondingCurveActive ? '✅ Yes' : '❌ No'}`);
     console.log(`   Reason: ${analysis.graduationReason}`);
-    
+
     // Provide recommendations based on analysis
     console.log('\n💡 Recommendations:');
-    
+
     if (analysis.isGraduated) {
       console.log('🎉 Your token has successfully graduated to AMM trading!');
       console.log('   • Users can now trade using AMM pools');
@@ -142,7 +144,6 @@ async function main() {
     }
 
     console.log('\n✅ Graduation check completed!');
-
   } catch (error: any) {
     console.error('\n💥 Error during graduation check:', error);
     if (error.stack) {

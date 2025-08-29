@@ -8,7 +8,7 @@ import { log, logSuccess, logSignature, logError } from '../utils/debug';
 import { buyPumpFunToken } from './buy';
 import { TokenConfig, CreateTokenResult } from '../@types';
 import { sendAndConfirmRawTransaction, getExplorerUrl } from '../utils/transaction';
-import { getGlobalPDA, isGlobalAccountInitialized, initializeGlobalAccount } from './helper';
+import { getGlobalPDA, isGlobalAccountInitialized, initializeGlobalAccount } from './bc-helper';
 import { PUMP_PROGRAM_ID } from './constants';
 
 import { SimpleWallet } from '../utils/wallet';

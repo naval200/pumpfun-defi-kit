@@ -1,6 +1,17 @@
-import { Connection, Keypair, Transaction, Commitment } from '@solana/web3.js';
+import { Connection, Keypair, Transaction, Commitment, PublicKey } from '@solana/web3.js';
 import { debugLog, logError } from '../utils/debug';
 import type { GenericBatchOptions, GenericBatchResult, GenericBatchOperation } from '../@types';
+import { sendToken, sendTokenWithAccountCreation } from '../sendToken';
+import { buyTokens as buyAmmTokens } from '../amm';
+import { buyPumpFunToken } from '../bonding-curve';
+import { sellTokens } from '../amm';
+import { createSignedSellTransaction } from '../bonding-curve/sell';
+import { sendLamports } from '../utils/transaction';
+import {
+  getAssociatedTokenAddressSync,
+  createTransferInstruction,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 
 /**
  * Execute generic batch operations with custom execution logic

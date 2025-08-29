@@ -8,7 +8,7 @@ import {
   TOKEN_PROGRAM_ID,
   SYSTEM_PROGRAM_ID,
 } from './constants';
-import { getAllRequiredPDAsForBuy } from './helper';
+import { getAllRequiredPDAsForBuy } from './bc-helper';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 
 /**
@@ -31,11 +31,7 @@ export function createBondingCurveBuyInstructionAssuming(
   const pdas = getAllRequiredPDAsForBuy(PUMP_PROGRAM_ID, mint, buyer);
 
   // Resolve associated accounts deterministically
-  const associatedBondingCurve = getAssociatedTokenAddressSync(
-    mint,
-    pdas.bondingCurvePDA,
-    true
-  );
+  const associatedBondingCurve = getAssociatedTokenAddressSync(mint, pdas.bondingCurvePDA, true);
   const associatedUser = getAssociatedTokenAddressSync(mint, buyer, false);
 
   // Arguments
@@ -130,5 +126,3 @@ export function createBondingCurveSellInstructionAssuming(
     data,
   });
 }
-
-

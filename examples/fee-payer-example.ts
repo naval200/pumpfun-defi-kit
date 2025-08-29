@@ -2,7 +2,7 @@
 
 /**
  * Fee Payer Example
- * 
+ *
  * This example demonstrates how to use the fee payer functionality
  * to separate the wallet that pays transaction fees from the wallet
  * that owns the tokens.
@@ -55,11 +55,11 @@ async function treasuryFeePayerExample() {
     try {
       const buyResult = await buyPumpFunToken(
         connection,
-        userWallet,           // User owns the tokens
+        userWallet, // User owns the tokens
         new PublicKey(CONFIG.tokenMint),
-        0.01,                 // 0.01 SOL worth of tokens
-        1000,                 // 10% slippage
-        treasuryWallet        // Treasury pays the fees
+        0.01, // 0.01 SOL worth of tokens
+        1000, // 10% slippage
+        treasuryWallet // Treasury pays the fees
       );
       console.log(`✅ Buy successful! Signature: ${buyResult}`);
     } catch (error) {
@@ -71,10 +71,10 @@ async function treasuryFeePayerExample() {
     try {
       const sellResult = await sellPumpFunToken(
         connection,
-        userWallet,           // User owns the tokens
+        userWallet, // User owns the tokens
         new PublicKey(CONFIG.tokenMint),
-        1000,                 // 1000 tokens
-        treasuryWallet        // Treasury pays the fees
+        1000, // 1000 tokens
+        treasuryWallet // Treasury pays the fees
       );
       console.log(`✅ Sell successful! Signature: ${sellResult}`);
     } catch (error) {
@@ -86,15 +86,15 @@ async function treasuryFeePayerExample() {
     try {
       const sendResult = await sendToken(
         connection,
-        userWallet,           // User owns the tokens
-        recipientAddress,     // Recipient address
+        userWallet, // User owns the tokens
+        recipientAddress, // Recipient address
         new PublicKey(CONFIG.tokenMint),
-        BigInt(100),         // 100 tokens
-        false,                // allowOwnerOffCurve
-        true,                 // createRecipientAccount
-        treasuryWallet        // Treasury pays the fees
+        BigInt(100), // 100 tokens
+        false, // allowOwnerOffCurve
+        true, // createRecipientAccount
+        treasuryWallet // Treasury pays the fees
       );
-      
+
       if (sendResult.success) {
         console.log(`✅ Send successful! Signature: ${sendResult.signature}`);
       } else {
@@ -109,13 +109,13 @@ async function treasuryFeePayerExample() {
     try {
       const ammBuyResult = await buyTokens(
         connection,
-        userWallet,           // User owns the tokens
+        userWallet, // User owns the tokens
         new PublicKey(CONFIG.poolKey),
-        0.01,                 // 0.01 SOL worth of tokens
-        100,                  // 1% slippage
-        treasuryWallet        // Treasury pays the fees
+        0.01, // 0.01 SOL worth of tokens
+        100, // 1% slippage
+        treasuryWallet // Treasury pays the fees
       );
-      
+
       if (ammBuyResult.success) {
         console.log(`✅ AMM Buy successful! Signature: ${ammBuyResult.signature}`);
       } else {
@@ -131,7 +131,6 @@ async function treasuryFeePayerExample() {
     console.log('   2. Fund treasury wallet with SOL for fees');
     console.log('   3. Fund user wallet with tokens to trade');
     console.log('   4. Use the CLI commands with --fee-payer option');
-
   } catch (error) {
     console.error('❌ Example failed:', error);
   }
@@ -146,7 +145,7 @@ async function batchOperationsExample() {
 
   try {
     const connection = new Connection(CONFIG.rpcUrl, CONFIG.commitment);
-    
+
     // Generate wallets for batch operations
     const treasuryWallet = Keypair.generate();
     const user1Wallet = Keypair.generate();
@@ -160,24 +159,24 @@ async function batchOperationsExample() {
 
     // Example: Multiple users buying tokens with same treasury
     console.log('\n🔄 Batch buy operations with single treasury');
-    
+
     const users = [user1Wallet, user2Wallet, user3Wallet];
     const amounts = [0.01, 0.02, 0.03]; // Different amounts for each user
 
     for (let i = 0; i < users.length; i++) {
       const user = users[i];
       const amount = amounts[i];
-      
+
       console.log(`\n   User ${i + 1} buying ${amount} SOL worth of tokens...`);
-      
+
       try {
         const result = await buyPumpFunToken(
           connection,
-          user,                    // User owns the tokens
+          user, // User owns the tokens
           new PublicKey(CONFIG.tokenMint),
-          amount,                  // Amount in SOL
-          1000,                    // 10% slippage
-          treasuryWallet           // Same treasury pays all fees
+          amount, // Amount in SOL
+          1000, // 10% slippage
+          treasuryWallet // Same treasury pays all fees
         );
         console.log(`   ✅ User ${i + 1} buy successful!`);
       } catch (error) {
@@ -190,7 +189,6 @@ async function batchOperationsExample() {
     console.log('   - Efficient for bulk operations');
     console.log('   - Cost savings compared to individual fee payments');
     console.log('   - Simplified treasury management');
-
   } catch (error) {
     console.error('❌ Batch operations example failed:', error);
   }
@@ -213,7 +211,7 @@ async function runAllExamples() {
   console.log('   ✅ Batch operations with single fee payer');
   console.log('   ✅ Gasless user experience');
   console.log('   ✅ Relayer service support');
-  
+
   console.log('\n📚 For more information, see:');
   console.log('   - docs/fee-payer-usage.md');
   console.log('   - CLI commands with --fee-payer option');
@@ -225,8 +223,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   runAllExamples().catch(console.error);
 }
 
-export {
-  treasuryFeePayerExample,
-  batchOperationsExample,
-  runAllExamples
-};
+export { treasuryFeePayerExample, batchOperationsExample, runAllExamples };

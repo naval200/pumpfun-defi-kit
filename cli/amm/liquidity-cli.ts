@@ -1,9 +1,6 @@
-import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import fs from 'fs';
-import path from 'path';
-import { addLiquidity, removeLiquidity } from '../../src/amm/liquidity';
-import { findPoolsForToken } from '../../src/amm/amm';
-import { loadWallet, loadTokenInfo } from '../cli-args';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { addLiquidity, removeLiquidity } from '../../src/amm/amm';
+import { parseArgs, loadWallet, loadTokenInfo, printUsage } from '../cli-args';
 
 function showHelp() {
   console.log(`
@@ -11,55 +8,16 @@ Usage: npm run cli:amm:liquidity -- [options]
 
 Options:
   --help                    Show this help message
-  --wallet <path>          Path to wallet JSON file (default: wallets/creator-wallet.json)
-  --input-token <path>     Path to token info JSON file (default: wallets/token-info.json)
-  --pool-key <address>     Specific pool key to use (optional)
-  --action <add|remove>    Action to perform: add or remove liquidity (default: add)
-  --amount <number>        Amount for liquidity operation (default: 0.01 SOL for add, 50% for remove)
-  --slippage <number>      Slippage tolerance in basis points (default: 100)
+  --action <action>         Action to perform: 'add' or 'remove' (required)
+  --input-token <path>      Path to token-info.json file (required)
+  --amount <number>         Amount of tokens for liquidity operation (required)
+  --pool-key <address>      Pool key address (optional, will use from token info)
 
 Examples:
   npm run cli:amm:liquidity -- --help
-  npm run cli:amm:liquidity -- --action add --amount 0.05
-  npm run cli:amm:liquidity -- --action remove --amount 1000
-  npm run cli:amm:liquidity -- --pool-key <pool-address> --action add
+  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --amount 1000
+  npm run cli:amm:liquidity -- --action remove --input-token ./token-info.json --amount 500 --pool-key <pool-address>
 `);
-}
-
-function parseArgs() {
-  const args: any = {};
-  const argv = process.argv.slice(2);
-  
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    
-    switch (arg) {
-      case '--help':
-      case '-h':
-        args.help = true;
-        break;
-      case '--wallet':
-        args.wallet = argv[++i];
-        break;
-      case '--input-token':
-        args.inputToken = argv[++i];
-        break;
-      case '--pool-key':
-        args.poolKey = argv[++i];
-        break;
-      case '--action':
-        args.action = argv[++i];
-        break;
-      case '--amount':
-        args.amount = parseFloat(argv[++i]);
-        break;
-      case '--slippage':
-        args.slippage = parseInt(argv[++i]);
-        break;
-    }
-  }
-  
-  return args;
 }
 
 /**
@@ -67,102 +25,93 @@ function parseArgs() {
  */
 async function main() {
   const args = parseArgs();
-  
+
   if (args.help) {
     showHelp();
     return;
   }
 
+  // Validate required arguments
+  if (!args.action || !args.inputToken || !args.amount) {
+    console.error('❌ Error: --action, --input-token, and --amount are required');
+    printUsage('cli:amm:liquidity');
+    return;
+  }
+
+  if (!['add', 'remove'].includes(args.action)) {
+    console.error('❌ Error: --action must be either "add" or "remove"');
+    return;
+  }
+
   try {
-    console.log('💧 AMM Liquidity Operations');
-    console.log('============================');
+    console.log(
+      `🏊 AMM Liquidity ${args.action.charAt(0).toUpperCase() + args.action.slice(1)} CLI`
+    );
+    console.log('=====================================');
+    console.log(`Action: ${args.action}`);
+    console.log(`Input Token: ${args.inputToken}`);
+    console.log(`Amount: ${args.amount}`);
+
+    // Setup connection
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    console.log('✅ Connected to Solana devnet');
 
     // Load token information
     const tokenInfo = loadTokenInfo(args.inputToken);
     console.log(`🎯 Token: ${tokenInfo.name || 'Unknown'} (${tokenInfo.symbol || 'Unknown'})`);
     console.log(`📍 Token Mint: ${tokenInfo.mint}`);
-    if (tokenInfo.poolKey) {
-      console.log(`🏊 Pool Key from config: ${tokenInfo.poolKey}`);
-    }
 
-    // Setup connection and wallet
-    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-    const wallet = loadWallet(args.wallet);
-    console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
+    // Load wallet
+    const wallet = loadWallet(args.inputToken);
+    console.log(`👛 Wallet: ${wallet.publicKey.toString()}`);
 
-    // Check wallet balance
-    const balance = await connection.getBalance(wallet.publicKey);
-    console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-
-    if (balance < 0.2 * LAMPORTS_PER_SOL) {
-      console.log('⚠️ Wallet balance is low. Need at least 0.2 SOL for liquidity operations.');
+    // Determine pool key
+    let poolKey: PublicKey;
+    if (args.poolKey) {
+      poolKey = new PublicKey(args.poolKey);
+      console.log(`🏊 Pool Key: ${poolKey.toString()}`);
+    } else if (tokenInfo.poolKey) {
+      poolKey = new PublicKey(tokenInfo.poolKey);
+      console.log(`🏊 Pool Key: ${poolKey.toString()} (from token info)`);
+    } else {
+      console.error('❌ Error: No pool key provided and none found in token info');
+      console.log('💡 Use --pool-key to specify a pool address');
       return;
     }
 
-    let poolKey: PublicKey;
+    // Execute liquidity operation
+    console.log(`\n🚀 Executing ${args.action} liquidity operation...`);
 
-    // If pool key is provided via args, use it
-    if (args.poolKey) {
-      poolKey = new PublicKey(args.poolKey);
-      console.log(`🏊 Using provided pool key: ${poolKey.toString()}`);
-    }
-    // If pool key is in token info, use it
-    else if (tokenInfo.poolKey) {
-      poolKey = new PublicKey(tokenInfo.poolKey);
-      console.log(`🏊 Using pool key from config: ${poolKey.toString()}`);
-    }
-    // Otherwise search for pools
-    else {
-      console.log('🔍 Searching for AMM pools for this token...');
-      const tokenMint = new PublicKey(tokenInfo.mint);
-      const pools = await findPoolsForToken(connection, tokenMint);
+    if (args.action === 'add') {
+      const result = await addLiquidity(
+        connection,
+        wallet,
+        poolKey,
+        new PublicKey(tokenInfo.mint),
+        args.amount
+      );
 
-      if (pools.length === 0) {
-        console.log('❌ No AMM pools found for this token');
-        console.log('💡 The token may not have been migrated to AMM yet');
-        return;
-      }
-
-      console.log(`✅ Found ${pools.length} AMM pool(s) for this token`);
-      poolKey = pools[0];
-      console.log(`🏊 Using first pool: ${poolKey.toString()}`);
-    }
-
-    const action = args.action || 'add';
-    const amount = args.amount || (action === 'add' ? 0.01 : undefined);
-    const slippage = args.slippage || 100;
-
-    if (action === 'add') {
-      console.log('\n💧 Adding Liquidity...');
-      console.log(`📊 Amount: ${amount} SOL`);
-      console.log(`📊 Slippage tolerance: ${slippage} basis points (${slippage / 100}%)`);
-
-      const addResult = await addLiquidity(connection, wallet, poolKey, amount, slippage);
-
-      if (addResult.success) {
-        console.log('✅ Add liquidity successful!');
-        console.log(`📊 Transaction signature: ${addResult.signature}`);
-        console.log(`🪙 LP tokens received: ${addResult.lpTokenAmount}`);
+      if (result.success) {
+        console.log('✅ Liquidity added successfully');
+        console.log(`📝 Transaction signature: ${result.signature}`);
       } else {
-        console.log(`❌ Add liquidity failed: ${addResult.error}`);
-      }
-    } else if (action === 'remove') {
-      console.log('\n💸 Removing Liquidity...');
-      console.log(`📊 LP Token Amount: ${amount}`);
-      console.log(`📊 Slippage tolerance: ${slippage} basis points (${slippage / 100}%)`);
-
-      const removeResult = await removeLiquidity(connection, wallet, poolKey, amount, slippage);
-
-      if (removeResult.success) {
-        console.log('✅ Remove liquidity successful!');
-        console.log(`📊 Transaction signature: ${removeResult.signature}`);
-        console.log(`💰 Base tokens received: ${removeResult.baseAmount}`);
-        console.log(`💰 Quote tokens received: ${removeResult.quoteAmount}`);
-      } else {
-        console.log(`❌ Remove liquidity failed: ${removeResult.error}`);
+        console.log(`❌ Failed to add liquidity: ${result.error}`);
       }
     } else {
-      console.log(`❌ Invalid action: ${action}. Use 'add' or 'remove'`);
+      const result = await removeLiquidity(
+        connection,
+        wallet,
+        poolKey,
+        new PublicKey(tokenInfo.mint),
+        args.amount
+      );
+
+      if (result.success) {
+        console.log('✅ Liquidity removed successfully');
+        console.log(`📝 Transaction signature: ${result.signature}`);
+      } else {
+        console.log(`❌ Failed to remove liquidity: ${result.error}`);
+      }
     }
   } catch (error) {
     console.error(`❌ Error: ${error}`);

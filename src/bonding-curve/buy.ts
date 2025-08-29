@@ -1,18 +1,12 @@
-import {
-  Connection,
-  PublicKey,
-  Keypair,
-  Transaction,
-  TransactionInstruction,
-} from '@solana/web3.js';
-import BN from 'bn.js';
-import { getOrCreateAssociatedTokenAccount } from '../createAccount';
-import { deriveBondingCurveAddress, getAllRequiredPDAsForBuy, ensureBondingCurveAtas } from './helper';
-import { PUMP_PROGRAM_ID } from './constants';
-import { debugLog, log, logError, logSignature, logSuccess } from '../utils/debug';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
+import { getAllRequiredPDAsForBuy, ensureBondingCurveAtas } from './bc-helper';
 import { createBondingCurveBuyInstructionAssuming } from './instructions';
+import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import { debugLog, logError, log, logSuccess, logSignature } from '../utils/debug';
+import BN from 'bn.js';
+import { PUMP_PROGRAM_ID } from './constants';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { getOrCreateAssociatedTokenAccount } from '../createAccount';
+import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
 
 /**
  * Common setup for buy operations - gets PDAs and ensures ATAs exist
@@ -75,46 +69,6 @@ async function setupBuyOperation(
 }
 
 /**
- * Ensure required ATAs for buy flow (user and bonding curve)
- * - When assumeAccountsExist is true, this performs no RPC and only logs
- * - Otherwise, it will create missing ATAs as needed
- */
-async function ensureUserAndBondingCurveAtas(
-  connection: Connection,
-  wallet: Keypair,
-  mint: PublicKey,
-): Promise<void> {
-  // Setup user ATA
-  debugLog('👤 Ensuring user associated token account...');
-  const userAtaResult = await getOrCreateAssociatedTokenAccount(
-    connection,
-    wallet,
-    wallet.publicKey,
-    mint
-  );
-  if (!userAtaResult.success) {
-    throw new Error(`Failed to create user ATA: ${userAtaResult.error}`);
-  }
-  debugLog(`✅ User ATA ready: ${userAtaResult.account.toString()}`);
-
-  // Setup bonding curve ATA
-  const [bondingCurve] = deriveBondingCurveAddress(mint);
-  debugLog(`📈 Derived bonding curve: ${bondingCurve.toString()}`);
-  debugLog('🔗 Ensuring bonding curve associated token account...');
-  const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
-    connection,
-    wallet,
-    bondingCurve,
-    mint,
-    true // allowOwnerOffCurve
-  );
-  if (!bondingCurveAtaResult.success) {
-    throw new Error(`Failed to create bonding curve ATA: ${bondingCurveAtaResult.error}`);
-  }
-  debugLog(`✅ Bonding curve ATA ready: ${bondingCurveAtaResult.account.toString()}`);
-}
-
-/**
  * Create complete buy instruction with robust PDA resolution
  */
 async function createCompleteBuyInstruction(
@@ -159,7 +113,9 @@ export async function buyPumpFunToken(
 
     try {
       // Setup the buy operation (deterministic addresses only when batching)
-      const setupResult = await setupBuyOperation(connection, wallet, mint, { assumeAccountsExist: true });
+      const setupResult = await setupBuyOperation(connection, wallet, mint, {
+        assumeAccountsExist: true,
+      });
       if (!setupResult.success) {
         throw new Error(`Setup failed: ${setupResult.error}`);
       }

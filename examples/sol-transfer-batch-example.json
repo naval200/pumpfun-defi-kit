@@ -1,0 +1,31 @@
+[
+  {
+    "type": "sol-transfer",
+    "id": "sol-transfer-1",
+    "description": "Send 0.01 SOL to recipient 1",
+    "params": {
+      "recipient": "11111111111111111111111111111111",
+      "lamports": 10000000
+    }
+  },
+  {
+    "type": "sol-transfer",
+    "id": "sol-transfer-2",
+    "description": "Send 0.02 SOL to recipient 2",
+    "params": {
+      "recipient": "22222222222222222222222222222222",
+      "lamports": 20000000
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "token-transfer-1",
+    "description": "Send 100 tokens to user A",
+    "params": {
+      "recipient": "33333333333333333333333333333333",
+      "mint": "44444444444444444444444444444444",
+      "amount": "100000000",
+      "createAccount": true
+    }
+  }
+]

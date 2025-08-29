@@ -64,7 +64,9 @@ export async function buyTokens(
 
     if (options?.assumeAccountsExist) {
       debugLog('⛔ Assuming accounts exist: filtering out ATA creation instructions for AMM buy');
-      instructions = instructions.filter(ix => ix.programId.toString() !== ASSOCIATED_TOKEN_PROGRAM_ID.toString());
+      instructions = instructions.filter(
+        ix => ix.programId.toString() !== ASSOCIATED_TOKEN_PROGRAM_ID.toString()
+      );
     }
 
     // Send transaction with retry logic
@@ -144,8 +146,12 @@ export async function createSignedAmmBuyTransaction(
     );
 
     if (options?.assumeAccountsExist) {
-      debugLog('⛔ Assuming accounts exist: filtering ATA creation instructions for signed AMM buy');
-      instructions = instructions.filter(ix => ix.programId.toString() !== ASSOCIATED_TOKEN_PROGRAM_ID.toString());
+      debugLog(
+        '⛔ Assuming accounts exist: filtering ATA creation instructions for signed AMM buy'
+      );
+      instructions = instructions.filter(
+        ix => ix.programId.toString() !== ASSOCIATED_TOKEN_PROGRAM_ID.toString()
+      );
     }
 
     // Create transaction

@@ -70,7 +70,7 @@ export async function createToken() {
     if (createResult.success && createResult.mintKeypair) {
       const mint = createResult.mintKeypair;
       const tokenAddress = createResult.mint || mint.publicKey.toString();
-      
+
       // Derive bonding curve address from mint (this is how it works in PumpFun)
       const [bondingCurveAddress] = deriveBondingCurveAddress(mint.publicKey);
 

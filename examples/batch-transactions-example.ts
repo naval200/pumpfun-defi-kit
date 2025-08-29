@@ -3,7 +3,7 @@
 /**
  * Example script demonstrating how to use the Batch Transactions API
  * This script shows how to create and execute batch operations programmatically
- * 
+ *
  * Note: Currently only supports consuming operations (transfers, sell-amm, sell-bonding-curve)
  * Buy operations cannot be batched together as they have different dependencies
  */
@@ -25,8 +25,8 @@ const exampleOperations = [
       recipient: '11111111111111111111111111111111',
       mint: '22222222222222222222222222222222',
       amount: '100000000',
-      createAccount: true
-    }
+      createAccount: true,
+    },
   },
   {
     type: 'transfer',
@@ -36,8 +36,8 @@ const exampleOperations = [
       recipient: '33333333333333333333333333333333',
       mint: '22222222222222222222222222222222',
       amount: '50000000',
-      createAccount: false
-    }
+      createAccount: false,
+    },
   },
   {
     type: 'sell-amm',
@@ -46,8 +46,8 @@ const exampleOperations = [
     params: {
       poolKey: '44444444444444444444444444444444',
       amount: 1000,
-      slippage: 1
-    }
+      slippage: 1,
+    },
   },
   {
     type: 'sell-bonding-curve',
@@ -56,9 +56,9 @@ const exampleOperations = [
     params: {
       mint: '22222222222222222222222222222222',
       amount: 500,
-      slippage: 1000
-    }
-  }
+      slippage: 1000,
+    },
+  },
 ];
 
 /**
@@ -66,7 +66,7 @@ const exampleOperations = [
  */
 function createExampleOperationsFile(): void {
   const outputPath = path.join(__dirname, 'batch-operations-example.json');
-  
+
   try {
     fs.writeFileSync(outputPath, JSON.stringify(exampleOperations, null, 2));
     console.log(`✅ Example operations file created: ${outputPath}`);
@@ -80,15 +80,15 @@ function createExampleOperationsFile(): void {
  */
 function validateOperations(operations: any[]): boolean {
   console.log('🔍 Validating operations structure...');
-  
+
   const validation = validateBatchOperations(operations);
-  
+
   if (!validation.valid) {
     console.error('❌ Validation errors found:');
     validation.errors.forEach(error => console.error(`  - ${error}`));
     return false;
   }
-  
+
   console.log('✅ All operations are valid');
   return true;
 }
@@ -99,25 +99,25 @@ function validateOperations(operations: any[]): boolean {
 function displayOperationsSummary(operations: any[]): void {
   console.log('\n📋 Operations Summary:');
   console.log('=======================');
-  
+
   const typeCounts: { [key: string]: number } = {};
   operations.forEach(op => {
     typeCounts[op.type] = (typeCounts[op.type] || 0) + 1;
   });
-  
+
   Object.entries(typeCounts).forEach(([type, count]) => {
     console.log(`${type}: ${count} operations`);
   });
-  
+
   console.log(`\nTotal: ${operations.length} operations`);
-  
+
   // Show first few operations as examples
   console.log('\n📝 Sample Operations:');
   operations.slice(0, 3).forEach((op, index) => {
     console.log(`  ${index + 1}. [${op.type.toUpperCase()}] ${op.description}`);
     console.log(`     ID: ${op.id}`);
   });
-  
+
   if (operations.length > 3) {
     console.log(`  ... and ${operations.length - 3} more operations`);
   }
@@ -129,7 +129,7 @@ function displayOperationsSummary(operations: any[]): void {
 function generateApiExamples(): void {
   console.log('\n🚀 Programmatic API Usage Examples:');
   console.log('===================================');
-  
+
   console.log('\n1. Basic batch execution:');
   console.log('const results = await batchTransactions(');
   console.log('  connection,');
@@ -138,7 +138,7 @@ function generateApiExamples(): void {
   console.log('  feePayer,');
   console.log('  { maxParallel: 3 }');
   console.log(');');
-  
+
   console.log('\n2. With custom options:');
   console.log('const results = await batchTransactions(');
   console.log('  connection,');
@@ -152,7 +152,7 @@ function generateApiExamples(): void {
   console.log('    maxTransferInstructionsPerTx: 15');
   console.log('  }');
   console.log(');');
-  
+
   console.log('\n3. Validate operations before execution:');
   console.log('const validation = validateBatchOperations(operations);');
   console.log('if (validation.valid) {');
@@ -179,33 +179,32 @@ function displayLimitations(): void {
 async function main(): Promise<void> {
   console.log('🚀 Batch Transactions Example');
   console.log('============================');
-  
+
   try {
     // Create example operations file
     createExampleOperationsFile();
-    
+
     // Validate operations
     if (!validateOperations(exampleOperations)) {
       console.error('❌ Operations validation failed');
       return;
     }
-    
+
     // Display summary
     displayOperationsSummary(exampleOperations);
-    
+
     // Display limitations
     displayLimitations();
-    
+
     // Generate API examples
     generateApiExamples();
-    
+
     console.log('\n✅ Example setup complete!');
     console.log('\n💡 Next steps:');
     console.log('  1. Create a fee payer wallet with sufficient SOL');
     console.log('  2. Update the operations file with real addresses and amounts');
     console.log('  3. Use the programmatic API shown above');
     console.log('  4. Monitor the execution progress and results');
-    
   } catch (error) {
     console.error(`❌ Error in example setup: ${error}`);
   }

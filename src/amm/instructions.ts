@@ -26,5 +26,3 @@ export async function createAmmSellInstructionsAssuming(
   const base = BN.isBN(baseAmount) ? (baseAmount as BN) : new BN(baseAmount);
   return await pumpAmmSdk.sellBaseInput(swapSolanaState, base, slippage);
 }
-
-

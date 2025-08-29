@@ -1,6 +1,6 @@
 import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
 import BN from 'bn.js';
-import { deriveBondingCurveAddress, ensureBondingCurveAtas } from './helper';
+import { deriveBondingCurveAddress, ensureBondingCurveAtas } from './bc-helper';
 import { debugLog, log, logError, logSignature, logSuccess } from '../utils/debug';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
@@ -148,7 +148,11 @@ export async function sellPumpFunToken(
   tokenAmount: number,
   feePayer?: Keypair,
   slippageBasisPoints: number = 1000,
-  options?: { assumeAccountsExist?: boolean; assumeBalanceExists?: boolean; minSolOutputLamports?: number }
+  options?: {
+    assumeAccountsExist?: boolean;
+    assumeBalanceExists?: boolean;
+    minSolOutputLamports?: number;
+  }
 ): Promise<string> {
   log('💸 Setting up sell transaction...');
 
@@ -178,9 +182,15 @@ export async function sellPumpFunToken(
 
     try {
       // Compute expected SOL output (allow override to skip RPC)
-      const minSol = options?.minSolOutputLamports !== undefined
-        ? new BN(options.minSolOutputLamports)
-        : await calculateExpectedSolOutput(connection, mint, new BN(tokenAmount), slippageBasisPoints);
+      const minSol =
+        options?.minSolOutputLamports !== undefined
+          ? new BN(options.minSolOutputLamports)
+          : await calculateExpectedSolOutput(
+              connection,
+              mint,
+              new BN(tokenAmount),
+              slippageBasisPoints
+            );
       debugLog(`🔧 Calculated expected SOL output: ${minSol.toString()} lamports`);
       debugLog(`📊 Applied slippage: ${slippageBasisPoints} basis points`);
 

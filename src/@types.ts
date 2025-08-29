@@ -123,3 +123,20 @@ export interface GenericBatchOperation {
   description: string;
   params: Record<string, any>;
 }
+
+/**
+ * SOL transfer options
+ */
+export interface SendSolOptions {
+  maxRetries?: number;
+  retryDelay?: number;
+}
+
+/**
+ * SOL transfer result
+ */
+export interface SendSolResult {
+  success: boolean;
+  signature?: string;
+  error?: string;
+}

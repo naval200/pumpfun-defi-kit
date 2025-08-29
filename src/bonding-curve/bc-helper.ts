@@ -350,7 +350,6 @@ export async function ensureBondingCurveAtas(
   wallet: Keypair,
   mint: PublicKey
 ): Promise<void> {
-
   // Ensure user ATA
   const userAtaResult = await getOrCreateAssociatedTokenAccount(
     connection,

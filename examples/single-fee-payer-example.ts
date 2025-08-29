@@ -5,7 +5,10 @@
  * This shows how one fee payer wallet handles all transaction fees in a batch
  */
 
-import { executePumpFunBatch as batchTransactions, validatePumpFunBatchOperations as validateBatchOperations } from '../src/batch';
+import {
+  executePumpFunBatch as batchTransactions,
+  validatePumpFunBatchOperations as validateBatchOperations,
+} from '../src/batch';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import type { BatchOperation } from '../src/@types';
 
@@ -25,8 +28,8 @@ const exampleOperations: BatchOperation[] = [
       recipient: '11111111111111111111111111111111',
       mint: '22222222222222222222222222222222',
       amount: '100000000',
-      createAccount: true
-    }
+      createAccount: true,
+    },
   },
   {
     type: 'sell-amm',
@@ -35,9 +38,9 @@ const exampleOperations: BatchOperation[] = [
     params: {
       poolKey: '44444444444444444444444444444444',
       amount: 1000,
-      slippage: 1
-    }
-  }
+      slippage: 1,
+    },
+  },
 ];
 
 /**
@@ -46,19 +49,19 @@ const exampleOperations: BatchOperation[] = [
 async function main() {
   console.log('🚀 Single Fee Payer Batch Transactions Example');
   console.log('=============================================');
-  
+
   try {
     // Setup connection (devnet for testing)
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-    
+
     // In a real scenario, you would load these from wallet files
     const wallet = Keypair.generate(); // Main wallet with tokens
     const feePayer = Keypair.generate(); // Dedicated fee payer wallet
-    
+
     console.log(`👛 Main wallet: ${wallet.publicKey.toString()}`);
     console.log(`💸 Fee payer wallet: ${feePayer.publicKey.toString()}`);
     console.log('');
-    
+
     // Key benefits of single fee payer approach
     console.log('🎯 Benefits of Single Fee Payer:');
     console.log('  ✅ Consistent fee handling across all operations');
@@ -67,25 +70,25 @@ async function main() {
     console.log('  ✅ Single point of control for transaction fees');
     console.log('  ✅ Better for automated/scripted operations');
     console.log('');
-    
+
     // Validate operations
     console.log('🔍 Validating operations...');
     const validation = validateBatchOperations(exampleOperations);
-    
+
     if (!validation.valid) {
       console.error('❌ Operations validation failed:');
       validation.errors.forEach(error => console.error(`  - ${error}`));
       return;
     }
-    
+
     console.log('✅ All operations are valid');
-    
+
     // Display operations summary
     console.log('\n📋 Operations to execute:');
     exampleOperations.forEach((op, index) => {
       console.log(`  ${index + 1}. [${op.type.toUpperCase()}] ${op.description}`);
       console.log(`     ID: ${op.id}`);
-      
+
       // Show operation-specific details
       switch (op.type) {
         case 'transfer':
@@ -100,37 +103,39 @@ async function main() {
           break;
       }
     });
-    
+
     console.log('\n💡 Note: All operations will use the same fee payer wallet');
     console.log('   This ensures consistent fee handling and efficient processing');
-    console.log('   The batch includes ALL operation types - transfers, AMM ops, and bonding curve ops!');
-    
+    console.log(
+      '   The batch includes ALL operation types - transfers, AMM ops, and bonding curve ops!'
+    );
+
     // Execute batch transactions with single fee payer
     console.log('\n🚀 Executing batch transactions...');
-    
+
     const results = await batchTransactions(
       connection,
-      wallet,        // Main wallet (has tokens for operations)
+      wallet, // Main wallet (has tokens for operations)
       exampleOperations,
-      feePayer,      // Single fee payer for ALL transactions
+      feePayer, // Single fee payer for ALL transactions
       {
-        maxParallel: 2,        // Execute 2 operations at a time
-        delayBetween: 1000,    // 1 second delay between batches
-        retryFailed: true      // Retry failed operations
+        maxParallel: 2, // Execute 2 operations at a time
+        delayBetween: 1000, // 1 second delay between batches
+        retryFailed: true, // Retry failed operations
       }
     );
-    
+
     // Display results
     console.log('\n📊 Execution Results:');
     console.log('======================');
-    
+
     const successful = results.filter(r => r.success);
     const failed = results.filter(r => !r.success);
-    
+
     console.log(`✅ Successful: ${successful.length}`);
     console.log(`❌ Failed: ${failed.length}`);
     console.log(`📈 Success Rate: ${((successful.length / results.length) * 100).toFixed(1)}%`);
-    
+
     if (successful.length > 0) {
       console.log('\n✅ Successful Operations:');
       successful.forEach(result => {
@@ -142,7 +147,7 @@ async function main() {
         }
       });
     }
-    
+
     if (failed.length > 0) {
       console.log('\n❌ Failed Operations:');
       failed.forEach(result => {
@@ -150,7 +155,7 @@ async function main() {
         console.log(`    Error: ${result.error}`);
       });
     }
-    
+
     console.log('\n🎉 Batch execution complete!');
     console.log('\n💡 Key Points:');
     console.log('  • All transactions used the same fee payer wallet');
@@ -158,7 +163,6 @@ async function main() {
     console.log('  • This ensures efficient batch processing');
     console.log('  • Fee payer only needs sufficient SOL for transaction fees');
     console.log('  • Main wallet needs tokens for the actual operations');
-    
   } catch (error) {
     console.error('❌ Error executing batch transactions:', error);
   }
@@ -170,17 +174,17 @@ async function main() {
 function explainWalletConfigurations() {
   console.log('\n🔧 Wallet Configuration Examples:');
   console.log('==================================');
-  
+
   console.log('\n1. Separate Fee Payer (Recommended for production):');
   console.log('   • Main wallet: Holds tokens for operations');
   console.log('   • Fee payer: Dedicated wallet with SOL for fees');
   console.log('   • Benefits: Better security, easier cost tracking');
-  
+
   console.log('\n2. Same Wallet (Simpler setup):');
   console.log('   • Main wallet: Also acts as fee payer');
   console.log('   • Must have both tokens AND sufficient SOL for fees');
   console.log('   • Benefits: Simpler, fewer wallets to manage');
-  
+
   console.log('\n3. Multiple Fee Payers (Advanced):');
   console.log('   • Different fee payers for different operation types');
   console.log('   • More complex but offers flexibility');

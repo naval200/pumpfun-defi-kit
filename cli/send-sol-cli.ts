@@ -26,10 +26,10 @@ Examples:
 function parseArgs() {
   const args: any = {};
   const argv = process.argv.slice(2);
-  
+
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    
+
     switch (arg) {
       case '--help':
       case '-h':
@@ -52,7 +52,7 @@ function parseArgs() {
         break;
     }
   }
-  
+
   return args;
 }
 
@@ -61,7 +61,7 @@ function parseArgs() {
  */
 async function main() {
   const args = parseArgs();
-  
+
   if (args.help) {
     showHelp();
     return;
@@ -127,12 +127,14 @@ async function main() {
     // Check source wallet balance
     const balance = await connection.getBalance(fromWallet.publicKey);
     const amountLamports = Math.floor(args.amount * LAMPORTS_PER_SOL);
-    
+
     console.log(`💰 Source wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
     console.log(`📊 Transfer amount: ${args.amount} SOL (${amountLamports} lamports)`);
 
     if (balance < amountLamports) {
-      console.error(`❌ Insufficient balance. Available: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL, Required: ${args.amount} SOL`);
+      console.error(
+        `❌ Insufficient balance. Available: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL, Required: ${args.amount} SOL`
+      );
       return;
     }
 
@@ -140,7 +142,9 @@ async function main() {
       console.log('\n🔍 DRY RUN - Would execute the following:');
       console.log(`  • Send ${args.amount} SOL from ${fromWallet.publicKey.toString()}`);
       console.log(`  • To: ${toAddress.toString()}`);
-      console.log(`  • Fee payer: ${feePayer ? feePayer.publicKey.toString() : fromWallet.publicKey.toString()}`);
+      console.log(
+        `  • Fee payer: ${feePayer ? feePayer.publicKey.toString() : fromWallet.publicKey.toString()}`
+      );
       console.log('✅ Dry run completed - no transactions sent');
       return;
     }
@@ -152,7 +156,7 @@ async function main() {
       fromWallet,
       toAddress,
       args.amount,
-      { feePayer }
+      feePayer
     );
 
     if (result.success) {
@@ -162,7 +166,6 @@ async function main() {
     } else {
       console.log(`❌ SOL transfer failed: ${result.error}`);
     }
-
   } catch (error) {
     console.error(`❌ Error: ${error}`);
   }

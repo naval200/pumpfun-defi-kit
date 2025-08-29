@@ -13,9 +13,11 @@ import path from 'path';
 async function checkWalletBalances() {
   try {
     const args = parseArgs();
-    
+
     if (args.help) {
-      console.log('Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path> [--mint <token-mint>]');
+      console.log(
+        'Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path> [--mint <token-mint>]'
+      );
       console.log('  --wallet <path>     Path to wallet JSON file (required)');
       console.log('  --mint <mint>       Specific token mint to check (optional)');
       console.log('  --help              Show this help message');
@@ -32,9 +34,7 @@ async function checkWalletBalances() {
     let walletKeypair: Keypair;
     try {
       const walletData = fs.readFileSync(args.wallet, 'utf8');
-      walletKeypair = Keypair.fromSecretKey(
-        new Uint8Array(JSON.parse(walletData))
-      );
+      walletKeypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(walletData)));
     } catch (error) {
       logError('❌ Failed to load wallet:', error);
       return;
@@ -56,7 +56,10 @@ async function checkWalletBalances() {
     if (args.mint) {
       try {
         const mintPublicKey = new PublicKey(args.mint);
-        const tokenAccount = await getAssociatedTokenAddress(mintPublicKey, walletKeypair.publicKey);
+        const tokenAccount = await getAssociatedTokenAddress(
+          mintPublicKey,
+          walletKeypair.publicKey
+        );
 
         debugLog(`🪙 Checking specific token: ${args.mint}`);
         debugLog(`   Token Account: ${tokenAccount.toString()}`);
@@ -65,7 +68,7 @@ async function checkWalletBalances() {
           const accountInfo = await getAccount(connection, tokenAccount);
           debugLog(`   ✅ Token Account found`);
           debugLog(`   💰 Balance: ${accountInfo.amount}`);
-          
+
           if (Number(accountInfo.amount) > 0) {
             debugLog(`   🎯 Has tokens!`);
           } else {
@@ -83,7 +86,7 @@ async function checkWalletBalances() {
       debugLog('🔍 Checking for all SPL tokens...');
       try {
         const tokenAccounts = await connection.getTokenAccountsByOwner(walletKeypair.publicKey, {
-          programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+          programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
         });
 
         if (tokenAccounts.value.length > 0) {
@@ -92,8 +95,10 @@ async function checkWalletBalances() {
             try {
               const accountInfo = await getAccount(connection, account.pubkey);
               const mintInfo = await getMint(connection, accountInfo.mint);
-              debugLog(`   🪙 ${accountInfo.mint.toString()} - Balance: ${accountInfo.amount} (${mintInfo.decimals} decimals)`);
-              
+              debugLog(
+                `   🪙 ${accountInfo.mint.toString()} - Balance: ${accountInfo.amount} (${mintInfo.decimals} decimals)`
+              );
+
               if (Number(accountInfo.amount) > 0) {
                 const actualBalance = Number(accountInfo.amount) / Math.pow(10, mintInfo.decimals);
                 debugLog(`      💰 Actual Balance: ${actualBalance.toFixed(6)}`);
@@ -109,7 +114,6 @@ async function checkWalletBalances() {
         debugLog(`⚠️ Error checking SPL tokens: ${error}`);
       }
     }
-
   } catch (error) {
     logError('❌ Error checking balances:', error);
   }

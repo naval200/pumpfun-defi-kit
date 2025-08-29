@@ -1,17 +1,35 @@
-import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
+import {
+  Connection,
+  PublicKey,
+  Keypair,
+  Transaction,
+  SystemProgram,
+} from '@solana/web3.js';
+import {
+  getAssociatedTokenAddressSync,
+  createTransferInstruction,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
+import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
+import BN from 'bn.js';
+
+import {
+  buyTokens as buyAmmTokens,
+  sellTokens,
+  createAmmBuyInstructionsAssuming,
+  createAmmSellInstructionsAssuming,
+} from '../amm';
+import {
+  buyPumpFunToken,
+  createSignedSellTransaction,
+  createBondingCurveBuyInstructionAssuming,
+  createBondingCurveSellInstructionAssuming,
+} from '../bonding-curve';
+import { chunkArray } from './batch-helper';
+import { sendLamports } from '../utils/transaction';
 import { debugLog, logError } from '../utils/debug';
 import type { BatchOperation, BatchResult, BatchExecutionOptions } from '../@types';
 import { sendToken, sendTokenWithAccountCreation } from '../sendToken';
-import { buyTokens as buyAmmTokens, createSignedAmmBuyTransaction } from '../amm/buy';
-import { buyPumpFunToken, createSignedBuyTransaction } from '../bonding-curve/buy';
-import { sellTokens } from '../amm';
-import { createSignedSellTransaction } from '../bonding-curve/sell';
-import { chunkArray } from './batch-helper';
-import { sendLamports } from '../utils/transaction';
-import { createBondingCurveBuyInstructionAssuming, createBondingCurveSellInstructionAssuming } from '../bonding-curve/instructions';
-import { createAmmBuyInstructionsAssuming, createAmmSellInstructionsAssuming } from '../amm/instructions';
-import { getAssociatedTokenAddressSync, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 
 // Re-export types for external use
 export type { BatchOperation, BatchResult, BatchExecutionOptions };
@@ -34,7 +52,13 @@ export async function executePumpFunBatch(
   feePayer?: Keypair,
   options: Partial<BatchExecutionOptions> = {}
 ): Promise<BatchResult[]> {
-  const { maxParallel = 3, delayBetween = 1000, retryFailed = false, combinePerBatch = false, assumeAccountsExist = true } = options;
+  const {
+    maxParallel = 3,
+    delayBetween = 1000,
+    retryFailed = false,
+    combinePerBatch = false,
+    assumeAccountsExist = true,
+  } = options;
   const results: BatchResult[] = [];
 
   debugLog(`🚀 Executing ${operations.length} PumpFun operations in batches of ${maxParallel}`);
@@ -57,13 +81,15 @@ export async function executePumpFunBatch(
 
       for (const op of batch) {
         const senderPubkey = (op.sender || wallet.publicKey.toString()).toString();
-        const sender = op.sender ? Keypair.fromSecretKey(Uint8Array.from(JSON.parse(op.sender))) : wallet;
+        const sender = op.sender
+          ? Keypair.fromSecretKey(Uint8Array.from(JSON.parse(op.sender)))
+          : wallet;
         const entry = groupedBySender.get(senderPubkey) || { sender, ops: [] };
         entry.ops.push(op);
         groupedBySender.set(senderPubkey, entry);
       }
 
-      for (const [senderPubkey, group] of groupedBySender) {
+      for (const [_, group] of groupedBySender) {
         try {
           const instructions: any[] = [];
           const sender = group.sender;
@@ -73,9 +99,18 @@ export async function executePumpFunBatch(
             switch (operation.type) {
               case 'transfer': {
                 const { recipient, mint, amount } = operation.params;
-                if (!assumeAccountsExist) throw new Error('combinePerBatch requires assumeAccountsExist for transfers');
-                const sourceAta = getAssociatedTokenAddressSync(new PublicKey(mint), sender.publicKey, false);
-                const destAta = getAssociatedTokenAddressSync(new PublicKey(mint), new PublicKey(recipient), false);
+                if (!assumeAccountsExist)
+                  throw new Error('combinePerBatch requires assumeAccountsExist for transfers');
+                const sourceAta = getAssociatedTokenAddressSync(
+                  new PublicKey(mint),
+                  sender.publicKey,
+                  false
+                );
+                const destAta = getAssociatedTokenAddressSync(
+                  new PublicKey(mint),
+                  new PublicKey(recipient),
+                  false
+                );
                 instructions.push(
                   createTransferInstruction(
                     sourceAta,
@@ -91,7 +126,6 @@ export async function executePumpFunBatch(
               case 'sol-transfer': {
                 const { recipient, lamports } = operation.params;
                 // Build a SystemProgram transfer inside a combined tx
-                const { SystemProgram } = await import('@solana/web3.js');
                 instructions.push(
                   SystemProgram.transfer({
                     fromPubkey: sender.publicKey,
@@ -107,7 +141,7 @@ export async function executePumpFunBatch(
                   createBondingCurveBuyInstructionAssuming(
                     sender.publicKey,
                     new PublicKey(mint),
-                    new (await import('bn.js')).default(Number(solAmount) * 1e9),
+                    new BN(Number(solAmount) * 1e9),
                     Number(slippage)
                   )
                 );
@@ -119,15 +153,17 @@ export async function executePumpFunBatch(
                   createBondingCurveSellInstructionAssuming(
                     sender.publicKey,
                     new PublicKey(mint),
-                    new (await import('bn.js')).default(Number(amount)),
-                    new (await import('bn.js')).default(Number(minSolOutputLamports))
+                    new BN(Number(amount)),
+                    new BN(Number(minSolOutputLamports))
                   )
                 );
                 break;
               }
               case 'buy-amm': {
                 const { poolKey, quoteAmount, slippage = 1, swapSolanaState } = operation.params;
-                const state = swapSolanaState || (await ammSdk.swapSolanaState(new PublicKey(poolKey), sender.publicKey));
+                const state =
+                  swapSolanaState ||
+                  (await ammSdk.swapSolanaState(new PublicKey(poolKey), sender.publicKey));
                 const ixs = await createAmmBuyInstructionsAssuming(
                   ammSdk,
                   state,
@@ -139,7 +175,9 @@ export async function executePumpFunBatch(
               }
               case 'sell-amm': {
                 const { poolKey, amount, slippage = 1, swapSolanaState } = operation.params;
-                const state = swapSolanaState || (await ammSdk.swapSolanaState(new PublicKey(poolKey), sender.publicKey));
+                const state =
+                  swapSolanaState ||
+                  (await ammSdk.swapSolanaState(new PublicKey(poolKey), sender.publicKey));
                 const ixs = await createAmmSellInstructionsAssuming(
                   ammSdk,
                   state,
@@ -177,7 +215,12 @@ export async function executePumpFunBatch(
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           group.ops.forEach(op => {
-            results.push({ operationId: op.id, type: op.type, success: false, error: errorMessage });
+            results.push({
+              operationId: op.id,
+              type: op.type,
+              success: false,
+              error: errorMessage,
+            });
           });
         }
       }
@@ -392,7 +435,10 @@ async function executeSolTransfer(
   const { recipient, lamports, sender } = params;
 
   try {
-    const senderKeypair = sender && sender !== wallet.publicKey.toString() ? Keypair.fromSecretKey(Buffer.from(JSON.parse(sender))) : wallet;
+    const senderKeypair =
+      sender && sender !== wallet.publicKey.toString()
+        ? Keypair.fromSecretKey(Buffer.from(JSON.parse(sender)))
+        : wallet;
     const signature = await sendLamports(
       connection,
       senderKeypair,
@@ -496,11 +542,7 @@ async function executeAmmSell(
 /**
  * Execute AMM buy with wallet paying its own fee and optional ATA skip
  */
-async function executeAmmBuy(
-  connection: Connection,
-  wallet: Keypair,
-  params: any
-): Promise<any> {
+async function executeAmmBuy(connection: Connection, wallet: Keypair, params: any): Promise<any> {
   const { poolKey, quoteAmount, slippage = 1, assumeAccountsExist = true } = params;
 
   try {

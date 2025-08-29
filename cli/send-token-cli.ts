@@ -19,7 +19,7 @@ async function sendTokenCli() {
       '  --amount <number>           Amount of tokens to send (required)',
       '  --wallet <path>             Path to wallet JSON file',
       '  --fee-payer <path>          Path to fee payer wallet JSON file (optional)',
-      '  --create-account            Create recipient account if it doesn\'t exist (default: true)',
+      "  --create-account            Create recipient account if it doesn't exist (default: true)",
     ]);
     return;
   }
@@ -78,9 +78,13 @@ async function sendTokenCli() {
     );
 
     if (canReceive.success && canReceive.recipientAccount) {
-      debugLog(`✅ Recipient already has a token account: ${canReceive.recipientAccount.toString()}`);
+      debugLog(
+        `✅ Recipient already has a token account: ${canReceive.recipientAccount.toString()}`
+      );
     } else if (args.createAccount !== false) {
-      debugLog(`ℹ️ Recipient doesn't have a token account, will create one if createAccount is true`);
+      debugLog(
+        `ℹ️ Recipient doesn't have a token account, will create one if createAccount is true`
+      );
     } else {
       logError('❌ Error: Recipient cannot receive tokens (invalid address or mint)');
       return;
@@ -110,7 +114,6 @@ async function sendTokenCli() {
     } else {
       logError(`❌ Token transfer failed: ${result.error}`);
     }
-
   } catch (error) {
     logError(`❌ Error: ${error}`);
   }

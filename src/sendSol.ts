@@ -10,18 +10,7 @@ import {
   SendTransactionError,
 } from '@solana/web3.js';
 import { debugLog, logError } from './utils/debug';
-
-export interface SendSolOptions {
-  feePayer?: Keypair;
-  maxRetries?: number;
-  retryDelay?: number;
-}
-
-export interface SendSolResult {
-  success: boolean;
-  signature?: string;
-  error?: string;
-}
+import { SendSolOptions, SendSolResult } from './@types';
 
 /**
  * Send SOL from one wallet to another
@@ -29,6 +18,7 @@ export interface SendSolResult {
  * @param fromWallet - Source wallet keypair
  * @param toAddress - Destination wallet public key
  * @param amountSol - Amount to send in SOL (will be converted to lamports)
+ * @param feePayer - Optional fee payer keypair (if different from sender)
  * @param options - Additional options
  * @returns SendSolResult with success status and signature or error
  */
@@ -37,6 +27,7 @@ export async function sendSol(
   fromWallet: Keypair,
   toAddress: PublicKey,
   amountSol: number,
+  feePayer?: Keypair,
   options: SendSolOptions = {}
 ): Promise<SendSolResult> {
   try {
@@ -74,11 +65,11 @@ export async function sendSol(
     // Get recent blockhash
     const { blockhash } = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash;
-    transaction.feePayer = options.feePayer?.publicKey || fromWallet.publicKey;
+    transaction.feePayer = feePayer?.publicKey || fromWallet.publicKey;
 
     // Sign transaction
-    if (options.feePayer && !options.feePayer.publicKey.equals(fromWallet.publicKey)) {
-      transaction.sign(fromWallet, options.feePayer);
+    if (feePayer && !feePayer.publicKey.equals(fromWallet.publicKey)) {
+      transaction.sign(fromWallet, feePayer);
     } else {
       transaction.sign(fromWallet);
     }
@@ -87,7 +78,7 @@ export async function sendSol(
     const signature = await sendAndConfirmTransaction(
       connection,
       transaction,
-      options.feePayer ? [fromWallet, options.feePayer] : [fromWallet],
+      feePayer ? [fromWallet, feePayer] : [fromWallet],
       {
         commitment: 'confirmed',
         maxRetries: options.maxRetries || 3,

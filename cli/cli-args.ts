@@ -33,10 +33,10 @@ export interface CliArgs {
 export function parseArgs(): CliArgs {
   const args: CliArgs = {};
   const argv = process.argv.slice(2);
-  
+
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    
+
     switch (arg) {
       case '--wallet':
       case '-w':
@@ -123,14 +123,14 @@ export function parseArgs(): CliArgs {
         break;
     }
   }
-  
+
   return args;
 }
 
 export function loadWallet(walletPath?: string): Keypair {
   const defaultWalletPath = path.join(process.cwd(), 'wallets', 'creator-wallet.json');
   const finalWalletPath = walletPath || defaultWalletPath;
-  
+
   try {
     const walletData = JSON.parse(fs.readFileSync(finalWalletPath, 'utf8'));
     return Keypair.fromSecretKey(Uint8Array.from(walletData));
@@ -141,7 +141,7 @@ export function loadWallet(walletPath?: string): Keypair {
 
 export function loadFeePayerWallet(feePayerPath?: string): Keypair | null {
   if (!feePayerPath) return null;
-  
+
   try {
     const walletData = JSON.parse(fs.readFileSync(feePayerPath, 'utf8'));
     return Keypair.fromSecretKey(Uint8Array.from(walletData));
@@ -153,7 +153,7 @@ export function loadFeePayerWallet(feePayerPath?: string): Keypair | null {
 export function loadTokenInfo(tokenPath?: string): any {
   const defaultTokenPath = path.join(process.cwd(), 'wallets', 'token-info.json');
   const finalTokenPath = tokenPath || defaultTokenPath;
-  
+
   try {
     return JSON.parse(fs.readFileSync(finalTokenPath, 'utf8'));
   } catch (error) {
