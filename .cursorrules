@@ -16,6 +16,7 @@ This is a PumpFun token creation and trading experiment on Solana devnet using T
 - Include comprehensive JSDoc comments
 - Use meaningful variable names
 - Follow Solana best practices for transaction handling
+- **NO lazy imports**: Always import modules at the top of the file, never use `await import()` or dynamic imports
 
 ## Architecture Patterns
 - Separate concerns: token creation, trading, utilities

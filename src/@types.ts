@@ -88,7 +88,6 @@ export interface BatchExecutionOptions {
   maxParallel?: number;
   delayBetween?: number;
   retryFailed?: boolean;
-  feePayer: Keypair;
   maxTransferInstructionsPerTx?: number;
 }
 

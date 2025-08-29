@@ -143,7 +143,7 @@ export async function createSignedAmmSellTransaction(
       const { blockhash: newBlockhash } = await connection.getLatestBlockhash('confirmed');
       transaction.recentBlockhash = newBlockhash;
     }
-    
+
     // Set fee payer (use feePayer if provided, otherwise use wallet)
     transaction.feePayer = feePayer ? feePayer.publicKey : wallet.publicKey;
 
@@ -157,16 +157,15 @@ export async function createSignedAmmSellTransaction(
     }
 
     debugLog('✅ Signed AMM sell transaction created successfully');
-    
+
     return {
       success: true,
       transaction,
     };
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logError(`Failed to create signed AMM sell transaction: ${errorMessage}`);
-    
+
     return {
       success: false,
       error: errorMessage,

@@ -6,7 +6,7 @@ import { uploadMetadata } from '../utils/metadata';
 import { log, logSuccess, logSignature, logError } from '../utils/debug';
 // getBondingCurveState moved to helper.ts
 import { buyPumpFunToken } from './buy';
-import { TokenConfig, CreateTokenResult } from '../types';
+import { TokenConfig, CreateTokenResult } from '../@types';
 import { sendAndConfirmRawTransaction, getExplorerUrl } from '../utils/transaction';
 import { getGlobalPDA, isGlobalAccountInitialized, initializeGlobalAccount } from './helper';
 import { PUMP_PROGRAM_ID } from './constants';

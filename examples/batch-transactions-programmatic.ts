@@ -28,16 +28,6 @@ const exampleOperations: BatchOperation[] = [
     }
   },
   {
-    type: 'buy-amm',
-    id: 'buy-amm-1',
-    description: 'Buy tokens from AMM pool 1',
-    params: {
-      poolKey: '44444444444444444444444444444444',
-      amount: 0.1,
-      slippage: 1
-    }
-  },
-  {
     type: 'sell-amm',
     id: 'sell-amm-1',
     description: 'Sell tokens to AMM pool 1',
@@ -48,12 +38,12 @@ const exampleOperations: BatchOperation[] = [
     }
   },
   {
-    type: 'buy-bonding-curve',
-    id: 'buy-bc-1',
-    description: 'Buy tokens via bonding curve',
+    type: 'sell-bonding-curve',
+    id: 'sell-bc-1',
+    description: 'Sell tokens via bonding curve',
     params: {
       mint: '66666666666666666666666666666666',
-      amount: 0.1,
+      amount: 500,
       slippage: 1000
     }
   }
@@ -172,12 +162,12 @@ function createDynamicOperations(): BatchOperation[] {
   
   // Add AMM operations
   operations.push({
-    type: 'buy-amm',
-    id: 'dynamic-buy-amm',
-    description: 'Dynamic AMM buy',
+    type: 'sell-amm',
+    id: 'dynamic-sell-amm',
+    description: 'Dynamic AMM sell',
     params: {
       poolKey: '44444444444444444444444444444444',
-      amount: 0.05,
+      amount: 500,
       slippage: 2
     }
   });
@@ -225,12 +215,12 @@ async function executeConditionalBatch(
     // Add more operations based on success
     const additionalOperations: BatchOperation[] = [
       {
-        type: 'buy-amm',
-        id: 'conditional-buy',
-        description: 'Conditional AMM buy',
+        type: 'sell-amm',
+        id: 'conditional-sell',
+        description: 'Conditional AMM sell',
         params: {
           poolKey: '44444444444444444444444444444444',
-          amount: 0.1,
+          amount: 1000,
           slippage: 1
         }
       }

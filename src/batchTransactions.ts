@@ -1,9 +1,12 @@
-import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
-import { debugLog, logError, logSuccess } from './utils/debug';
+import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import { debugLog, logError } from './utils/debug';
 import type { BatchOperation, BatchResult, BatchExecutionOptions } from './@types';
-import { createTransferInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
-import { createSignedAmmSellTransaction } from './amm/sell';
+import { sendToken, sendTokenWithAccountCreation } from './sendToken';
+import { sellTokens } from './amm';
 import { createSignedSellTransaction } from './bonding-curve/sell';
+
+// Re-export types for external use
+export type { BatchOperation, BatchResult, BatchExecutionOptions };
 
 /**
  * Execute batch transactions
@@ -16,13 +19,14 @@ import { createSignedSellTransaction } from './bonding-curve/sell';
  * - They change pool state which could affect subsequent operations
  * - They have different signing and authorization patterns
  */
-export async function executeBatchTransactions(
+export async function batchTransactions(
   connection: Connection,
   wallet: Keypair,
   operations: BatchOperation[],
-  options: BatchExecutionOptions
+  feePayer: Keypair,
+  options: Partial<BatchExecutionOptions> = {}
 ): Promise<BatchResult[]> {
-  const { maxParallel = 3, delayBetween = 1000, retryFailed = false, feePayer } = options;
+  const { maxParallel = 3, delayBetween = 1000, retryFailed = false } = options;
   const results: BatchResult[] = [];
   
   // Validate fee payer is provided
@@ -31,100 +35,253 @@ export async function executeBatchTransactions(
   }
   
   debugLog(`🚀 Executing ${operations.length} operations in batches of ${maxParallel}`);
-  debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()} for all transactions`);
-  debugLog(`📝 Note: All transactions in this batch will use the same fee payer`);
+  debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
   
-  // Get a single recent blockhash for the entire batch execution
-  // This ensures all transactions can be processed together efficiently
-  debugLog('🔗 Getting shared blockhash for batch operations...');
-  const { blockhash } = await connection.getLatestBlockhash('confirmed');
-  debugLog(`📝 Using blockhash: ${blockhash}`);
+  // For now, disable combined transaction mode to avoid signature issues
+  // TODO: Re-enable combined mode once signing logic is fixed
+  debugLog(`📝 Note: Combined transaction mode disabled - executing operations individually`);
   
-  // Check if all operations are "consuming" operations (transfers, sells)
-  // These can be batched together since they all reduce PumpFun token balances
-  const consumingOps = ['transfer', 'sell-amm', 'sell-bonding-curve'];
-  const allConsuming = operations.every(op => consumingOps.includes(op.type));
+  // Execute operations individually in batches
+  const batches = chunkArray(operations, maxParallel);
   
-  if (allConsuming) {
-    try {
-      const maxPerTx = options.maxTransferInstructionsPerTx ?? 20;
-      const combinedTxs = await buildAutoChunkedPumpFunConsumingTransactions(
-        connection,
-        operations,
-        feePayer,
-        blockhash,
-        wallet,
-        maxPerTx
-      );
-
-      for (const [idx, tx] of combinedTxs.entries()) {
-        const submit = await submitTransaction(connection, tx, `combined-pumpfun-consuming-${idx + 1}`);
-        // mark all ops as the same result; if we chunked, each chunk reports result for its subset
-        const start = idx * maxPerTx;
-        const slice = operations.slice(start, Math.min(start + maxPerTx, operations.length));
-        slice.forEach(op => {
-          results.push({
-            operationId: op.id,
-            type: op.type,
-            success: submit.success,
-            signature: submit.signature,
-            error: submit.error,
-          });
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    const batch = batches[batchIndex];
+    debugLog(`🔄 Executing Batch ${batchIndex + 1}/${batches.length} (${batch.length} operations)`);
+    
+    // Execute batch in parallel
+    const batchPromises = batch.map(async (operation) => {
+      try {
+        debugLog(`🚀 Executing ${operation.type}: ${operation.description}`);
+        
+        let result: any;
+        
+        switch (operation.type) {
+          case 'transfer':
+            result = await executeTransfer(connection, wallet, feePayer, operation.params);
+            break;
+          case 'sell-bonding-curve':
+            result = await executeBondingCurveSell(connection, wallet, feePayer, operation.params);
+            break;
+          case 'sell-amm':
+            result = await executeAmmSell(connection, wallet, feePayer, operation.params);
+            break;
+          default:
+            throw new Error(`Unknown operation type: ${operation.type}`);
+        }
+        
+        return {
+          operationId: operation.id,
+          type: operation.type,
+          success: result.success,
+          signature: result.signature,
+          error: result.error
+        };
+        
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logError(`Error executing operation ${operation.id}: ${errorMessage}`);
+        
+        return {
+          operationId: operation.id,
+          type: operation.type,
+          success: false,
+          error: errorMessage
+        };
+      }
+    });
+    
+    const batchResults = await Promise.allSettled(batchPromises);
+    
+    // Process batch results
+    batchResults.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else {
+        results.push({
+          operationId: batch[index].id,
+          type: batch[index].type,
+          success: false,
+          error: result.reason?.message || 'Unknown error'
         });
       }
-      return results;
-    } catch (e) {
-      logError('Failed to build/submit combined PumpFun consuming transaction:', e);
-      // Fallback to per-op execution below
+    });
+    
+    // Add delay between batches (except for the last batch)
+    if (batchIndex < batches.length - 1 && delayBetween > 0) {
+      debugLog(`⏳ Waiting ${delayBetween}ms before next batch...`);
+      await new Promise(resolve => setTimeout(resolve, delayBetween));
     }
   }
-
-  // For non-consuming or mixed batches, return errors
-  operations.forEach(op => {
-    results.push({
-      operationId: op.id,
-      type: op.type,
-      success: false,
-      error: 'Only consuming operations (transfers, sell-amm, sell-bonding-curve) are supported in combined transaction mode',
-    });
-  });
-
+  
+  // Retry failed operations if requested
+  if (retryFailed) {
+    const failedOperations = operations.filter(op => 
+      !results.find(r => r.operationId === op.id && r.success)
+    );
+    
+    if (failedOperations.length > 0) {
+      debugLog(`🔄 Retrying ${failedOperations.length} failed operations...`);
+      
+      for (const operation of failedOperations) {
+        debugLog(`🔄 Retrying operation: ${operation.id}`);
+        const retryResult = await executeOperation(connection, wallet, feePayer, operation);
+        
+        // Update the existing result
+        const existingIndex = results.findIndex(r => r.operationId === operation.id);
+        if (existingIndex >= 0) {
+          results[existingIndex] = retryResult;
+        } else {
+          results.push(retryResult);
+        }
+      }
+    }
+  }
+  
   return results;
 }
 
 /**
- * Submit a signed transaction to the network
+ * Execute a single operation
  */
-async function submitTransaction(
+async function executeOperation(
   connection: Connection,
-  transaction: Transaction,
-  operationId: string
-): Promise<{ success: boolean; signature?: string; error?: string }> {
+  wallet: Keypair,
+  feePayer: Keypair,
+  operation: BatchOperation
+): Promise<BatchResult> {
   try {
-    debugLog(`📤 Submitting transaction for operation: ${operationId}`);
+    debugLog(`🚀 Executing ${operation.type}: ${operation.description}`);
     
-    const signature = await connection.sendRawTransaction(transaction.serialize(), {
-      skipPreflight: false,
-      preflightCommitment: 'confirmed',
-    });
+    let result: any;
     
-    // Wait for confirmation
-    const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-    
-    if (confirmation.value.err) {
-      throw new Error(`Transaction failed: ${confirmation.value.err}`);
+    switch (operation.type) {
+      case 'transfer':
+        result = await executeTransfer(connection, wallet, feePayer, operation.params);
+        break;
+      case 'sell-bonding-curve':
+        result = await executeBondingCurveSell(connection, wallet, feePayer, operation.params);
+        break;
+      case 'sell-amm':
+        result = await executeAmmSell(connection, wallet, feePayer, operation.params);
+        break;
+      default:
+        throw new Error(`Unknown operation type: ${operation.type}`);
     }
     
-    logSuccess(`Transaction confirmed for operation ${operationId}: ${signature}`);
-    
     return {
-      success: true,
-      signature
+      operationId: operation.id,
+      type: operation.type,
+      success: result.success,
+      signature: result.signature,
+      error: result.error
     };
     
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logError(`Failed to submit transaction for operation ${operationId}: ${errorMessage}`);
+    logError(`Error executing operation ${operation.id}: ${errorMessage}`);
+    
+    return {
+      operationId: operation.id,
+      type: operation.type,
+      success: false,
+      error: errorMessage
+    };
+  }
+}
+
+/**
+ * Execute token transfer operation
+ */
+async function executeTransfer(
+  connection: Connection,
+  wallet: Keypair,
+  feePayer: Keypair,
+  params: any
+): Promise<any> {
+  const { recipient, mint, amount, createAccount = true } = params;
+  
+  try {
+    if (createAccount) {
+      return await sendTokenWithAccountCreation(
+        connection,
+        wallet,
+        new PublicKey(recipient),
+        new PublicKey(mint),
+        BigInt(amount),
+        false, // allowOwnerOffCurve
+        feePayer
+      );
+    } else {
+      return await sendToken(
+        connection,
+        wallet,
+        new PublicKey(recipient),
+        new PublicKey(mint),
+        BigInt(amount),
+        false, // allowOwnerOffCurve
+        false, // createRecipientAccount
+        feePayer
+      );
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+/**
+ * Execute bonding curve sell operation
+ */
+async function executeBondingCurveSell(
+  connection: Connection,
+  wallet: Keypair,
+  feePayer: Keypair,
+  params: any
+): Promise<any> {
+  const { mint, amount, slippage = 1000 } = params;
+  
+  try {
+    debugLog(`🔧 Executing bonding curve sell for ${amount} tokens`);
+    debugLog(`🎯 Mint: ${mint}`);
+    debugLog(`📊 Slippage: ${slippage} basis points`);
+    
+    const result = await createSignedSellTransaction(
+      connection,
+      wallet,
+      new PublicKey(mint),
+      amount,
+      slippage,
+      feePayer
+    );
+    
+    if (result.success && result.transaction) {
+      // Submit the signed transaction
+      const signature = await connection.sendRawTransaction(result.transaction.serialize(), {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+      });
+      
+      // Wait for confirmation
+      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+      
+      if (confirmation.value.err) {
+        throw new Error(`Transaction failed: ${confirmation.value.err}`);
+      }
+      
+      return {
+        success: true,
+        signature,
+        amount,
+        mint
+      };
+    } else {
+      throw new Error(result.error || 'Failed to create signed sell transaction');
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError(`Bonding curve sell failed: ${errorMessage}`);
     
     return {
       success: false,
@@ -134,126 +291,34 @@ async function submitTransaction(
 }
 
 /**
- * Build a single transaction containing multiple PumpFun token consuming operations
- * All operations will share the same fee payer and blockhash
+ * Execute AMM sell operation
  */
-async function buildCombinedPumpFunConsumingTransaction(
-  connection: Connection,
-  operations: BatchOperation[],
-  feePayer: Keypair,
-  blockhash: string,
-  defaultSender: Keypair
-): Promise<Transaction> {
-  const tx = new Transaction();
-  tx.feePayer = feePayer.publicKey;
-  tx.recentBlockhash = blockhash;
-
-  // Collect unique signers (senders) required
-  const signers: Keypair[] = [];
-  const ensureSigner = (kp: Keypair) => {
-    if (!signers.find(s => s.publicKey.equals(kp.publicKey))) signers.push(kp);
-  };
-
-  for (const op of operations) {
-    const sender: Keypair = op.params?.sender || defaultSender;
-    ensureSigner(sender);
-
-    switch (op.type) {
-      case 'transfer':
-        const { recipient, mint, amount } = op.params;
-        const fromAta = await getAssociatedTokenAddress(new PublicKey(mint), sender.publicKey);
-        const toAta = await getAssociatedTokenAddress(new PublicKey(mint), new PublicKey(recipient));
-        const transferIx = createTransferInstruction(fromAta, toAta, sender.publicKey, BigInt(amount));
-        tx.add(transferIx);
-        break;
-
-      case 'sell-amm':
-        // Create signed AMM sell transaction and extract instructions
-        const ammSellTx = await createSignedAmmSellTransaction(
-          connection,
-          sender,
-          new PublicKey(op.params.poolKey),
-          op.params.amount,
-          op.params.slippage || 1,
-          feePayer,
-          blockhash
-        );
-        if (ammSellTx.success && ammSellTx.transaction) {
-          // Add all instructions from the AMM sell transaction
-          ammSellTx.transaction.instructions.forEach((ix: any) => tx.add(ix));
-        }
-        break;
-
-      case 'sell-bonding-curve':
-        // Create signed bonding curve sell transaction and extract instructions
-        const bondingSellTx = await createSignedSellTransaction(
-          connection,
-          sender,
-          new PublicKey(op.params.mint),
-          op.params.amount,
-          op.params.slippage || 1000,
-          feePayer,
-          blockhash
-        );
-        if (bondingSellTx.success && bondingSellTx.transaction) {
-          // Add all instructions from the bonding curve sell transaction
-          bondingSellTx.transaction.instructions.forEach((ix: any) => tx.add(ix));
-        }
-        break;
-
-      default:
-        throw new Error(`Unknown operation type: ${op.type}`);
-    }
-  }
-
-  // Partial sign by all senders
-  signers.forEach(s => tx.partialSign(s));
-  // Fee payer signs last
-  tx.sign(feePayer);
-
-  return tx;
-}
-
-/**
- * Auto-chunk combined PumpFun token consuming operations to avoid transaction size/compute limits
- */
-async function buildAutoChunkedPumpFunConsumingTransactions(
-  connection: Connection,
-  operations: BatchOperation[],
-  feePayer: Keypair,
-  blockhash: string,
-  defaultSender: Keypair,
-  maxPerTx: number
-): Promise<Transaction[]> {
-  const txs: Transaction[] = [];
-  for (let i = 0; i < operations.length; i += maxPerTx) {
-    const chunk = operations.slice(i, i + maxPerTx);
-    const tx = await buildCombinedPumpFunConsumingTransaction(connection, chunk, feePayer, blockhash, defaultSender);
-    txs.push(tx);
-  }
-  return txs;
-}
-
-/**
- * Execute batch transactions with simplified API
- */
-export async function batchTransactions(
+async function executeAmmSell(
   connection: Connection,
   wallet: Keypair,
-  operations: BatchOperation[],
   feePayer: Keypair,
-  options: Partial<BatchExecutionOptions> = {}
-): Promise<BatchResult[]> {
-  const defaultOptions: BatchExecutionOptions = {
-    maxParallel: 3,
-    delayBetween: 1000,
-    retryFailed: false,
-    feePayer
-  };
+  params: any
+): Promise<any> {
+  const { poolKey, amount, slippage = 1 } = params;
   
-  const finalOptions = { ...defaultOptions, ...options };
-  
-  return executeBatchTransactions(connection, wallet, operations, finalOptions);
+  try {
+    debugLog(`💸 Selling tokens to pool: ${poolKey}`);
+    debugLog(`Token amount: ${amount}`);
+    
+    return await sellTokens(
+      connection,
+      wallet,
+      new PublicKey(poolKey),
+      amount,
+      slippage,
+      feePayer
+    );
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
 }
 
 /**

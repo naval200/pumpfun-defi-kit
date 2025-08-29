@@ -31,6 +31,10 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 - **[AMM Usage Guide](./amm-usage.md)** - How to use AMM functionality and testing
 - **[Pool Creation Guide](./pool-creation-guide.md)** - Creating and managing liquidity pools
 
+### Batch Operations
+
+- **[Batch Transactions Usage](./batch-transactions-usage.md)** - CLI and programmatic API for batch operations
+
 ### Bonding Curve
 
 - **[Sell Testing Guide](./sell-testing-guide.md)** - Testing selling functionality
@@ -69,6 +73,7 @@ docs/
 ├── README.md                           # This index file
 ├── TESTING_GUIDE.md                   # Comprehensive testing guide
 ├── TEST_SUITE_SUMMARY.md              # Test coverage overview
+├── batch-transactions-usage.md        # Batch operations CLI and API
 ├── amm-usage.md                       # AMM functionality and testing guide
 ├── pool-creation-guide.md             # Pool management
 ├── sell-testing-guide.md              # Selling functionality

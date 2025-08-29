@@ -309,7 +309,12 @@ export async function sendAndConfirmTransactionWithFeePayer(
   const allSigners = feePayer ? [feePayer, ...signers] : signers;
 
   // Send the transaction
-  const sendResult = await sendTransactionWithRetry(connection, preparedTransaction, allSigners, options);
+  const sendResult = await sendTransactionWithRetry(
+    connection,
+    preparedTransaction,
+    allSigners,
+    options
+  );
 
   if (!sendResult.success || !sendResult.signature) {
     return sendResult;

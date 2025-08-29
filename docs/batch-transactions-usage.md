@@ -1,10 +1,10 @@
 # Batch Transactions CLI
 
-The Batch Transactions CLI allows you to execute multiple PumpFun operations in parallel, including token transfers, buys, and sells across both bonding curve and AMM modes. This is particularly useful for bulk operations, testing scenarios, or managing multiple positions simultaneously.
+The Batch Transactions CLI allows you to execute multiple PumpFun operations in parallel, including token transfers and sells across both bonding curve and AMM modes. This is particularly useful for bulk operations, testing scenarios, or managing multiple positions simultaneously.
 
 ## Features
 
-- **Multiple Operation Types**: Support for transfers, bonding curve buys/sells, and AMM buys/sells
+- **Multiple Operation Types**: Support for transfers, bonding curve sells, and AMM sells
 - **Parallel Execution**: Execute multiple transactions simultaneously for improved performance
 - **Mandatory Fee Payer**: All operations use a dedicated fee payer wallet to ensure consistent fee handling
 - **Batch Processing**: Group operations into configurable batch sizes
@@ -33,7 +33,6 @@ npm run cli:batch-transactions --operations <path> --fee-payer <path> [options]
 
 ### Optional Parameters
 
-- `--wallet <path>`: Path to main wallet JSON file (uses default if not specified)
 - `--max-parallel <number>`: Maximum parallel transactions (default: 3)
 - `--retry-failed`: Retry failed transactions once
 - `--delay-between <ms>`: Delay between transaction batches in milliseconds (default: 1000)
@@ -80,29 +79,7 @@ Transfers tokens between wallets.
 - `amount`: Amount in smallest token units (e.g., lamports for SOL)
 - `createAccount`: Whether to create recipient account if it doesn't exist
 
-#### 2. AMM Buy (`buy-amm`)
-
-Buy tokens from an AMM pool.
-
-```json
-{
-  "type": "buy-amm",
-  "id": "buy-amm-1",
-  "description": "Buy tokens from AMM pool 1",
-  "params": {
-    "poolKey": "44444444444444444444444444444444",
-    "amount": 0.1,
-    "slippage": 1
-  }
-}
-```
-
-**Parameters:**
-- `poolKey`: AMM pool public key
-- `amount`: SOL amount to spend
-- `slippage`: Slippage tolerance in percentage
-
-#### 3. AMM Sell (`sell-amm`)
+#### 2. AMM Sell (`sell-amm`)
 
 Sell tokens to an AMM pool.
 
@@ -121,34 +98,12 @@ Sell tokens to an AMM pool.
 
 **Parameters:**
 - `poolKey`: AMM pool public key
-- `amount`: Token amount to sell
-- `slippage`: Slippage tolerance in percentage
+- `amount`: Amount of tokens to sell
+- `slippage`: Slippage tolerance in basis points (1 = 0.01%)
 
-#### 4. Bonding Curve Buy (`buy-bonding-curve`)
+#### 3. Bonding Curve Sell (`sell-bonding-curve`)
 
-Buy tokens via bonding curve.
-
-```json
-{
-  "type": "buy-bonding-curve",
-  "id": "buy-bc-1",
-  "description": "Buy tokens via bonding curve",
-  "params": {
-    "mint": "66666666666666666666666666666666",
-    "amount": 0.1,
-    "slippage": 1000
-  }
-}
-```
-
-**Parameters:**
-- `mint`: Token mint address
-- `amount`: SOL amount to spend
-- `slippage`: Slippage tolerance in basis points
-
-#### 5. Bonding Curve Sell (`sell-bonding-curve`)
-
-Sell tokens via bonding curve.
+Sell tokens via the bonding curve mechanism.
 
 ```json
 {
@@ -165,8 +120,55 @@ Sell tokens via bonding curve.
 
 **Parameters:**
 - `mint`: Token mint address
-- `amount`: Token amount to sell
-- `slippage`: Slippage tolerance in basis points
+- `amount`: Amount of tokens to sell
+- `slippage`: Slippage tolerance in basis points (1000 = 10%)
+
+## Programmatic API
+
+The batch transactions functionality is also available as a programmatic API for integration into your own applications:
+
+```typescript
+import { batchTransactions, BatchOperation } from '../src/batchTransactions';
+
+const operations: BatchOperation[] = [
+  // ... your operations
+];
+
+const results = await batchTransactions(
+  connection,
+  wallet,
+  operations,
+  feePayer,
+  {
+    maxParallel: 3,
+    delayBetween: 1000,
+    retryFailed: true
+  }
+);
+```
+
+### Function Signature
+
+```typescript
+export async function batchTransactions(
+  connection: Connection,
+  wallet: Keypair,
+  operations: BatchOperation[],
+  feePayer: Keypair,
+  options: Partial<BatchExecutionOptions> = {}
+): Promise<BatchResult[]>
+```
+
+### Options Interface
+
+```typescript
+interface BatchExecutionOptions {
+  maxParallel?: number;           // Default: 3
+  delayBetween?: number;          // Default: 1000ms
+  retryFailed?: boolean;          // Default: false
+  maxTransferInstructionsPerTx?: number; // Optional
+}
+```
 
 ## Examples
 

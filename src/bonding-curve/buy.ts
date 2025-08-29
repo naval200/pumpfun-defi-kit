@@ -26,14 +26,13 @@ import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
 async function setupBuyOperation(
   connection: Connection,
   wallet: Keypair,
-  mint: PublicKey,
-  feePayer?: Keypair
-): Promise<{ 
-  success: boolean; 
-  pdas?: any; 
-  associatedBondingCurve?: PublicKey; 
-  associatedUser?: PublicKey; 
-  error?: string 
+  mint: PublicKey
+): Promise<{
+  success: boolean;
+  pdas?: any;
+  associatedBondingCurve?: PublicKey;
+  associatedUser?: PublicKey;
+  error?: string;
 }> {
   try {
     // Get all required PDAs
@@ -67,13 +66,13 @@ async function setupBuyOperation(
       success: true,
       pdas,
       associatedBondingCurve,
-      associatedUser
+      associatedUser,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      error: errorMessage
+      error: errorMessage,
     };
   }
 }
@@ -234,7 +233,7 @@ export async function buyPumpFunToken(
 
     try {
       // Setup the buy operation (get PDAs and ensure ATAs exist)
-      const setupResult = await setupBuyOperation(connection, wallet, mint, feePayer);
+      const setupResult = await setupBuyOperation(connection, wallet, mint);
       if (!setupResult.success) {
         throw new Error(`Setup failed: ${setupResult.error}`);
       }
@@ -262,11 +261,11 @@ export async function buyPumpFunToken(
           feePayer, // fee payer
           { preflightCommitment: 'confirmed' }
         );
-        
+
         if (!signature.success) {
           throw new Error(`Transaction failed: ${signature.error}`);
         }
-        
+
         logSuccess('Buy transaction confirmed successfully!');
         log(`💰 Purchased tokens for ${solAmount} SOL`);
         logSignature(signature.signature!, 'Buy');
@@ -346,7 +345,7 @@ export async function createSignedBuyTransaction(
     debugLog(`📊 Slippage: ${slippageBasisPoints} basis points`);
 
     // Setup the buy operation (get PDAs and ensure ATAs exist)
-    const setupResult = await setupBuyOperation(connection, wallet, mint, feePayer);
+    const setupResult = await setupBuyOperation(connection, wallet, mint);
     if (!setupResult.success) {
       throw new Error(`Setup failed: ${setupResult.error}`);
     }
@@ -375,7 +374,7 @@ export async function createSignedBuyTransaction(
       const { blockhash: newBlockhash } = await connection.getLatestBlockhash('confirmed');
       transaction.recentBlockhash = newBlockhash;
     }
-    
+
     // Set fee payer (use feePayer if provided, otherwise use wallet)
     transaction.feePayer = feePayer ? feePayer.publicKey : wallet.publicKey;
 
@@ -389,16 +388,15 @@ export async function createSignedBuyTransaction(
     }
 
     debugLog('✅ Signed buy transaction created successfully');
-    
+
     return {
       success: true,
       transaction,
     };
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logError(`Failed to create signed buy transaction: ${errorMessage}`);
-    
+
     return {
       success: false,
       error: errorMessage,

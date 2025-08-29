@@ -1,533 +1,212 @@
 #!/usr/bin/env tsx
 
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
-import { sendToken, sendTokenWithAccountCreation } from '../src/sendToken';
-// Note: Bonding-curve and AMM ops are executed via helper functions below.
-// We don't import non-existent symbol exports here to avoid linter errors.
-import { parseArgs, loadWallet, loadFeePayerWallet, printUsage } from './cli-args';
-import { log, logError } from '../src/utils/debug';
-import { buyTokens as buyAmm } from '../src/amm/buy';
-import { sellTokens as sellAmm } from '../src/amm/sell';
-
-/**
- * Interface for batch transaction operations
- */
-interface BatchOperation {
-  type: 'transfer' | 'buy-bonding-curve' | 'sell-bonding-curve' | 'buy-amm' | 'sell-amm';
-  id: string;
-  params: any;
-  description: string;
-}
-
-/**
- * Interface for batch transaction result
- */
-interface BatchResult {
-  operationId: string;
-  type: string;
-  success: boolean;
-  signature?: string;
-  error?: string;
-  details?: any;
-}
+import { Connection, Keypair } from '@solana/web3.js';
+import { parseArgs } from './cli-args';
+import {
+  batchTransactions,
+  validateBatchOperations,
+  BatchOperation,
+} from '../src/batchTransactions';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * CLI for executing batch transactions
- * Supports multiple types of PumpFun operations with mandatory fee payer
  */
-export async function batchTransactionsCli() {
-  const args = parseArgs();
-
-  if (args.help) {
-    printUsage('cli:batch-transactions', [
-      '  --operations <path>           Path to JSON file containing batch operations (required)',
-      '  --fee-payer <path>            Path to fee payer wallet JSON file (required)',
-      '  --wallet <path>               Path to wallet JSON file (optional, uses default if not specified)',
-      '  --dry-run                     Show what would be executed without actually running',
-      '  --max-parallel <number>       Maximum parallel transactions (default: 3)',
-      '  --retry-failed                Retry failed transactions once',
-      '  --delay-between <ms>          Delay between transaction batches in milliseconds (default: 1000)',
-    ]);
-    return;
-  }
-
-  // Validate required arguments
-  if (!args.operations || !args.feePayer) {
-    console.error('❌ Error: --operations and --fee-payer are required');
-    printUsage('cli:batch-transactions');
-    return;
-  }
-
-  console.log('🚀 Batch Transactions CLI');
-  console.log('=========================');
-
+async function main() {
   try {
-    // Load operations from JSON file
-    const operations = await loadOperationsFile(args.operations);
-    if (!operations || operations.length === 0) {
-      console.error('❌ Error: No operations found in operations file');
+    const args = parseArgs();
+
+    if (args.help) {
+      console.log(
+        'Usage: npm run cli:batch-transactions -- --operations <file> --fee-payer <wallet> [options]'
+      );
+      console.log('');
+      console.log('Required:');
+      console.log('  --operations <file>     Path to JSON file containing batch operations');
+      console.log('  --fee-payer <wallet>    Path to fee payer wallet JSON file');
+      console.log('');
+      console.log('Options:');
+      console.log('  --max-parallel <num>    Maximum parallel transactions (default: 3)');
+      console.log(
+        '  --delay-between <ms>    Delay between batches in milliseconds (default: 1000)'
+      );
+      console.log('  --retry-failed          Retry failed operations automatically');
+      console.log('  --dry-run               Show what would be executed without submitting');
       return;
     }
 
-    console.log(`📋 Loaded ${operations.length} operations from ${args.operations}`);
-
-    // Load fee payer wallet (mandatory)
-    const feePayer = loadFeePayerWallet(args.feePayer);
-    if (!feePayer) {
-      console.error('❌ Error: Failed to load fee payer wallet');
-      return;
+    // Validate required arguments
+    if (!args.operations || !args.feePayer) {
+      console.error('❌ Error: --operations and --fee-payer are required');
+      console.error('Use --help for usage information');
+      process.exit(1);
     }
 
-    // Load main wallet (optional, uses default if not specified)
-    const wallet = loadWallet(args.wallet);
-    console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
+    // Load operations file
+    const operationsFile = path.resolve(args.operations);
+    if (!fs.existsSync(operationsFile)) {
+      console.error(`❌ Error: Operations file not found: ${operationsFile}`);
+      process.exit(1);
+    }
+
+    // Load fee payer wallet
+    const feePayerPath = path.resolve(args.feePayer);
+    if (!fs.existsSync(feePayerPath)) {
+      console.error(`❌ Error: Fee payer wallet not found: ${feePayerPath}`);
+      process.exit(1);
+    }
+
+    console.log('🚀 Batch Transactions CLI');
+    console.log('=========================');
+
+    // Load operations
+    const operationsData = fs.readFileSync(operationsFile, 'utf8');
+    let operations: BatchOperation[];
+
+    try {
+      // Try to parse as direct array first
+      let parsedData = JSON.parse(operationsData);
+
+      // If it's wrapped in an object with 'operations' key, extract it
+      if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
+        if (parsedData.operations && Array.isArray(parsedData.operations)) {
+          operations = parsedData.operations;
+        } else {
+          throw new Error(
+            'Operations file must contain an array or object with "operations" array'
+          );
+        }
+      } else if (Array.isArray(parsedData)) {
+        operations = parsedData;
+      } else {
+        throw new Error('Operations file must contain an array');
+      }
+    } catch (error) {
+      console.error('❌ Error: Failed to load operations file:', error);
+      process.exit(1);
+    }
+
+    console.log(`📋 Loaded ${operations.length} operations from ${operationsFile}`);
+
+    // Load fee payer wallet
+    const feePayerData = JSON.parse(fs.readFileSync(feePayerPath, 'utf8'));
+    const feePayer = Keypair.fromSecretKey(Uint8Array.from(feePayerData));
     console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
 
-    // Setup connection
-    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    // Load default wallet (for operations that need a sender)
+    const defaultWalletPath = path.resolve('wallets/creator-wallet.json');
+    let defaultWallet: Keypair;
 
-    // Parse additional arguments
+    if (fs.existsSync(defaultWalletPath)) {
+      const walletData = JSON.parse(fs.readFileSync(defaultWalletPath, 'utf8'));
+      defaultWallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
+      console.log(`👛 Using default wallet: ${defaultWallet.publicKey.toString()}`);
+    } else {
+      // Create a dummy wallet if none exists (for testing)
+      defaultWallet = Keypair.generate();
+      console.log(
+        `⚠️  No default wallet found, using generated wallet: ${defaultWallet.publicKey.toString()}`
+      );
+    }
+
+    // Validate operations
+    const validation = validateBatchOperations(operations);
+    if (!validation.valid) {
+      console.error('❌ Error: Invalid operations:');
+      validation.errors.forEach(error => console.error(`  • ${error}`));
+      process.exit(1);
+    }
+
+    // Parse options
     const maxParallel = args.maxParallel || 3;
     const delayBetween = args.delayBetween || 1000;
     const retryFailed = args.retryFailed || false;
     const dryRun = args.dryRun || false;
 
     if (dryRun) {
-      console.log('🔍 DRY RUN MODE - No transactions will be executed');
-      await displayBatchPlan(operations, maxParallel);
+      console.log('\n🔍 DRY RUN MODE - No transactions will be submitted');
+      console.log('📋 Operations to be executed:');
+      operations.forEach((op, index) => {
+        console.log(`  ${index + 1}. ${op.type}: ${op.description}`);
+        console.log(`     Params: ${JSON.stringify(op.params)}`);
+      });
+      console.log(`\n📊 Configuration:`);
+      console.log(`  • Max parallel: ${maxParallel}`);
+      console.log(`  • Delay between batches: ${delayBetween}ms`);
+      console.log(`  • Retry failed: ${retryFailed}`);
+      console.log(`  • Fee payer: ${feePayer.publicKey.toString()}`);
       return;
     }
 
-    // Execute batch transactions
-    const results = await executeBatchTransactions(
-      connection,
-      wallet,
-      feePayer,
-      operations,
+    // Connect to Solana
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    console.log('🔗 Connected to Solana devnet');
+
+    // Execute batch transactions using the actual module
+    console.log('\n🚀 Executing batch transactions...');
+    const results = await batchTransactions(connection, defaultWallet, operations, feePayer, {
       maxParallel,
       delayBetween,
-      retryFailed
-    );
+      retryFailed,
+    });
 
     // Display results
-    displayBatchResults(results);
+    console.log('\n📊 Batch Execution Results');
+    console.log('=========================');
 
-  } catch (error) {
-    console.error(`❌ Error: ${error}`);
-    return;
-  }
-}
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
 
-/**
- * Load operations from JSON file
- */
-async function loadOperationsFile(filePath: string): Promise<BatchOperation[]> {
-  try {
-    const fs = await import('fs');
-    const operationsData = fs.readFileSync(filePath, 'utf8');
-    const operations = JSON.parse(operationsData);
-    
-    // Validate operations structure
-    if (!Array.isArray(operations)) {
-      throw new Error('Operations file must contain an array');
-    }
+    console.log(`✅ Successful: ${successful.length}`);
+    console.log(`❌ Failed: ${failed.length}`);
+    console.log(`📈 Success Rate: ${((successful.length / results.length) * 100).toFixed(1)}%`);
 
-    return operations.map((op, index) => ({
-      ...op,
-      id: op.id || `op-${index}`,
-      description: op.description || `Operation ${index + 1}`
-    }));
-  } catch (error) {
-    throw new Error(`Failed to load operations file: ${error}`);
-  }
-}
-
-/**
- * Display batch execution plan
- */
-async function displayBatchPlan(operations: BatchOperation[], maxParallel: number): Promise<void> {
-  console.log('\n📋 Batch Execution Plan:');
-  console.log('========================');
-  
-  const batches = chunkArray(operations, maxParallel);
-  
-  batches.forEach((batch, batchIndex) => {
-    console.log(`\n🔄 Batch ${batchIndex + 1} (${batch.length} operations):`);
-    batch.forEach((op, opIndex) => {
-      console.log(`  ${opIndex + 1}. [${op.type.toUpperCase()}] ${op.description}`);
-      console.log(`     ID: ${op.id}`);
-      
-      // Display operation-specific details
-      switch (op.type) {
-        case 'transfer':
-          console.log(`     From: ${op.params.from || 'Default Wallet'}`);
-          console.log(`     To: ${op.params.recipient}`);
-          console.log(`     Mint: ${op.params.mint}`);
-          console.log(`     Amount: ${op.params.amount}`);
-          break;
-        case 'buy-bonding-curve':
-        case 'sell-bonding-curve':
-          console.log(`     Mint: ${op.params.mint}`);
-          console.log(`     Amount: ${op.params.amount}`);
-          console.log(`     Slippage: ${op.params.slippage || 'Default'}%`);
-          break;
-        case 'buy-amm':
-        case 'sell-amm':
-          console.log(`     Pool Key: ${op.params.poolKey}`);
-          console.log(`     Amount: ${op.params.amount}`);
-          console.log(`     Slippage: ${op.params.slippage || 'Default'}%`);
-          break;
-      }
-    });
-  });
-}
-
-/**
- * Execute batch transactions
- */
-async function executeBatchTransactions(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair,
-  operations: BatchOperation[],
-  maxParallel: number,
-  delayBetween: number,
-  retryFailed: boolean
-): Promise<BatchResult[]> {
-  const results: BatchResult[] = [];
-  const batches = chunkArray(operations, maxParallel);
-
-  console.log(`\n🚀 Executing ${operations.length} operations in ${batches.length} batches`);
-  console.log(`📊 Max parallel transactions: ${maxParallel}`);
-
-  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-    const batch = batches[batchIndex];
-    console.log(`\n🔄 Executing Batch ${batchIndex + 1}/${batches.length} (${batch.length} operations)`);
-
-    // Execute batch in parallel
-    const batchPromises = batch.map(operation => 
-      executeOperation(connection, wallet, feePayer, operation)
-    );
-
-    const batchResults = await Promise.allSettled(batchPromises);
-    
-    // Process batch results
-    batchResults.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        results.push(result.value);
-      } else {
-        results.push({
-          operationId: batch[index].id,
-          type: batch[index].type,
-          success: false,
-          error: result.reason?.message || 'Unknown error'
-        });
-      }
-    });
-
-    // Add delay between batches (except for the last batch)
-    if (batchIndex < batches.length - 1 && delayBetween > 0) {
-      console.log(`⏳ Waiting ${delayBetween}ms before next batch...`);
-      await new Promise(resolve => setTimeout(resolve, delayBetween));
-    }
-  }
-
-  // Retry failed transactions if requested
-  if (retryFailed) {
-    const failedOperations = operations.filter(op => 
-      !results.find(r => r.operationId === op.id && r.success)
-    );
-
-    if (failedOperations.length > 0) {
-      console.log(`\n🔄 Retrying ${failedOperations.length} failed operations...`);
-      
-      for (const operation of failedOperations) {
-        console.log(`🔄 Retrying operation: ${operation.id}`);
-        const retryResult = await executeOperation(connection, wallet, feePayer, operation);
-        
-        // Update the existing result
-        const existingIndex = results.findIndex(r => r.operationId === operation.id);
-        if (existingIndex >= 0) {
-          results[existingIndex] = retryResult;
-        } else {
-          results.push(retryResult);
+    if (successful.length > 0) {
+      console.log('\n✅ Successful Operations:');
+      successful.forEach(result => {
+        console.log(`  • ${result.type}: ${result.operationId}`);
+        if (result.signature) {
+          console.log(`    Signature: ${result.signature}`);
+          console.log(
+            `    Explorer: https://explorer.solana.com/tx/${result.signature}?cluster=devnet`
+          );
         }
-      }
-    }
-  }
-
-  return results;
-}
-
-/**
- * Execute a single operation
- */
-async function executeOperation(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair,
-  operation: BatchOperation
-): Promise<BatchResult> {
-  try {
-    log(`🚀 Executing ${operation.type}: ${operation.description}`);
-
-    let result: any;
-
-    switch (operation.type) {
-      case 'transfer':
-        result = await executeTransfer(connection, wallet, feePayer, operation.params);
-        break;
-      case 'buy-bonding-curve':
-        result = await executeBondingCurveBuy(connection, wallet, feePayer, operation.params);
-        break;
-      case 'sell-bonding-curve':
-        result = await executeBondingCurveSell(connection, wallet, feePayer, operation.params);
-        break;
-      case 'buy-amm':
-        result = await executeAmmBuy(connection, wallet, feePayer, operation.params);
-        break;
-      case 'sell-amm':
-        result = await executeAmmSell(connection, wallet, feePayer, operation.params);
-        break;
-      default:
-        throw new Error(`Unknown operation type: ${operation.type}`);
-    }
-
-    return {
-      operationId: operation.id,
-      type: operation.type,
-      success: result.success,
-      signature: result.signature,
-      error: result.error,
-      details: result
-    };
-
-  } catch (error) {
-    logError(`Error executing operation ${operation.id}:`, error);
-    return {
-      operationId: operation.id,
-      type: operation.type,
-      success: false,
-      error: error instanceof Error ? error.message : String(error)
-    };
-  }
-}
-
-/**
- * Execute token transfer operation
- */
-async function executeTransfer(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair,
-  params: any
-): Promise<any> {
-  const { recipient, mint, amount, createAccount = true } = params;
-  
-  if (createAccount) {
-    return await sendTokenWithAccountCreation(
-      connection,
-      wallet,
-      new PublicKey(recipient),
-      new PublicKey(mint),
-      BigInt(amount),
-      false, // allowOwnerOffCurve
-      feePayer
-    );
-  } else {
-    return await sendToken(
-      connection,
-      wallet,
-      new PublicKey(recipient),
-      new PublicKey(mint),
-      BigInt(amount),
-      false, // allowOwnerOffCurve
-      false, // createRecipientAccount
-      feePayer
-    );
-  }
-}
-
-/**
- * Execute bonding curve buy operation
- */
-async function executeBondingCurveBuy(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair,
-  params: any
-): Promise<any> {
-  const { mint, amount, slippage = 1000 } = params;
-  
-  // Note: This would need to be implemented in the bonding curve buy module
-  // For now, returning a placeholder
-  return {
-    success: false,
-    error: 'Bonding curve buy not yet implemented in batch mode'
-  };
-}
-
-/**
- * Execute bonding curve sell operation
- */
-async function executeBondingCurveSell(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair,
-  params: any
-): Promise<any> {
-  const { mint, amount, slippage = 1000 } = params;
-  
-  try {
-    log(`🔧 Executing bonding curve sell for ${amount} tokens`);
-    log(`🎯 Mint: ${mint}`);
-    log(`📊 Slippage: ${slippage} basis points`);
-    
-    // Use the createSignedSellTransaction function from the bonding curve module
-    const { createSignedSellTransaction } = await import('../src/bonding-curve/sell');
-    
-    const result = await createSignedSellTransaction(
-      connection,
-      wallet,
-      new PublicKey(mint),
-      amount,
-      slippage,
-      feePayer
-    );
-    
-    if (result.success && result.transaction) {
-      // Submit the signed transaction
-      const signature = await connection.sendRawTransaction(result.transaction.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
+        console.log('');
       });
-      
-      // Wait for confirmation
-      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-      
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${confirmation.value.err}`);
-      }
-      
-      return {
-        success: true,
-        signature,
-        amount,
-        mint
-      };
-    } else {
-      throw new Error(result.error || 'Failed to create signed sell transaction');
+    }
+
+    if (failed.length > 0) {
+      console.log('\n❌ Failed Operations:');
+      failed.forEach(result => {
+        console.log(`  • ${result.type}: ${result.operationId}`);
+        console.log(`    Error: ${result.error}`);
+        console.log('');
+      });
+    }
+
+    console.log('\n📋 Summary:');
+    console.log(`Total Operations: ${results.length}`);
+    console.log(`Successful: ${successful.length}`);
+    console.log(`Failed: ${failed.length}`);
+
+    if (retryFailed && failed.length > 0) {
+      console.log('\n💡 Tip: Use --retry-failed to automatically retry failed operations');
+    }
+
+    // Exit with error code if any operations failed
+    if (failed.length > 0) {
+      process.exit(1);
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logError(`Bonding curve sell failed: ${errorMessage}`);
-    
-    return {
-      success: false,
-      error: errorMessage
-    };
+    console.error('\n💥 CLI failed with error:', error);
+    process.exit(1);
   }
 }
 
-/**
- * Execute AMM buy operation
- */
-async function executeAmmBuy(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair,
-  params: any
-): Promise<any> {
-  const { poolKey, amount, slippage = 1 } = params;
-  
-  return await buyAmm(
-    connection,
-    wallet,
-    new PublicKey(poolKey),
-    amount,
-    slippage,
-    feePayer
-  );
-}
-
-/**
- * Execute AMM sell operation
- */
-async function executeAmmSell(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair,
-  params: any
-): Promise<any> {
-  const { poolKey, amount, slippage = 1 } = params;
-  
-  return await sellAmm(
-    connection,
-    wallet,
-    new PublicKey(poolKey),
-    amount,
-    slippage,
-    feePayer
-  );
-}
-
-/**
- * Display batch execution results
- */
-function displayBatchResults(results: BatchResult[]): void {
-  console.log('\n📊 Batch Execution Results');
-  console.log('==========================');
-
-  const successful = results.filter(r => r.success);
-  const failed = results.filter(r => !r.success);
-
-  console.log(`✅ Successful: ${successful.length}`);
-  console.log(`❌ Failed: ${failed.length}`);
-  console.log(`📈 Success Rate: ${((successful.length / results.length) * 100).toFixed(1)}%`);
-
-  if (successful.length > 0) {
-    console.log('\n✅ Successful Operations:');
-    successful.forEach(result => {
-      console.log(`  • ${result.type}: ${result.operationId}`);
-      if (result.signature) {
-        const explorerUrl = `https://explorer.solana.com/tx/${result.signature}?cluster=devnet`;
-        console.log(`    Signature: ${result.signature}`);
-        console.log(`    Explorer: ${explorerUrl}`);
-      }
-    });
-  }
-
-  if (failed.length > 0) {
-    console.log('\n❌ Failed Operations:');
-    failed.forEach(result => {
-      console.log(`  • ${result.type}: ${result.operationId}`);
-      console.log(`    Error: ${result.error}`);
-    });
-  }
-
-  // Summary
-  console.log('\n📋 Summary:');
-  console.log(`Total Operations: ${results.length}`);
-  console.log(`Successful: ${successful.length}`);
-  console.log(`Failed: ${failed.length}`);
-  
-  if (failed.length > 0) {
-    console.log('\n💡 Tip: Use --retry-failed to automatically retry failed operations');
-  }
-}
-
-/**
- * Utility function to chunk array into smaller arrays
- */
-function chunkArray<T>(array: T[], chunkSize: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += chunkSize) {
-    chunks.push(array.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
-
-// Run if this file is executed directly
+// Run the CLI if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  batchTransactionsCli().catch(console.error);
+  main();
 }
+
+export { main };

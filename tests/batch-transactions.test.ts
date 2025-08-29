@@ -1,25 +1,14 @@
-import { batchTransactionsCli } from '../cli/batch-transactions-cli';
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { batchTransactions, validateBatchOperations } from '../src/batchTransactions';
 
-// Mock the CLI dependencies
+// Mock the dependencies
 jest.mock('../src/sendToken');
 jest.mock('../src/bonding-curve/buy');
 jest.mock('../src/bonding-curve/sell');
 jest.mock('../src/amm/buy');
 jest.mock('../src/amm/sell');
-jest.mock('./cli-args');
 
-describe('Batch Transactions CLI', () => {
-  let mockConnection: Connection;
-  let mockWallet: Keypair;
-  let mockFeePayer: Keypair;
-
+describe('Batch Transactions', () => {
   beforeEach(() => {
-    // Create mock keypairs
-    mockWallet = Keypair.generate();
-    mockFeePayer = Keypair.generate();
-    mockConnection = new Connection('https://api.devnet.solana.com', 'confirmed');
-
     // Reset all mocks
     jest.clearAllMocks();
   });
@@ -34,8 +23,8 @@ describe('Batch Transactions CLI', () => {
           recipient: '11111111111111111111111111111111',
           mint: '22222222222222222222222222222222',
           amount: '100000000',
-          createAccount: true
-        }
+          createAccount: true,
+        },
       };
 
       expect(transferOperation.type).toBe('transfer');
@@ -52,8 +41,8 @@ describe('Batch Transactions CLI', () => {
         params: {
           poolKey: '44444444444444444444444444444444',
           amount: 1000,
-          slippage: 1
-        }
+          slippage: 1,
+        },
       };
 
       expect(ammSellOperation.type).toBe('sell-amm');
@@ -70,8 +59,8 @@ describe('Batch Transactions CLI', () => {
         params: {
           mint: '66666666666666666666666666666666',
           amount: 500,
-          slippage: 1000
-        }
+          slippage: 1000,
+        },
       };
 
       expect(bcSellOperation.type).toBe('sell-bonding-curve');
@@ -87,14 +76,12 @@ describe('Batch Transactions CLI', () => {
         type: 'invalid-type',
         id: 'invalid-1',
         description: 'Invalid operation',
-        params: {}
+        params: {},
       };
 
-      // This should be caught by the CLI validation
+      // This should be caught by the validation
       expect(invalidOperation.type).not.toBe('transfer');
-      expect(invalidOperation.type).not.toBe('buy-amm');
       expect(invalidOperation.type).not.toBe('sell-amm');
-      expect(invalidOperation.type).not.toBe('buy-bonding-curve');
       expect(invalidOperation.type).not.toBe('sell-bonding-curve');
     });
 
@@ -102,12 +89,12 @@ describe('Batch Transactions CLI', () => {
       const operations = [
         { id: 'op-1', type: 'transfer', description: 'Op 1', params: {} },
         { id: 'op-2', type: 'transfer', description: 'Op 2', params: {} },
-        { id: 'op-1', type: 'transfer', description: 'Op 3', params: {} } // Duplicate ID
+        { id: 'op-1', type: 'transfer', description: 'Op 3', params: {} }, // Duplicate ID
       ];
 
       const ids = operations.map(op => op.id);
       const uniqueIds = new Set(ids);
-      
+
       expect(ids.length).toBeGreaterThan(uniqueIds.size);
     });
   });
@@ -118,7 +105,7 @@ describe('Batch Transactions CLI', () => {
         recipient: '11111111111111111111111111111111',
         mint: '22222222222222222222222222222222',
         amount: '100000000',
-        createAccount: true
+        createAccount: true,
       };
 
       expect(transferParams.recipient).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
@@ -131,7 +118,7 @@ describe('Batch Transactions CLI', () => {
       const ammParams = {
         poolKey: '44444444444444444444444444444444',
         amount: 1000,
-        slippage: 1
+        slippage: 1,
       };
 
       expect(ammParams.poolKey).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
@@ -144,7 +131,7 @@ describe('Batch Transactions CLI', () => {
       const bcParams = {
         mint: '66666666666666666666666666666666',
         amount: 500,
-        slippage: 1000
+        slippage: 1000,
       };
 
       expect(bcParams.mint).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
@@ -164,13 +151,13 @@ describe('Batch Transactions CLI', () => {
           recipient: '11111111111111111111111111111111',
           mint: '22222222222222222222222222222222',
           amount: '100000000',
-          createAccount: true
-        }
+          createAccount: true,
+        },
       }));
 
       const maxParallel = 3;
-      const batches: typeof operations[] = [];
-      
+      const batches: (typeof operations)[] = [];
+
       for (let i = 0; i < operations.length; i += maxParallel) {
         batches.push(operations.slice(i, i + maxParallel));
       }
@@ -181,10 +168,10 @@ describe('Batch Transactions CLI', () => {
     });
 
     it('should handle empty operations array', () => {
-      const operations: any[] = [];
+      const operations: unknown[] = [];
       const maxParallel = 3;
-      const batches: any[][] = [];
-      
+      const batches: unknown[][] = [];
+
       for (let i = 0; i < operations.length; i += maxParallel) {
         batches.push(operations.slice(i, i + maxParallel));
       }
@@ -201,13 +188,13 @@ describe('Batch Transactions CLI', () => {
           recipient: '11111111111111111111111111111111',
           mint: '22222222222222222222222222222222',
           amount: '100000000',
-          createAccount: true
-        }
+          createAccount: true,
+        },
       }));
 
       const maxParallel = 5;
-      const batches: typeof operations[] = [];
-      
+      const batches: (typeof operations)[] = [];
+
       for (let i = 0; i < operations.length; i += maxParallel) {
         batches.push(operations.slice(i, i + maxParallel));
       }
@@ -225,7 +212,7 @@ describe('Batch Transactions CLI', () => {
         description: 'Invalid transfer',
         params: {
           // Missing recipient, mint, amount
-        } as any
+        } as Record<string, unknown>,
       };
 
       expect(invalidTransfer.params.recipient).toBeUndefined();
@@ -235,36 +222,41 @@ describe('Batch Transactions CLI', () => {
 
     it('should handle invalid public key formats', () => {
       const invalidPublicKey = 'invalid-public-key';
-      
+
       // This should not match the Solana public key format
       expect(invalidPublicKey).not.toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
     });
 
     it('should handle invalid amounts', () => {
-      const invalidAmounts = [
-        -1,
-        NaN,
-        Infinity,
-        -Infinity
-      ];
+      const invalidAmounts = [-1, NaN, Infinity, -Infinity];
 
       invalidAmounts.forEach(amount => {
-        expect(amount).toBeLessThanOrEqual(0);
-        expect(isFinite(amount)).toBeFalsy();
+        if (amount === -1) {
+          // -1 is finite but invalid for amounts
+          expect(amount).toBeLessThanOrEqual(0);
+        } else {
+          // NaN, Infinity, -Infinity are not finite
+          expect(isFinite(amount)).toBeFalsy();
+        }
       });
     });
   });
 
-  describe('CLI Integration', () => {
-    it('should export the main CLI function', () => {
-      expect(typeof batchTransactionsCli).toBe('function');
+  describe('Module Integration', () => {
+    it('should export the main batchTransactions function', () => {
+      expect(typeof batchTransactions).toBe('function');
+    });
+
+    it('should export the validateBatchOperations function', () => {
+      expect(typeof validateBatchOperations).toBe('function');
     });
 
     it('should be callable', () => {
       expect(() => {
         // This is just a test that the function exists and is callable
         // We're not actually executing it due to mocked dependencies
-        batchTransactionsCli;
+        batchTransactions;
+        validateBatchOperations;
       }).not.toThrow();
     });
   });
