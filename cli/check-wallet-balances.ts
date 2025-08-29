@@ -1,101 +1,96 @@
 #!/usr/bin/env tsx
 
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { createConnection } from '../src/utils/connection';
-import { getAssociatedTokenAddress, getAccount } from '@solana/spl-token';
-import * as fs from 'fs';
-import * as path from 'path';
+import { Connection, Keypair, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { getMint, getAccount, getAssociatedTokenAddress } from '@solana/spl-token';
+import { loadWallet } from './cli-args';
+import { debugLog, log, logError } from '../src/utils/debug';
 
 /**
  * Check wallet balances for all known tokens
  */
-async function main() {
+async function checkWalletBalances() {
   try {
-    console.log('🔍 Checking Creator Wallet Balances...\n');
+    debugLog('🔍 Checking Creator Wallet Balances...\n');
 
-    // Load creator wallet
-    const walletsDir = path.join(__dirname, '../wallets');
-    const creatorWalletPath = path.join(walletsDir, 'creator-wallet.json');
-    const creatorWalletData = JSON.parse(fs.readFileSync(creatorWalletPath, 'utf8'));
-    const creatorKeypair = Keypair.fromSecretKey(Uint8Array.from(creatorWalletData));
+    // Load wallet from CLI args
+    const creatorKeypair = await loadWallet();
+    if (!creatorKeypair) {
+      logError('❌ Failed to load wallet');
+      return;
+    }
 
-    // Get connection
-    const connection = createConnection();
+    // Connect to devnet
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-    console.log(`👤 Creator Wallet: ${creatorKeypair.publicKey.toString()}`);
-    console.log(`🔗 Network: ${connection.rpcEndpoint}\n`);
+    debugLog(`👤 Creator Wallet: ${creatorKeypair.publicKey.toString()}`);
+    debugLog(`🔗 Network: ${connection.rpcEndpoint}\n`);
 
     // Check SOL balance
     const solBalance = await connection.getBalance(creatorKeypair.publicKey);
-    console.log(`💰 SOL Balance: ${(solBalance / 1e9).toFixed(4)} SOL\n`);
+    debugLog(`💰 SOL Balance: ${(solBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL\n`);
 
-    // Check all known token mints
+    // Check specific token balances from token files
     const tokenFiles = [
-      'token-info-working.json',
-      'token-info-1.json',
-      'token-info-2.json'
+      'wallets/token1.json',
+      'wallets/token2.json',
+      'wallets/token3.json'
     ];
 
     for (const tokenFile of tokenFiles) {
       try {
-        const tokenInfoPath = path.join(walletsDir, tokenFile);
-        if (!fs.existsSync(tokenInfoPath)) continue;
-
-        const tokenInfo = JSON.parse(fs.readFileSync(tokenInfoPath, 'utf8'));
+        const tokenInfo = JSON.parse(require('fs').readFileSync(tokenFile, 'utf8'));
         const mintPublicKey = new PublicKey(tokenInfo.mint);
 
-        console.log(`🪙 ${tokenInfo.name} (${tokenInfo.symbol})`);
-        console.log(`   Mint: ${mintPublicKey.toString()}`);
+        // Get token info
+        const mintInfo = await getMint(connection, mintPublicKey);
+        const tokenAccount = await getAssociatedTokenAddress(mintPublicKey, creatorKeypair.publicKey);
+
+        debugLog(`🪙 ${tokenInfo.name} (${tokenInfo.symbol})`);
+        debugLog(`   Mint: ${mintPublicKey.toString()}`);
 
         try {
-          const tokenAccount = await getAssociatedTokenAddress(mintPublicKey, creatorKeypair.publicKey);
           const accountInfo = await getAccount(connection, tokenAccount);
+          debugLog(`   ✅ Token Account: ${tokenAccount.toString()}`);
+          debugLog(`   💰 Balance: ${accountInfo.amount}`);
           
-          console.log(`   ✅ Token Account: ${tokenAccount.toString()}`);
-          console.log(`   💰 Balance: ${accountInfo.amount}`);
-          
-          if (accountInfo.amount > 0) {
-            console.log(`   🎯 Has tokens to send!`);
+          if (Number(accountInfo.amount) > 0) {
+            debugLog(`   🎯 Has tokens to send!`);
           }
         } catch (error) {
-          if (error instanceof Error && error.message.includes('Account does not exist')) {
-            console.log(`   ❌ No token account found`);
-          } else {
-            console.log(`   ⚠️ Error checking balance: ${error}`);
-          }
+          debugLog(`   ❌ No token account found`);
         }
-        console.log('');
       } catch (error) {
-        console.log(`⚠️ Error processing ${tokenFile}: ${error}\n`);
+        debugLog(`   ⚠️ Error checking balance: ${error}`);
       }
+      debugLog('');
     }
 
-    // Also check for any other SPL tokens the wallet might have
-    console.log('🔍 Checking for other SPL tokens...');
+    // Check for other SPL tokens
+    debugLog('🔍 Checking for other SPL tokens...');
     try {
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-        creatorKeypair.publicKey,
-        { programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') }
-      );
+      const tokenAccounts = await connection.getTokenAccountsByOwner(creatorKeypair.publicKey, {
+        programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+      });
 
       if (tokenAccounts.value.length > 0) {
-        console.log(`Found ${tokenAccounts.value.length} token account(s):`);
+        debugLog(`Found ${tokenAccounts.value.length} token account(s):`);
         for (const account of tokenAccounts.value) {
-          const accountInfo = account.account.data.parsed.info;
-          console.log(`   🪙 ${accountInfo.mint} - Balance: ${accountInfo.tokenAmount.amount}`);
+          const accountInfo = await getAccount(connection, account.pubkey);
+          debugLog(`   🪙 ${accountInfo.mint} - Balance: ${accountInfo.tokenAmount.amount}`);
         }
       } else {
-        console.log('No SPL token accounts found');
+        debugLog('No SPL token accounts found');
       }
     } catch (error) {
-      console.log(`⚠️ Error checking SPL tokens: ${error}`);
+      debugLog(`⚠️ Error checking SPL tokens: ${error}`);
     }
 
   } catch (error) {
-    console.error('❌ Error checking balances:', error);
+    logError('❌ Error checking balances:', error);
   }
 }
 
-if (require.main === module) {
-  main();
+// Run if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  checkWalletBalances().catch(logError);
 }

@@ -3,6 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Keypair } from '@solana/web3.js';
+import { debugLog, logError } from '../src/utils/debug';
 
 export interface CliArgs {
   wallet?: string;
@@ -161,58 +162,50 @@ export function loadTokenInfo(tokenPath?: string): any {
 }
 
 export function saveTokenInfo(tokenInfo: any, outputPath?: string): void {
-  const defaultOutputPath = path.join(process.cwd(), 'wallets', 'token-info.json');
-  const finalOutputPath = outputPath || defaultOutputPath;
-  
   try {
-    // Ensure the directory exists
-    const dir = path.dirname(finalOutputPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    
-    fs.writeFileSync(finalOutputPath, JSON.stringify(tokenInfo, null, 2));
-    console.log(`💾 Token info saved to ${finalOutputPath}`);
+    const finalOutputPath = outputPath || `token-info-${Date.now()}.json`;
+    require('fs').writeFileSync(finalOutputPath, JSON.stringify(tokenInfo, null, 2));
+    debugLog(`💾 Token info saved to ${finalOutputPath}`);
   } catch (error) {
-    throw new Error(`Failed to save token info to ${finalOutputPath}: ${error}`);
+    logError(`❌ Failed to save token info: ${error}`);
   }
 }
 
 export function printUsage(scriptName: string, options: string[] = []): void {
-  console.log(`Usage: npm run ${scriptName} [options]`);
-  console.log('');
-  console.log('Options:');
-  console.log('  -w, --wallet <path>           Path to wallet JSON file');
-  console.log('  -i, --input-token <path>      Path to input token JSON file');
-  console.log('  -o, --output-token <path>     Path to output token JSON file');
-  console.log('  -a, --amount <number>         Amount for buy/sell operations');
-  console.log('  -s, --slippage <number>       Slippage tolerance in basis points');
-  console.log('  -n, --token-name <string>     Token name for creation');
-  console.log('  -y, --token-symbol <string>   Token symbol for creation');
-  console.log('  -d, --token-description <string> Token description for creation');
-  console.log('  -p, --image-path <path>       Path to token image');
-  console.log('  -b, --initial-buy <number>    Initial buy amount for token creation');
-  console.log('  -k, --pool-key <string>       Pool key for AMM operations');
-  console.log('  -l, --lp-amount <number>      LP token amount for liquidity operations');
-  console.log('  -f, --fee-payer <path>        Path to fee payer wallet JSON file');
-  console.log('  -r, --recipient <string>      Recipient address for token transfer');
-  console.log('  -m, --mint <string>           Mint address for token creation');
-  console.log('  -c, --create-account          Create a new account for the token');
-  console.log('  --operations <path>           Path to JSON file containing batch operations');
-  console.log('  --max-parallel <number>       Maximum parallel transactions for batch operations');
-  console.log('  --retry-failed                Retry failed transactions in batch mode');
-  console.log('  --delay-between <ms>          Delay between transaction batches in milliseconds');
-  console.log('  --dry-run                     Show what would be executed without running');
-  console.log('  -h, --help                    Show this help message');
-  
+  debugLog(`Usage: npm run ${scriptName} [options]`);
+  debugLog('');
+  debugLog('Options:');
+  debugLog('  -w, --wallet <path>           Path to wallet JSON file');
+  debugLog('  -i, --input-token <path>      Path to input token JSON file');
+  debugLog('  -o, --output-token <path>     Path to output token JSON file');
+  debugLog('  -a, --amount <number>         Amount for buy/sell operations');
+  debugLog('  -s, --slippage <number>       Slippage tolerance in basis points');
+  debugLog('  -n, --token-name <string>     Token name for creation');
+  debugLog('  -y, --token-symbol <string>   Token symbol for creation');
+  debugLog('  -d, --token-description <string> Token description for creation');
+  debugLog('  -p, --image-path <path>       Path to token image');
+  debugLog('  -b, --initial-buy <number>    Initial buy amount for token creation');
+  debugLog('  -k, --pool-key <string>       Pool key for AMM operations');
+  debugLog('  -l, --lp-amount <number>      LP token amount for liquidity operations');
+  debugLog('  -f, --fee-payer <path>        Path to fee payer wallet JSON file');
+  debugLog('  -r, --recipient <string>      Recipient address for token transfer');
+  debugLog('  -m, --mint <string>           Mint address for token creation');
+  debugLog('  -c, --create-account          Create a new account for the token');
+  debugLog('  --operations <path>           Path to JSON file containing batch operations');
+  debugLog('  --max-parallel <number>       Maximum parallel transactions for batch operations');
+  debugLog('  --retry-failed                Retry failed transactions in batch mode');
+  debugLog('  --delay-between <ms>          Delay between transaction batches in milliseconds');
+  debugLog('  --dry-run                     Show what would be executed without running');
+  debugLog('  -h, --help                    Show this help message');
+
   if (options.length > 0) {
-    console.log('');
-    console.log('Script-specific options:');
-    options.forEach(option => console.log(`  ${option}`));
+    debugLog('');
+    debugLog('Script-specific options:');
+    options.forEach(option => debugLog(`  ${option}`));
   }
-  
-  console.log('');
-  console.log('Examples:');
-  console.log(`  npm run ${scriptName} --amount 0.1 --slippage 1000`);
-  console.log(`  npm run ${scriptName} --wallet ./my-wallet.json --input-token ./my-token.json`);
+
+  debugLog('');
+  debugLog('Examples:');
+  debugLog(`  npm run ${scriptName} --amount 0.1 --slippage 1000`);
+  debugLog(`  npm run ${scriptName} --wallet ./my-wallet.json --input-token ./my-token.json`);
 }

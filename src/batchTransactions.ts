@@ -30,15 +30,15 @@ export async function executeBatchTransactions(
     throw new Error('Fee payer is required for batch transactions');
   }
   
-  console.log(`🚀 Executing ${operations.length} operations in batches of ${maxParallel}`);
-  console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()} for all transactions`);
-  console.log(`📝 Note: All transactions in this batch will use the same fee payer`);
+  debugLog(`🚀 Executing ${operations.length} operations in batches of ${maxParallel}`);
+  debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()} for all transactions`);
+  debugLog(`📝 Note: All transactions in this batch will use the same fee payer`);
   
   // Get a single recent blockhash for the entire batch execution
   // This ensures all transactions can be processed together efficiently
-  console.log('🔗 Getting shared blockhash for batch operations...');
+  debugLog('🔗 Getting shared blockhash for batch operations...');
   const { blockhash } = await connection.getLatestBlockhash('confirmed');
-  console.log(`📝 Using blockhash: ${blockhash}`);
+  debugLog(`📝 Using blockhash: ${blockhash}`);
   
   // Check if all operations are "consuming" operations (transfers, sells)
   // These can be batched together since they all reduce PumpFun token balances

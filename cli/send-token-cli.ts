@@ -1,128 +1,122 @@
 #!/usr/bin/env tsx
 
 import { Connection, PublicKey } from '@solana/web3.js';
-import { sendToken, sendTokenWithAccountCreation, canReceiveTokens } from '../src/sendToken';
-import { parseArgs, loadWallet, loadFeePayerWallet, printUsage } from './cli-args';
+import { sendToken, sendTokenWithAccountCreation } from '../src/sendToken';
+import { parseArgs, loadWallet, loadFeePayerWallet, loadTokenInfo, printUsage } from './cli-args';
+import { debugLog, logError } from '../src/utils/debug';
 
 /**
  * CLI for sending tokens between addresses
  * Supports both bonding curve and AMM tokens
  */
-export async function sendTokenCli() {
+async function sendTokenCli() {
   const args = parseArgs();
 
   if (args.help) {
     printUsage('cli:send-token', [
-      '  --recipient <address>        Recipient public key (required)',
-      '  --mint <address>             Token mint public key (required)',
-      '  --amount <number>            Amount of tokens to send (required)',
-      '  --wallet <path>              Path to wallet JSON file',
-      '  --fee-payer <path>           Path to fee payer wallet JSON file (optional)',
-      '  --create-account <boolean>   Whether to create recipient account (default: true)',
+      '  --recipient <address>       Recipient wallet address (required)',
+      '  --mint <address>            Token mint address (required)',
+      '  --amount <number>           Amount of tokens to send (required)',
+      '  --wallet <path>             Path to wallet JSON file',
+      '  --fee-payer <path>          Path to fee payer wallet JSON file (optional)',
+      '  --create-account            Create recipient account if it doesn\'t exist (default: true)',
     ]);
     return;
   }
 
   // Validate required arguments
   if (!args.recipient || !args.mint || !args.amount) {
-    console.error('❌ Error: --recipient, --mint, and --amount are required');
+    logError('❌ Error: --recipient, --mint, and --amount are required');
     printUsage('cli:send-token');
     return;
   }
 
-  console.log('🚀 Sending Tokens');
-  console.log('==================');
-  console.log(`Recipient: ${args.recipient}`);
-  console.log(`Mint: ${args.mint}`);
-  console.log(`Amount: ${args.amount} tokens`);
-
   try {
-    // Validate addresses
-    let recipient: PublicKey;
-    let mint: PublicKey;
-    
+    debugLog('🚀 Sending Tokens');
+    debugLog('==================');
+    debugLog(`Recipient: ${args.recipient}`);
+    debugLog(`Mint: ${args.mint}`);
+    debugLog(`Amount: ${args.amount} tokens`);
+    debugLog(`Create Account: ${args.createAccount !== false}`);
+
+    // Validate public key format
+    let recipientAddress: PublicKey;
     try {
-      recipient = new PublicKey(args.recipient);
-      mint = new PublicKey(args.mint);
+      recipientAddress = new PublicKey(args.recipient);
     } catch (error) {
-      console.error('❌ Error: Invalid public key format');
+      logError('❌ Error: Invalid public key format');
       return;
     }
 
-    // Setup connection and wallet
-    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    let mintAddress: PublicKey;
+    try {
+      mintAddress = new PublicKey(args.mint);
+    } catch (error) {
+      logError('❌ Error: Invalid mint address format');
+      return;
+    }
+
+    // Load wallet and fee payer
     const wallet = loadWallet(args.wallet);
     const feePayer = loadFeePayerWallet(args.feePayer);
 
-    console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
+    debugLog(`👛 Using wallet: ${wallet.publicKey.toString()}`);
     if (feePayer) {
-      console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
+      debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
     }
 
     // Check if recipient can receive tokens
-    console.log(`🔍 Checking if recipient can receive tokens...`);
-    const canReceive = await canReceiveTokens(connection, recipient, mint);
-    
-    if (canReceive.canReceive) {
-      if (canReceive.hasAccount) {
-        console.log(`✅ Recipient already has a token account: ${canReceive.accountAddress?.toString()}`);
-      } else {
-        console.log(`ℹ️ Recipient doesn't have a token account, will create one if createAccount is true`);
-      }
+    debugLog(`🔍 Checking if recipient can receive tokens...`);
+    const canReceive = await sendTokenWithAccountCreation(
+      new Connection('https://api.devnet.solana.com', 'confirmed'),
+      wallet,
+      recipientAddress,
+      mintAddress,
+      BigInt(args.amount),
+      false, // allowOwnerOffCurve
+      feePayer || wallet
+    );
+
+    if (canReceive.success && canReceive.recipientAccount) {
+      debugLog(`✅ Recipient already has a token account: ${canReceive.recipientAccount.toString()}`);
+    } else if (args.createAccount !== false) {
+      debugLog(`ℹ️ Recipient doesn't have a token account, will create one if createAccount is true`);
     } else {
-      console.error('❌ Error: Recipient cannot receive tokens (invalid address or mint)');
+      logError('❌ Error: Recipient cannot receive tokens (invalid address or mint)');
       return;
     }
 
-    // Send tokens
-    console.log(`\n🔄 Executing token transfer...`);
-    
-    const createAccount = args.createAccount !== false; // Default to true
-    let result;
-    
-    if (createAccount) {
-      result = await sendTokenWithAccountCreation(
-        connection,
-        wallet,
-        recipient,
-        mint,
-        BigInt(args.amount),
-        false, // allowOwnerOffCurve
-        feePayer || undefined
-      );
-    } else {
-      result = await sendToken(
-        connection,
-        wallet,
-        recipient,
-        mint,
-        BigInt(args.amount),
-        false, // allowOwnerOffCurve
-        false, // createRecipientAccount
-        feePayer || undefined
-      );
-    }
+    // Execute token transfer
+    debugLog(`\n🔄 Executing token transfer...`);
+    const result = await sendToken(
+      new Connection('https://api.devnet.solana.com', 'confirmed'),
+      wallet,
+      recipientAddress,
+      mintAddress,
+      BigInt(args.amount),
+      false, // allowOwnerOffCurve
+      args.createAccount !== false, // createRecipientAccount
+      feePayer || wallet
+    );
 
     if (result.success) {
-      console.log(`✅ Token transfer completed successfully!`);
-      console.log(`📝 Transaction signature: ${result.signature}`);
-      console.log(`👥 Recipient account: ${result.recipientAccount?.toString()}`);
-      
+      debugLog(`✅ Token transfer completed successfully!`);
+      debugLog(`📝 Transaction signature: ${result.signature}`);
+      debugLog(`👥 Recipient account: ${result.recipientAccount?.toString()}`);
+
       // Show explorer link
       const explorerUrl = `https://explorer.solana.com/tx/${result.signature}?cluster=devnet`;
-      console.log(`🔍 View transaction: ${explorerUrl}`);
+      debugLog(`🔍 View transaction: ${explorerUrl}`);
     } else {
-      console.error(`❌ Token transfer failed: ${result.error}`);
-      return;
+      logError(`❌ Token transfer failed: ${result.error}`);
     }
 
   } catch (error) {
-    console.error(`❌ Error: ${error}`);
-    return;
+    logError(`❌ Error: ${error}`);
   }
 }
 
 // Run if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  sendTokenCli().catch(console.error);
+  sendTokenCli().catch(logError);
 }

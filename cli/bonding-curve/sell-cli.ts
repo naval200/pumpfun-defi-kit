@@ -3,6 +3,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { sellPumpFunToken } from '../../src/bonding-curve/sell';
 import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
+import { debugLog, logError } from '../../src/utils/debug';
 
 /**
  * Sell PumpFun tokens via bonding curve with configurable parameters
@@ -23,36 +24,36 @@ export async function sellToken() {
 
   // Validate required arguments
   if (!args.amount || args.amount <= 0) {
-    console.error('❌ Error: --amount is required and must be greater than 0');
+    logError('❌ Error: --amount is required and must be greater than 0');
     printUsage('cli:bc-sell');
     return;
   }
 
-  console.log('💸 Selling PumpFun Tokens via Bonding Curve');
-  console.log('============================================');
-  console.log(`Amount: ${args.amount} tokens`);
-  console.log(
+  debugLog('💸 Selling PumpFun Tokens via Bonding Curve');
+  debugLog('============================================');
+  debugLog(`Amount: ${args.amount} tokens`);
+  debugLog(
     `Slippage: ${args.slippage || 1000} basis points (${(args.slippage || 1000) / 100}%)`
   );
 
   try {
     // Load token information
     const tokenInfo = loadTokenInfo(args.inputToken);
-    console.log(`🎯 Token: ${tokenInfo.name || 'Unknown'} (${tokenInfo.symbol || 'Unknown'})`);
-    console.log(`📍 Mint: ${tokenInfo.mint}`);
+    debugLog(`🎯 Token: ${tokenInfo.name || 'Unknown'} (${tokenInfo.symbol || 'Unknown'})`);
+    debugLog(`📍 Mint: ${tokenInfo.mint}`);
 
     // Setup connection and wallet
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const wallet = loadWallet(args.wallet);
     const feePayer = loadFeePayerWallet(args.feePayer);
 
-    console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
+    debugLog(`👛 Using wallet: ${wallet.publicKey.toString()}`);
     if (feePayer) {
-      console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
+      debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
     }
 
     // Execute sell
-    console.log(`\n🔄 Executing sell of ${args.amount} tokens...`);
+    debugLog(`\n🔄 Executing sell of ${args.amount} tokens...`);
     const result = await sellPumpFunToken(
       connection,
       wallet,
@@ -62,17 +63,17 @@ export async function sellToken() {
     );
 
     if (result) {
-      console.log(`✅ Sell successful! Signature: ${result}`);
+      debugLog(`✅ Sell successful! Signature: ${result}`);
     } else {
-      console.log(`❌ Sell failed: ${result}`);
+      debugLog(`❌ Sell failed: ${result}`);
     }
   } catch (error) {
-    console.error(`❌ Error: ${error}`);
+    logError(`❌ Error: ${error}`);
     return;
   }
 }
 
 // Run if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  sellToken().catch(console.error);
+  sellToken().catch(logError);
 }
