@@ -6,18 +6,18 @@ export { getPoolInfo } from './info';
 export { createPool } from './createPool';
 
 // AMM utilities and pool management
-export { 
-  getPoolCreationData, 
-  findPoolsForToken, 
-  checkAMMPoolLiquidity, 
-  getAMMPoolInfo 
+export {
+  getPoolCreationData,
+  findPoolsForToken,
+  checkAMMPoolLiquidity,
+  getAMMPoolInfo,
 } from './amm';
 
 // Zero-RPC instruction builders for batching
-export { 
-  createAmmBuyInstructionsAssuming, 
-  createAmmSellInstructionsAssuming
+export {
+  createAmmBuyInstructionsAssuming,
+  createAmmSellInstructionsAssuming,
 } from './instructions';
 
 // Types
-export type { AmmSwapState } from './instructions';
+export type { AmmSwapState } from '../@types';

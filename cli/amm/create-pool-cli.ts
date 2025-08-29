@@ -3,6 +3,16 @@ import { createPool } from '../../src/amm/createPool';
 import fs from 'fs';
 import path from 'path';
 
+interface CliArgs {
+  help?: boolean;
+  wallet?: string;
+  baseMint?: string;
+  quoteMint?: string;
+  baseAmount?: number;
+  quoteAmount?: number;
+  poolIndex?: number;
+}
+
 function showHelp() {
   console.log(`
 Usage: npm run cli:amm:create-pool -- [options]
@@ -23,8 +33,8 @@ Examples:
 `);
 }
 
-function parseArgs() {
-  const args: any = {};
+function parseArgs(): CliArgs {
+  const args: CliArgs = {};
   const argv = process.argv.slice(2);
 
   for (let i = 0; i < argv.length; i++) {
@@ -101,7 +111,7 @@ async function main() {
 
     // Load token info or use provided mint
     let baseMint: PublicKey;
-    let tokenInfo: any = {};
+    let tokenInfo: { mint?: string; [key: string]: unknown } = {};
     const tokenInfoPath = path.join(process.cwd(), 'token-info.json');
 
     if (args.baseMint) {
@@ -115,6 +125,9 @@ async function main() {
       }
 
       tokenInfo = JSON.parse(fs.readFileSync(tokenInfoPath, 'utf8'));
+      if (!tokenInfo.mint) {
+        throw new Error('token-info.json does not contain a mint address');
+      }
       baseMint = new PublicKey(tokenInfo.mint);
       console.log('✅ Token info loaded:', {
         name: tokenInfo.name,

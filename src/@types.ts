@@ -140,3 +140,6 @@ export interface SendSolResult {
   signature?: string;
   error?: string;
 }
+
+// Using any type because the SDK's SwapSolanaState type is not accessible in the current version
+export type AmmSwapState = any;

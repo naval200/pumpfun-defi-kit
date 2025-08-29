@@ -13,7 +13,6 @@ import { buyPumpFunToken } from '../src/bonding-curve/buy';
 import { sellPumpFunToken } from '../src/bonding-curve/sell';
 import { sendToken } from '../src/sendToken';
 import { buyTokens } from '../src/amm/buy';
-import { sellTokens } from '../src/amm/sell';
 
 // Example configuration
 const CONFIG = {
@@ -170,7 +169,7 @@ async function batchOperationsExample() {
       console.log(`\n   User ${i + 1} buying ${amount} SOL worth of tokens...`);
 
       try {
-        const result = await buyPumpFunToken(
+        await buyPumpFunToken(
           connection,
           user, // User owns the tokens
           new PublicKey(CONFIG.tokenMint),

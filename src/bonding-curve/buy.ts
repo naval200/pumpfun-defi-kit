@@ -1,12 +1,27 @@
 import { getAllRequiredPDAsForBuy, ensureBondingCurveAtas } from './bc-helper';
 import { createBondingCurveBuyInstructionAssuming } from './instructions';
-import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  Transaction,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import { debugLog, logError, log, logSuccess, logSignature } from '../utils/debug';
 import BN from 'bn.js';
 import { PUMP_PROGRAM_ID } from './constants';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { getOrCreateAssociatedTokenAccount } from '../createAccount';
 import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
+
+interface BuyPDAs {
+  globalPDA: PublicKey;
+  bondingCurvePDA: PublicKey;
+  creatorVaultPDA: PublicKey;
+  eventAuthorityPDA: PublicKey;
+  globalVolumeAccumulatorPDA: PublicKey;
+  userVolumeAccumulatorPDA: PublicKey;
+}
 
 /**
  * Common setup for buy operations - gets PDAs and ensures ATAs exist
@@ -18,7 +33,7 @@ async function setupBuyOperation(
   options?: { assumeAccountsExist?: boolean }
 ): Promise<{
   success: boolean;
-  pdas?: any;
+  pdas?: BuyPDAs;
   associatedBondingCurve?: PublicKey;
   associatedUser?: PublicKey;
   error?: string;
@@ -72,14 +87,10 @@ async function setupBuyOperation(
  * Create complete buy instruction with robust PDA resolution
  */
 async function createCompleteBuyInstruction(
-  _programId: PublicKey,
   buyer: PublicKey,
   mint: PublicKey,
   solAmount: BN,
-  maxSlippageBasisPoints: number = 1000,
-  _pdas: any,
-  _associatedBondingCurve: PublicKey,
-  _associatedUser: PublicKey
+  maxSlippageBasisPoints: number = 1000
 ): Promise<TransactionInstruction> {
   // Reuse zero-RPC builder for consistency
   return createBondingCurveBuyInstructionAssuming(buyer, mint, solAmount, maxSlippageBasisPoints);
@@ -121,14 +132,10 @@ export async function buyPumpFunToken(
       }
 
       const buyInstruction = await createCompleteBuyInstruction(
-        PUMP_PROGRAM_ID,
         wallet.publicKey,
         mint,
         new BN(solAmount * 1e9), // Convert SOL to lamports
-        slippageBasisPoints,
-        setupResult.pdas!,
-        setupResult.associatedBondingCurve!,
-        setupResult.associatedUser!
+        slippageBasisPoints
       );
 
       const transaction = new Transaction().add(buyInstruction);
@@ -236,14 +243,10 @@ export async function createSignedBuyTransaction(
     // Create complete buy instruction
     debugLog('📝 Creating complete buy instruction...');
     const buyInstruction = await createCompleteBuyInstruction(
-      PUMP_PROGRAM_ID,
       wallet.publicKey,
       mint,
       new BN(solAmount * 1e9), // Convert SOL to lamports
-      slippageBasisPoints,
-      setupResult.pdas!,
-      setupResult.associatedBondingCurve!,
-      setupResult.associatedUser!
+      slippageBasisPoints
     );
 
     // Create transaction

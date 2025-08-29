@@ -11,12 +11,13 @@
 import { validatePumpFunBatchOperations as validateBatchOperations } from '../src/batch';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { BatchOperation } from '../src/@types';
 
 /**
  * Example batch operations for demonstration
  * Only consuming operations are supported in combined mode
  */
-const exampleOperations = [
+const exampleOperations: BatchOperation[] = [
   {
     type: 'transfer',
     id: 'transfer-example-1',
@@ -78,7 +79,7 @@ function createExampleOperationsFile(): void {
 /**
  * Validate operations structure using the built-in validator
  */
-function validateOperations(operations: any[]): boolean {
+function validateOperations(operations: BatchOperation[]): boolean {
   console.log('🔍 Validating operations structure...');
 
   const validation = validateBatchOperations(operations);
@@ -96,7 +97,7 @@ function validateOperations(operations: any[]): boolean {
 /**
  * Display operations summary
  */
-function displayOperationsSummary(operations: any[]): void {
+function displayOperationsSummary(operations: BatchOperation[]): void {
   console.log('\n📋 Operations Summary:');
   console.log('=======================');
 

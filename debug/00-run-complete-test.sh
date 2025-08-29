@@ -12,7 +12,8 @@ echo "1. Create 20 user wallets"
 echo "2. Transfer PumpFun tokens to 10 wallets"
 echo "3. Test basic batch operations (10 transfers)"
 echo "4. Test comprehensive batch operations (mixed types)"
-echo "5. Generate detailed logs and reports"
+echo "5. Test buy and SOL transfer operations together"
+echo "6. Generate detailed logs and reports"
 echo ""
 
 # Configuration
@@ -81,24 +82,38 @@ echo "✅ Setup phase completed successfully"
 echo ""
 
 # Phase 2: Basic batch testing
-echo "🧪 Phase 2: Testing basic batch operations (10 transfers)"
-echo "========================================================"
-echo "Running basic batch test..."
-bash "$DEBUG_DIR/02-test-batch-operations.sh"
+echo "🧪 Phase 2: Testing send and sell operations (10 transfers)"
+echo "=========================================================="
+echo "Running send and sell operations test..."
+bash "$DEBUG_DIR/02-test-batch-send-and-sell.sh"
 
 if [ $? -ne 0 ]; then
-    echo "❌ Basic batch test failed. Exiting."
+    echo "❌ Send and sell operations test failed. Exiting."
     exit 1
 fi
 
-echo "✅ Basic batch test completed successfully"
+echo "✅ Send and sell operations test completed successfully"
 echo ""
 
-# Phase 3: Comprehensive testing
-echo "🧪 Phase 3: Testing comprehensive batch operations (mixed types)"
+# Phase 3: Batched instructions testing
+echo "🔄 Phase 3: Testing batched instructions (mixed operations)"
+echo "=========================================================="
+echo "Running batched instructions test..."
+bash "$DEBUG_DIR/02-test-batch-send-and-buy.sh"
+
+if [ $? -ne 0 ]; then
+    echo "❌ Batched instructions test failed. Exiting."
+    exit 1
+fi
+
+echo "✅ Batched instructions test completed successfully"
+echo ""
+
+# Phase 4: Comprehensive testing
+echo "🧪 Phase 4: Testing comprehensive batch operations (mixed types)"
 echo "==============================================================="
 echo "Running comprehensive batch test..."
-bash "$DEBUG_DIR/03-test-comprehensive-batch.sh"
+bash "$DEBUG_DIR/09-test-comprehensive-batch.sh"
 
 if [ $? -ne 0 ]; then
     echo "❌ Comprehensive batch test failed. Exiting."
@@ -108,8 +123,8 @@ fi
 echo "✅ Comprehensive batch test completed successfully"
 echo ""
 
-# Phase 4: Generate final report
-echo "📊 Phase 4: Generating final test report"
+# Phase 5: Generate final report
+echo "📊 Phase 5: Generating final test report"
 echo "======================================="
 
 END_TIME=$(date +%s)
@@ -127,8 +142,9 @@ cat > "$REPORT_FILE" << EOF
 
 ## Test Phases
 1. ✅ **Setup Phase**: Created 20 user wallets, funded 10 with tokens
-2. ✅ **Basic Batch Test**: 10 transfer operations between wallets
-3. ✅ **Comprehensive Test**: Mixed operations (transfers, sells, AMM)
+2. ✅ **Send and Sell Test**: 10 transfer operations between wallets
+3. ✅ **Batched Instructions Test**: Mixed operations in single transaction
+4. ✅ **Comprehensive Test**: Mixed operations (transfers, sells, AMM)
 
 ## Configuration
 - **Token Mint**: $(jq -r '.mint' "$WALLETS_DIR/token-info.json")
@@ -140,19 +156,24 @@ cat > "$REPORT_FILE" << EOF
 - User wallets: \`debug/user-wallets/\`
 - Batch operations: \`debug/batch-operations-test.json\`
 - Comprehensive operations: \`debug/comprehensive-batch-test.json\`
-- Detailed logs: \`debug/batch-test-*.log\`
+- Buy and SOL transfer operations: \`debug/buy-and-sol-transfer-test.json\`
+- Detailed logs: \`debug/batch-test-*.log\`, \`debug/buy-sol-transfer-test-*.log\`
 
 ## Test Results
-- **Basic Batch**: 10 transfer operations ✅
-- **Comprehensive Batch**: 10 mixed operations ✅
+- **Send and Sell Test**: 10 transfer operations ✅
+- **Batched Instructions**: 10 mixed operations in single transaction ✅
+- **Comprehensive Batch**: 16 mixed operations ✅
 - **Fee Payer**: Treasury wallet used for all operations ✅
-- **Parallel Execution**: max-parallel=3 ✅
+- **Parallel Execution**: max-parallel=5 (send/sell), max-parallel=1 (batched), max-parallel=3 (comprehensive) ✅
 - **Retry Logic**: Automatic retry for failed operations ✅
 
 ## What Was Tested
 - Wallet creation and token distribution
 - Batch transfer operations between user wallets
 - Mixed operation types in single batch
+- Token buying via bonding curve and AMM
+- SOL transfers between wallets
+- Combined buy and transfer operations
 - Single fee payer for all operations
 - Parallel execution and error handling
 - Comprehensive logging and reporting
@@ -181,7 +202,8 @@ echo ""
 echo "📋 Summary of what was accomplished:"
 echo "  ✅ Created 20 user wallets with Solana CLI"
 echo "  ✅ Distributed PumpFun tokens to 10 wallets"
-echo "  ✅ Tested basic batch operations (10 transfers)"
+echo "  ✅ Tested send and sell operations (10 transfers)"
+echo "  ✅ Tested batched instructions (mixed operations in single transaction)"
 echo "  ✅ Tested comprehensive batch operations (mixed types)"
 echo "  ✅ Used treasury wallet as fee payer for all operations"
 echo "  ✅ Generated detailed logs and reports"

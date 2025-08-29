@@ -2,8 +2,7 @@ import { TransactionInstruction } from '@solana/web3.js';
 import BN from 'bn.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 
-// Note: No RPC here. Caller must pass PumpAmmSdk instance and pre-fetched swapSolanaState.
-export type AmmSwapState = any; // from PumpAmmSdk.swapSolanaState
+import { AmmSwapState } from '../@types';
 
 export async function createAmmBuyInstructionsAssuming(
   pumpAmmSdk: PumpAmmSdk,

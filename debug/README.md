@@ -7,7 +7,9 @@ This directory contains bash scripts for testing the batch transaction system wi
 The scripts create a complete test environment with:
 - 20 user wallets (no SOL, just for testing)
 - Initial token distribution to 10 wallets
-- Batch operations testing with transfers
+- Send and sell operations testing with transfers
+- SOL transfer operations testing
+- Buy and SOL transfer operations testing
 - Comprehensive testing with mixed operation types
 - Detailed logging and reporting
 
@@ -54,11 +56,14 @@ This will execute all phases automatically and generate a comprehensive report.
 # Phase 1: Setup wallets and distribute tokens
 ./01-setup-user-wallets.sh
 
-# Phase 2: Test basic batch operations (10 transfers)
-./02-test-batch-operations.sh
+# Phase 2: Test send and sell operations (10 transfers)
+./02-test-batch-send-and-sell.sh
 
-# Phase 3: Test comprehensive batch operations (mixed types)
-./03-test-comprehensive-batch.sh
+# Phase 3: Test batched instructions (mixed operations)
+./02-test-batch-send-and-buy.sh
+
+# Phase 4: Test comprehensive batch operations (mixed types)
+./09-test-comprehensive-batch.sh
 ```
 
 ## 📁 Script Details
@@ -76,19 +81,28 @@ This will execute all phases automatically and generate a comprehensive report.
   - Uses creator wallet as source, treasury wallet as fee payer
 - **Output**: 20 wallet files in `user-wallets/` directory
 
-### `02-test-batch-operations.sh` - Basic Testing
-- **Purpose**: Tests basic batch operations
+### `02-test-batch-send-and-sell.sh` - Batch Send Testing
+- **Purpose**: Tests basic batch send operations
 - **What it does**:
   - Creates 10 transfer operations between user wallets
   - Executes batch using treasury wallet as fee payer
   - Tests parallel execution and error handling
 - **Output**: Batch operations JSON and execution logs
 
-### `03-test-comprehensive-batch.sh` - Advanced Testing
-- **Purpose**: Tests mixed operation types
+### `02-test-batch-send-and-buy.sh` - Batch Send and Buy Testing
+- **Purpose**: Tests true batched instructions with mixed operations
 - **What it does**:
-  - Creates mixed operations (transfers, sells, AMM)
-  - Tests complex batch scenarios
+  - Creates 10 mixed operations (buys and SOL transfers)
+  - Combines all operations into single batched transaction
+  - Tests atomic execution - all succeed or all fail together
+  - Uses treasury wallet as fee payer
+- **Output**: Buy and SOL transfer operations JSON and execution logs
+
+### `09-test-comprehensive-batch.sh` - Advanced Testing
+- **Purpose**: Tests mixed operation types comprehensively
+- **What it does**:
+  - Creates 16 mixed operations (transfers, SOL transfers, buys, sells, AMM)
+  - Tests complex batch scenarios with all operation types
   - Generates detailed execution logs
 - **Output**: Comprehensive operations JSON and detailed logs
 
@@ -103,11 +117,13 @@ This will execute all phases automatically and generate a comprehensive report.
 - **Amount per wallet**: 1000 tokens (configurable in setup script)
 - **Transfer amounts**: Random between 10-100 tokens
 - **Sell amounts**: Random between 30-200 tokens
+- **Buy amounts**: Random between 0.01-0.05 SOL
+- **SOL transfer amounts**: Random between 0.001-0.05 SOL
 
 ### Batch Configuration
-- **Max parallel**: 3-5 operations (configurable)
+- **Max parallel**: 2-5 operations (configurable per test type)
 - **Retry logic**: Automatic retry for failed operations
-- **Delay between**: 2 seconds between batches
+- **Delay between**: 1-3 seconds between batches (configurable per test type)
 
 ## 📊 Output Files
 
@@ -119,25 +135,36 @@ debug/
 │   ├── user-wallet-1.json
 │   ├── user-wallet-2.json
 │   └── ...
-├── batch-operations-test.json       # Basic batch operations
+├── batch-operations-test.json       # Basic send and sell operations
+├── buy-and-sol-transfer-test.json   # Buy and SOL transfer operations
 ├── comprehensive-batch-test.json    # Mixed operations
 ├── batch-test-*.log                # Detailed execution logs
+├── buy-sol-transfer-test-*.log     # Buy and SOL transfer logs
 └── test-report-*.md                # Final test report
 ```
 
 ## 🧪 Testing Scenarios
 
-### Basic Batch Test
+### Batch Send Test
 - **Operations**: 10 transfer operations
 - **Types**: All transfers between user wallets
 - **Fee Payer**: Treasury wallet
+- **Max Parallel**: 5 operations
 - **Expected**: All operations succeed, single transaction
 
-### Comprehensive Test
+### Batch Send and Buy Test
 - **Operations**: 10 mixed operations
-- **Types**: 5 transfers + 3 bonding curve sells + 2 AMM sells
+- **Types**: 5 buy operations (3 bonding curve + 2 AMM) + 5 SOL transfers
 - **Fee Payer**: Treasury wallet
-- **Expected**: Mixed operations handled correctly
+- **Execution**: Single batched transaction (--combine-per-batch)
+- **Expected**: All operations succeed or fail together atomically
+
+### Comprehensive Test
+- **Operations**: 16 mixed operations
+- **Types**: 5 transfers + 4 SOL transfers + 2 buys + 3 bonding curve sells + 2 AMM sells
+- **Fee Payer**: Treasury wallet
+- **Max Parallel**: 3 operations
+- **Expected**: All operation types handled correctly
 
 ## 🔍 Monitoring and Debugging
 
@@ -205,10 +232,25 @@ export DEBUG_PUMPFUN_DEFI_SDK=true
 - Add new operation parameters
 - Test edge cases and error conditions
 
+## 🎯 Test Progression
+
+The test suite is designed with a logical progression:
+
+1. **Setup** - Create wallets and distribute tokens
+2. **Basic Operations** - Test simple send and sell operations
+3. **Batched Instructions** - Test true instruction batching with mixed operations
+4. **Comprehensive** - Test all operation types together
+
+This progression allows for:
+- **Incremental testing** - Each phase builds on the previous
+- **Isolated debugging** - Issues can be identified at specific levels
+- **Performance analysis** - Compare different operation types
+- **Scalability testing** - Test with increasing complexity
+
 ## 🤝 Contributing
 
 To add new test scenarios:
-1. Create new script following naming convention
+1. Create new script following naming convention (XX-test-description.sh)
 2. Add comprehensive error handling
 3. Include detailed logging
 4. Update master script if needed
@@ -221,6 +263,7 @@ To add new test scenarios:
 - **Fee Payer**: Treasury wallet must have sufficient SOL
 - **Cleanup**: User wallets can be deleted after testing
 - **Logs**: All logs are timestamped for easy tracking
+- **Numbering**: Scripts use XX prefix to allow for easy insertion of new tests
 
 ---
 

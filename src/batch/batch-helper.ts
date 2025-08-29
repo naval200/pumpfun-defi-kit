@@ -1,17 +1,18 @@
-import { Connection, Keypair, Transaction, Commitment, PublicKey } from '@solana/web3.js';
+import {
+  Connection,
+  Keypair,
+  Transaction,
+  Commitment,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import { debugLog, logError } from '../utils/debug';
 import type { GenericBatchOptions, GenericBatchResult, GenericBatchOperation } from '../@types';
-import { sendToken, sendTokenWithAccountCreation } from '../sendToken';
-import { buyTokens as buyAmmTokens } from '../amm';
-import { buyPumpFunToken } from '../bonding-curve';
-import { sellTokens } from '../amm';
-import { createSignedSellTransaction } from '../bonding-curve/sell';
-import { sendLamports } from '../utils/transaction';
-import {
-  getAssociatedTokenAddressSync,
-  createTransferInstruction,
-  TOKEN_PROGRAM_ID,
-} from '@solana/spl-token';
+
+interface ExecutorResult {
+  success: boolean;
+  signature?: string;
+  error?: string;
+}
 
 /**
  * Execute generic batch operations with custom execution logic
@@ -22,7 +23,7 @@ import {
 export async function executeGenericBatch<T extends GenericBatchOperation>(
   connection: Connection,
   operations: T[],
-  executor: (operation: T, connection: Connection, feePayer: Keypair) => Promise<any>,
+  executor: (operation: T, connection: Connection, feePayer: Keypair) => Promise<ExecutorResult>,
   options: GenericBatchOptions
 ): Promise<GenericBatchResult[]> {
   const { maxParallel = 3, delayBetween = 1000, retryFailed = false, feePayer } = options;
@@ -140,7 +141,7 @@ export async function executeGenericBatch<T extends GenericBatchOperation>(
 export async function executeCombinedTransaction(
   connection: Connection,
   operations: GenericBatchOperation[],
-  instructionBuilder: (operation: GenericBatchOperation) => any[],
+  instructionBuilder: (operation: GenericBatchOperation) => TransactionInstruction[],
   signers: Keypair[],
   feePayer: Keypair,
   options: { skipPreflight?: boolean; preflightCommitment?: Commitment } = {}

@@ -1,10 +1,4 @@
-import {
-  Connection,
-  PublicKey,
-  Keypair,
-  Transaction,
-  SystemProgram,
-} from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, Transaction, SystemProgram } from '@solana/web3.js';
 import {
   getAssociatedTokenAddressSync,
   createTransferInstruction,
@@ -30,9 +24,57 @@ import { sendLamports } from '../utils/transaction';
 import { debugLog, logError } from '../utils/debug';
 import type { BatchOperation, BatchResult, BatchExecutionOptions } from '../@types';
 import { sendToken, sendTokenWithAccountCreation } from '../sendToken';
+import { TransactionInstruction } from '@solana/web3.js';
 
 // Re-export types for external use
 export type { BatchOperation, BatchResult, BatchExecutionOptions };
+
+interface OperationResult {
+  success: boolean;
+  signature?: string;
+  error?: string;
+  amount?: number;
+  mint?: string;
+}
+
+interface TransferParams {
+  recipient: string;
+  mint: string;
+  amount: string;
+  createAccount?: boolean;
+}
+
+interface SolTransferParams {
+  recipient: string;
+  lamports: string;
+  sender?: string;
+}
+
+interface BondingCurveSellParams {
+  mint: string;
+  amount: number;
+  slippage?: number;
+}
+
+interface AmmSellParams {
+  poolKey: string;
+  amount: number;
+  slippage?: number;
+}
+
+interface AmmBuyParams {
+  poolKey: string;
+  quoteAmount: number;
+  slippage?: number;
+  assumeAccountsExist?: boolean;
+}
+
+interface BondingCurveBuyParams {
+  mint: string;
+  solAmount: number;
+  slippage?: number;
+  assumeAccountsExist?: boolean;
+}
 
 /**
  * Execute PumpFun token batch transactions
@@ -89,9 +131,9 @@ export async function executePumpFunBatch(
         groupedBySender.set(senderPubkey, entry);
       }
 
-      for (const [_, group] of groupedBySender) {
+      for (const [, group] of groupedBySender) {
         try {
-          const instructions: any[] = [];
+          const instructions: TransactionInstruction[] = [];
           const sender = group.sender;
           const ammSdk = new PumpAmmSdk(connection);
 
@@ -239,7 +281,7 @@ export async function executePumpFunBatch(
       try {
         debugLog(`🚀 Executing ${operation.type}: ${operation.description}`);
 
-        let result: any;
+        let result: OperationResult;
 
         switch (operation.type) {
           case 'transfer':
@@ -346,7 +388,7 @@ async function executeOperation(
   try {
     debugLog(`🚀 Executing ${operation.type}: ${operation.description}`);
 
-    let result: any;
+    let result: OperationResult;
 
     switch (operation.type) {
       case 'transfer':
@@ -389,8 +431,8 @@ async function executeTransfer(
   connection: Connection,
   wallet: Keypair,
   feePayer: Keypair | undefined,
-  params: any
-): Promise<any> {
+  params: TransferParams
+): Promise<OperationResult> {
   const { recipient, mint, amount, createAccount = true } = params;
 
   try {
@@ -430,8 +472,8 @@ async function executeTransfer(
 async function executeSolTransfer(
   connection: Connection,
   wallet: Keypair,
-  params: any
-): Promise<any> {
+  params: SolTransferParams
+): Promise<OperationResult> {
   const { recipient, lamports, sender } = params;
 
   try {
@@ -463,8 +505,8 @@ async function executeBondingCurveSell(
   connection: Connection,
   wallet: Keypair,
   feePayer: Keypair | undefined,
-  params: any
-): Promise<any> {
+  params: BondingCurveSellParams
+): Promise<OperationResult> {
   const { mint, amount, slippage = 1000 } = params;
 
   try {
@@ -522,8 +564,8 @@ async function executeAmmSell(
   connection: Connection,
   wallet: Keypair,
   feePayer: Keypair | undefined,
-  params: any
-): Promise<any> {
+  params: AmmSellParams
+): Promise<OperationResult> {
   const { poolKey, amount, slippage = 1 } = params;
 
   try {
@@ -542,7 +584,11 @@ async function executeAmmSell(
 /**
  * Execute AMM buy with wallet paying its own fee and optional ATA skip
  */
-async function executeAmmBuy(connection: Connection, wallet: Keypair, params: any): Promise<any> {
+async function executeAmmBuy(
+  connection: Connection,
+  wallet: Keypair,
+  params: AmmBuyParams
+): Promise<OperationResult> {
   const { poolKey, quoteAmount, slippage = 1, assumeAccountsExist = true } = params;
 
   try {
@@ -569,8 +615,8 @@ async function executeAmmBuy(connection: Connection, wallet: Keypair, params: an
 async function executeBondingCurveBuy(
   connection: Connection,
   wallet: Keypair,
-  params: any
-): Promise<any> {
+  params: BondingCurveBuyParams
+): Promise<OperationResult> {
   const { mint, solAmount, slippage = 1000, assumeAccountsExist = true } = params;
 
   try {
