@@ -128,7 +128,7 @@ Sell tokens via the bonding curve mechanism.
 The batch transactions functionality is also available as a programmatic API for integration into your own applications:
 
 ```typescript
-import { batchTransactions, BatchOperation } from '../src/batchTransactions';
+import { executePumpFunBatch as batchTransactions, BatchOperation } from '../src/batch';
 
 const operations: BatchOperation[] = [
   // ... your operations
@@ -150,7 +150,7 @@ const results = await batchTransactions(
 ### Function Signature
 
 ```typescript
-export async function batchTransactions(
+export async function executePumpFunBatch(
   connection: Connection,
   wallet: Keypair,
   operations: BatchOperation[],
@@ -158,118 +158,3 @@ export async function batchTransactions(
   options: Partial<BatchExecutionOptions> = {}
 ): Promise<BatchResult[]>
 ```
-
-### Options Interface
-
-```typescript
-interface BatchExecutionOptions {
-  maxParallel?: number;           // Default: 3
-  delayBetween?: number;          // Default: 1000ms
-  retryFailed?: boolean;          // Default: false
-  maxTransferInstructionsPerTx?: number; // Optional
-}
-```
-
-## Examples
-
-### Example 1: Basic Batch Execution
-
-```bash
-npm run cli:batch-transactions \
-  --operations examples/batch-operations-example.json \
-  --fee-payer wallets/fee-payer.json
-```
-
-### Example 2: Custom Parallelization and Retry
-
-```bash
-npm run cli:batch-transactions \
-  --operations examples/batch-operations-example.json \
-  --fee-payer wallets/fee-payer.json \
-  --max-parallel 5 \
-  --retry-failed \
-  --delay-between 2000
-```
-
-### Example 3: Dry Run Mode
-
-```bash
-npm run cli:batch-transactions \
-  --operations examples/batch-operations-example.json \
-  --fee-payer wallets/fee-payer.json \
-  --dry-run
-```
-
-### Example 4: Custom Wallet
-
-```bash
-npm run cli:batch-transactions \
-  --operations examples/batch-operations-example.json \
-  --fee-payer wallets/fee-payer.json \
-  --wallet wallets/custom-wallet.json
-```
-
-## Operation Execution Flow
-
-1. **Load Operations**: Parse the JSON file and validate operation structure
-2. **Batch Creation**: Group operations into batches based on `max-parallel` setting
-3. **Parallel Execution**: Execute operations within each batch simultaneously
-4. **Batch Delays**: Wait between batches to avoid network congestion
-5. **Retry Logic**: Optionally retry failed operations
-6. **Result Reporting**: Provide comprehensive success/failure reporting
-
-## Performance Considerations
-
-- **Parallel Limits**: Higher parallel limits increase throughput but may hit rate limits
-- **Batch Delays**: Longer delays reduce network congestion but increase total execution time
-- **Network Conditions**: Adjust parameters based on current Solana network conditions
-- **Fee Payer Balance**: Ensure fee payer has sufficient SOL for all operations
-
-## Error Handling
-
-- **Individual Failures**: Failed operations don't stop the batch; they're reported separately
-- **Retry Mechanism**: Failed operations can be automatically retried once
-- **Detailed Logging**: Each operation's success/failure is logged with specific error messages
-- **Transaction Signatures**: Successful operations include transaction signatures for verification
-
-## Best Practices
-
-1. **Test with Dry Run**: Always use `--dry-run` first to verify operation parameters
-2. **Start Small**: Begin with small batches and increase parallelization gradually
-3. **Monitor Network**: Check Solana network status before running large batches
-4. **Validate Addresses**: Ensure all addresses in the operations file are valid
-5. **Sufficient Balances**: Verify wallets have sufficient tokens and SOL before execution
-6. **Backup Operations**: Keep backup copies of operation files
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Invalid JSON Format**: Ensure the operations file is valid JSON
-2. **Missing Fee Payer**: Fee payer wallet is mandatory and must have sufficient SOL
-3. **Invalid Addresses**: Check that all public keys are valid Solana addresses
-4. **Insufficient Balances**: Verify wallets have sufficient tokens for transfers/sells
-5. **Network Congestion**: Increase delays between batches during high network usage
-
-### Debug Mode
-
-For detailed debugging, the CLI provides comprehensive logging:
-- Operation execution details
-- Transaction signatures
-- Error messages with context
-- Batch progress information
-
-## Security Considerations
-
-- **Fee Payer Security**: The fee payer wallet should be separate from main operation wallets
-- **Private Key Protection**: Ensure wallet files are stored securely and not committed to version control
-- **Operation Validation**: Always review operations before execution, especially in production
-- **Network Selection**: Verify you're operating on the intended network (devnet/mainnet)
-
-## Future Enhancements
-
-- **Conditional Operations**: Support for operations that depend on previous results
-- **Dynamic Parameters**: Runtime parameter adjustment based on market conditions
-- **Scheduled Execution**: Time-based operation scheduling
-- **Advanced Retry Logic**: Configurable retry strategies with exponential backoff
-- **Operation Templates**: Reusable operation patterns for common scenarios

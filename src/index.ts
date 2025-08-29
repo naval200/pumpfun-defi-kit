@@ -16,7 +16,7 @@ export * from './createAccount';
 export * from './sendToken';
 
 // Batch transactions exports
-export * from './batchTransactions';
+export * from './batch';
 
 // Type exports
 export * from './@types';

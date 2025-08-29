@@ -91,4 +91,33 @@ export interface BatchExecutionOptions {
   maxTransferInstructionsPerTx?: number;
 }
 
+/**
+ * Generic batch execution options
+ */
+export interface GenericBatchOptions {
+  maxParallel?: number;
+  delayBetween?: number;
+  retryFailed?: boolean;
+  feePayer: Keypair;
+}
 
+/**
+ * Generic batch result
+ */
+export interface GenericBatchResult {
+  operationId: string;
+  type: string;
+  success: boolean;
+  signature?: string;
+  error?: string;
+}
+
+/**
+ * Generic batch operation interface
+ */
+export interface GenericBatchOperation {
+  id: string;
+  type: string;
+  description: string;
+  params: Record<string, any>;
+}

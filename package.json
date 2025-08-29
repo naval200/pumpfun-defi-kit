@@ -55,7 +55,7 @@
     "prepublishOnly": "npm run build:clean",
     "prepack": "npm run build:clean",
     "postinstall": "echo 'Package installed successfully! Run npm run help to see available CLI commands.'",
-    "lint": "eslint src/**/*.ts examples/**/*.ts cli/**/*.ts debug/**/*.ts",
+    "lint": "eslint src/**/*.ts examples/**/*.ts cli/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
     "check-format": "prettier --check src/**/*.ts",

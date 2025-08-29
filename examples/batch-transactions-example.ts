@@ -8,8 +8,7 @@
  * Buy operations cannot be batched together as they have different dependencies
  */
 
-import { batchTransactions, validateBatchOperations } from '../src/batchTransactions';
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { validatePumpFunBatchOperations as validateBatchOperations } from '../src/batch';
 import * as fs from 'fs';
 import * as path from 'path';
 

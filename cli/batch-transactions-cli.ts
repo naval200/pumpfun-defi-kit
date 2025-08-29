@@ -3,10 +3,10 @@
 import { Connection, Keypair } from '@solana/web3.js';
 import { parseArgs } from './cli-args';
 import {
-  batchTransactions,
-  validateBatchOperations,
-  BatchOperation,
-} from '../src/batchTransactions';
+  executePumpFunBatch as batchTransactions,
+  validatePumpFunBatchOperations as validateBatchOperations,
+} from '../src/batch';
+import type { BatchOperation } from '../src/@types';
 import fs from 'fs';
 import path from 'path';
 

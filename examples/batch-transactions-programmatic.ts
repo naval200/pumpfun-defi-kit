@@ -5,12 +5,12 @@
  * This shows the clean, simple interface for executing multiple operations
  */
 
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { 
-  batchTransactions, 
-  BatchOperation, 
-  validateBatchOperations 
-} from '../src/batchTransactions';
+  executePumpFunBatch as batchTransactions,
+  validatePumpFunBatchOperations as validateBatchOperations,
+} from '../src/batch';
+import { BatchOperation } from '../src/@types';
+import { Connection, Keypair } from '@solana/web3.js';
 
 /**
  * Example batch operations

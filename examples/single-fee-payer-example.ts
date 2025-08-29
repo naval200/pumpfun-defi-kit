@@ -5,7 +5,7 @@
  * This shows how one fee payer wallet handles all transaction fees in a batch
  */
 
-import { batchTransactions, validateBatchOperations } from '../src/batchTransactions';
+import { executePumpFunBatch as batchTransactions, validatePumpFunBatchOperations as validateBatchOperations } from '../src/batch';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import type { BatchOperation } from '../src/@types';
 
