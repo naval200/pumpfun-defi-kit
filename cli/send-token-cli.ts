@@ -2,7 +2,7 @@
 
 import { Connection, PublicKey } from '@solana/web3.js';
 import { sendToken, sendTokenWithAccountCreation } from '../src/sendToken';
-import { parseArgs, loadWallet, loadFeePayerWallet, loadTokenInfo, printUsage } from './cli-args';
+import { parseArgs, loadWallet, loadFeePayerWallet, printUsage } from './cli-args';
 import { debugLog, logError } from '../src/utils/debug';
 
 /**

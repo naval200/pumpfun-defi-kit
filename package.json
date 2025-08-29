@@ -60,7 +60,7 @@
     "format": "prettier --write src/**/*.ts",
     "check-format": "prettier --check src/**/*.ts",
     "deploy:dist": "bash scripts/deploy-dist.sh",
-    "help": "echo 'Available CLI commands:' && echo '  Bonding Curve (BC):' && echo '    npm run cli:bc:create-token -- --help' && echo '    npm run cli:bc:buy -- --help' && echo '    npm run cli:bc:sell -- --help' && echo '    npm run cli:bc:sdk-buy -- --help' && echo '  AMM:' && echo '    npm run cli:amm:buy -- --help' && echo '    npm run cli:amm:create-pool -- --help' && echo '    npm run cli:amm:info -- --help' && echo '    npm run cli:amm:liquidity -- --help' && echo '  Utilities:' && echo '    npm run cli:graduation-check' && echo '    npm run cli:send-token -- --help' && echo '    npm run cli:batch-transactions -- --help' && echo '  Deployment:' && echo '    npm run deploy:dist' && echo '    npm run deploy:dist:shell'",
+    "help": "echo 'Available CLI commands:' && echo '  Bonding Curve (BC):' && echo '    npm run cli:bc:create-token -- --help' && echo '    npm run cli:bc:buy -- --help' && echo '    npm run cli:bc:sell -- --help' && echo '    npm run cli:bc:sdk-buy -- --help' && echo '  AMM:' && echo '    npm run cli:amm:buy -- --help' && echo '    npm run cli:amm:create-pool -- --help' && echo '    npm run cli:amm:info -- --help' && echo '    npm run cli:amm:liquidity -- --help' && echo '  Utilities:' && echo '    npm run cli:graduation-check' && echo '    npm run cli:send-token -- --help' && echo '    npm run cli:batch-transactions -- --help' && echo '    npm run cli:check-wallet-balances -- --help' && echo '  Deployment:' && echo '    npm run deploy:dist' && echo '    npm run deploy:dist:shell'",
     "cli:curve:create-token": "tsx cli/bonding-curve/create-token-cli.ts",
     "cli:curve:buy": "tsx cli/bonding-curve/buy-cli.ts",
     "cli:curve:sell": "tsx cli/bonding-curve/sell-cli.ts",
@@ -73,7 +73,8 @@
     "cli:amm:add-only": "tsx cli/amm/liquidity-cli.ts --add-only",
     "cli:graduation-check": "tsx cli/graduation-check-cli.ts",
     "cli:send-token": "tsx cli/send-token-cli.ts",
-    "cli:batch-transactions": "tsx cli/batch-transactions-cli.ts"
+    "cli:batch-transactions": "tsx cli/batch-transactions-cli.ts",
+    "cli:check-wallet-balances": "tsx cli/check-wallet-balances.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
