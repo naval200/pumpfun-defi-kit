@@ -378,12 +378,55 @@ async function executeBondingCurveSell(
 ): Promise<any> {
   const { mint, amount, slippage = 1000 } = params;
   
-  // Note: This would need to be implemented in the bonding curve sell module
-  // For now, returning a placeholder
-  return {
-    success: false,
-    error: 'Bonding curve sell not yet implemented in batch mode'
-  };
+  try {
+    log(`🔧 Executing bonding curve sell for ${amount} tokens`);
+    log(`🎯 Mint: ${mint}`);
+    log(`📊 Slippage: ${slippage} basis points`);
+    
+    // Use the createSignedSellTransaction function from the bonding curve module
+    const { createSignedSellTransaction } = await import('../src/bonding-curve/sell');
+    
+    const result = await createSignedSellTransaction(
+      connection,
+      wallet,
+      new PublicKey(mint),
+      amount,
+      slippage,
+      feePayer
+    );
+    
+    if (result.success && result.transaction) {
+      // Submit the signed transaction
+      const signature = await connection.sendRawTransaction(result.transaction.serialize(), {
+        skipPreflight: false,
+        preflightCommitment: 'confirmed',
+      });
+      
+      // Wait for confirmation
+      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+      
+      if (confirmation.value.err) {
+        throw new Error(`Transaction failed: ${confirmation.value.err}`);
+      }
+      
+      return {
+        success: true,
+        signature,
+        amount,
+        mint
+      };
+    } else {
+      throw new Error(result.error || 'Failed to create signed sell transaction');
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError(`Bonding curve sell failed: ${errorMessage}`);
+    
+    return {
+      success: false,
+      error: errorMessage
+    };
+  }
 }
 
 /**

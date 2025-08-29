@@ -46,14 +46,14 @@ fi
 
 echo "🎯 Token mint: $TOKEN_MINT"
 
-# Step 1: Create comprehensive batch operations
+# Create comprehensive batch operations JSON file
 echo ""
 echo "📝 Step 1: Creating comprehensive batch operations file..."
 
-# Create operations array with different types
+# Create 10 operations: 5 transfers + 3 bonding curve sells + 2 AMM sells
 BATCH_OPERATIONS='['
 
-# Add 5 transfer operations between user wallets
+# Add transfer operations between funded wallets (1-5)
 for i in $(seq 1 5); do
     SOURCE_WALLET="$USER_WALLETS_DIR/user-wallet-$i.json"
     SOURCE_ADDRESS=$(solana-keygen pubkey "$SOURCE_WALLET")
@@ -63,8 +63,8 @@ for i in $(seq 1 5); do
     TARGET_WALLET="$USER_WALLETS_DIR/user-wallet-$TARGET_NUM.json"
     TARGET_ADDRESS=$(solana-keygen pubkey "$TARGET_WALLET")
     
-    # Transfer amount (random between 20-100 tokens)
-    TRANSFER_AMOUNT=$((20 + RANDOM % 81))
+    # Transfer amount (random between 10-100 tokens)
+    TRANSFER_AMOUNT=$((10 + RANDOM % 91))
     
     if [ $i -gt 1 ]; then
         BATCH_OPERATIONS="$BATCH_OPERATIONS,"
@@ -84,14 +84,15 @@ for i in $(seq 1 5); do
     }"
 done
 
-# Add 3 sell operations (user wallets selling tokens)
+# Add bonding curve sell operations (users 6-8)
 for i in $(seq 6 8); do
-    SOURCE_WALLET="$USER_WALLETS_DIR/user-wallet-$i.json"
-    SOURCE_ADDRESS=$(solana-keygen pubkey "$SOURCE_WALLET")
+    # Add comma before each bonding curve sell operation
+    BATCH_OPERATIONS="$BATCH_OPERATIONS,"
     
+    # Random sell amount between 50-200 tokens
     SELL_AMOUNT=$((50 + RANDOM % 151))
     
-    BATCH_OPERATIONS="$BATCH_OPERATIONS,
+    BATCH_OPERATIONS="$BATCH_OPERATIONS
     {
       \"type\": \"sell-bonding-curve\",
       \"id\": \"sell-bonding-curve-$i\",
@@ -104,20 +105,21 @@ for i in $(seq 6 8); do
     }"
 done
 
-# Add 2 AMM sell operations
+# Add AMM sell operations (users 9-10)
 for i in $(seq 9 10); do
-    SOURCE_WALLET="$USER_WALLETS_DIR/user-wallet-$i.json"
-    SOURCE_ADDRESS=$(solana-keygen pubkey "$SOURCE_WALLET")
+    # Add comma before each AMM sell operation
+    BATCH_OPERATIONS="$BATCH_OPERATIONS,"
     
+    # Random sell amount between 30-100 tokens
     SELL_AMOUNT=$((30 + RANDOM % 71))
     
-    BATCH_OPERATIONS="$BATCH_OPERATIONS,
+    BATCH_OPERATIONS="$BATCH_OPERATIONS
     {
       \"type\": \"sell-amm\",
       \"id\": \"sell-amm-$i\",
       \"description\": \"User $i selling $SELL_AMOUNT tokens via AMM\",
       \"params\": {
-        \"poolKey\": \"$TOKEN_MINT\",
+        \"poolKey\": \"9JYxo26nokdUPi41Enrq3QXhTDwW1U8F466saNhDJFtw\",
         \"amount\": $SELL_AMOUNT,
         \"slippage\": 1
       }

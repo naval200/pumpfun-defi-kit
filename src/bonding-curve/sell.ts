@@ -29,10 +29,16 @@ async function createCompleteSellInstruction(
   programId: PublicKey,
   seller: PublicKey,
   mint: PublicKey,
-  tokenAmount: BN
+  tokenAmount: BN,
+  slippageBasisPoints: number = 1000
 ): Promise<TransactionInstruction> {
-  // Calculate parameters - sell only takes 2 parameters (not 3 like buy)
-  const minSolReceived = new BN(1); // Minimum SOL to receive (with slippage protection)
+  // Calculate expected SOL output using bonding curve formula
+  // For now, use a conservative estimate based on token amount
+  // In a real implementation, you'd query the current bonding curve state
+  const expectedSolOutput = calculateExpectedSolOutput(tokenAmount, slippageBasisPoints);
+  
+  debugLog(`🔧 Calculated expected SOL output: ${expectedSolOutput.toString()} lamports`);
+  debugLog(`📊 Applied slippage: ${slippageBasisPoints} basis points`);
 
   // Get all required PDAs - but sell doesn't use all of them!
   const { globalPDA, bondingCurvePDA, creatorVaultPDA, eventAuthorityPDA } =
@@ -75,7 +81,7 @@ async function createCompleteSellInstruction(
   tokenAmount.toArrayLike(Buffer, 'le', 8).copy(instructionData, offset);
   offset += 8;
 
-  minSolReceived.toArrayLike(Buffer, 'le', 8).copy(instructionData, offset);
+  expectedSolOutput.toArrayLike(Buffer, 'le', 8).copy(instructionData, offset);
   offset += 8;
 
   const finalInstructionData = instructionData.slice(0, offset);
@@ -102,6 +108,31 @@ async function createCompleteSellInstruction(
   });
 
   return sellInstruction;
+}
+
+/**
+ * Calculate expected SOL output for selling tokens
+ * This is a simplified calculation - in production you'd query the actual bonding curve state
+ */
+function calculateExpectedSolOutput(tokenAmount: BN, slippageBasisPoints: number): BN {
+  // For now, use a simple linear model: 1 token = 0.001 SOL (1000 lamports)
+  // This is just a placeholder - you'd need to implement the actual bonding curve formula
+  const basePricePerToken = new BN(1000); // 1000 lamports = 0.001 SOL per token
+  
+  // Calculate base SOL output
+  const baseSolOutput = tokenAmount.mul(basePricePerToken);
+  
+  // Apply slippage tolerance (slippageBasisPoints is in basis points, e.g., 1000 = 10%)
+  // For sell operations, we want to ensure we get at least this much SOL
+  const slippageMultiplier = new BN(10000 - slippageBasisPoints); // 10000 = 100%
+  const minSolOutput = baseSolOutput.mul(slippageMultiplier).div(new BN(10000));
+  
+  // Ensure minimum output is at least 1 lamport
+  if (minSolOutput.lt(new BN(1))) {
+    return new BN(1);
+  }
+  
+  return minSolOutput;
 }
 
 /**
@@ -137,7 +168,8 @@ export async function sellPumpFunToken(
   wallet: Keypair,
   mint: PublicKey,
   tokenAmount: number,
-  feePayer?: Keypair
+  feePayer?: Keypair,
+  slippageBasisPoints: number = 1000
 ): Promise<string> {
   log('💸 Setting up sell transaction...');
 
@@ -198,7 +230,8 @@ export async function sellPumpFunToken(
         PUMP_PROGRAM_ID,
         wallet.publicKey,
         mint,
-        new BN(tokenAmount) // Token amount to sell
+        new BN(tokenAmount), // Token amount to sell
+        slippageBasisPoints
       );
 
       const transaction = new Transaction().add(sellInstruction);
@@ -325,7 +358,8 @@ export async function createSignedSellTransaction(
       PUMP_PROGRAM_ID,
       wallet.publicKey,
       mint,
-      new BN(tokenAmount)
+      new BN(tokenAmount),
+      slippageBasisPoints
     );
 
     // Create transaction
