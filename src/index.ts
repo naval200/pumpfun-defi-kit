@@ -15,6 +15,9 @@ export * from './createAccount';
 // Token transfer exports
 export * from './sendToken';
 
+// SOL transfer exports
+export * from './sendSol';
+
 // Batch transactions exports
 export * from './batch';
 
