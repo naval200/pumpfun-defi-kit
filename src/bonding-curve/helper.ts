@@ -20,6 +20,7 @@ import {
   COMPUTE_BUDGET_INSTRUCTIONS,
 } from './constants';
 import { log, logWarning, logSuccess } from '../utils/debug';
+import { getOrCreateAssociatedTokenAccount } from '../createAccount';
 
 // ============================================================================
 // PUMP.FUN PROGRAM CONSTANTS
@@ -338,6 +339,41 @@ export function getEventAuthorityPDA(): PublicKey {
 export function getGlobalPDA(programId: PublicKey): PublicKey {
   const [globalPDA] = PublicKey.findProgramAddressSync([GLOBAL_SEED], programId);
   return globalPDA;
+}
+
+/**
+ * Ensure required ATAs (user and bonding curve) for buy/sell flows.
+ * When assumeAccountsExist is true, this is a no-op (no RPC).
+ */
+export async function ensureBondingCurveAtas(
+  connection: Connection,
+  wallet: Keypair,
+  mint: PublicKey
+): Promise<void> {
+
+  // Ensure user ATA
+  const userAtaResult = await getOrCreateAssociatedTokenAccount(
+    connection,
+    wallet,
+    wallet.publicKey,
+    mint
+  );
+  if (!userAtaResult.success) {
+    throw new Error(`Failed to create user ATA: ${userAtaResult.error}`);
+  }
+
+  // Ensure bonding curve ATA (owner off curve)
+  const [bondingCurve] = deriveBondingCurveAddress(mint);
+  const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
+    connection,
+    wallet,
+    bondingCurve,
+    mint,
+    true
+  );
+  if (!bondingCurveAtaResult.success) {
+    throw new Error(`Failed to create bonding curve ATA: ${bondingCurveAtaResult.error}`);
+  }
 }
 
 /**

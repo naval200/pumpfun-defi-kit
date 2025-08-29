@@ -168,6 +168,59 @@ export async function sendToken(
 }
 
 /**
+ * Send tokens assuming both sender and recipient ATAs already exist.
+ * - No getAccountInfo balance/existence checks
+ * - No ATA creation
+ * - Fails if accounts are missing or balance insufficient
+ */
+export async function sendTokenAssumingExistingAccounts(
+  connection: Connection,
+  sender: Keypair,
+  recipient: PublicKey,
+  mint: PublicKey,
+  amount: bigint,
+  allowOwnerOffCurve: boolean = false,
+  feePayer?: Keypair
+): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
+  try {
+    const senderTokenAccount = await getAssociatedTokenAddress(mint, sender.publicKey);
+    const recipientTokenAccount = await getAssociatedTokenAddress(mint, recipient, allowOwnerOffCurve);
+
+    const tx = new Transaction().add(
+      createTransferInstruction(
+        senderTokenAccount,
+        recipientTokenAccount,
+        sender.publicKey,
+        amount,
+        [],
+        TOKEN_PROGRAM_ID
+      )
+    );
+
+    const result = feePayer
+      ? await sendAndConfirmTransactionWithFeePayer(connection, tx, [sender], feePayer, {
+          preflightCommitment: 'confirmed',
+        })
+      : await sendAndConfirmTransaction(connection, tx, [sender], {
+          preflightCommitment: 'confirmed',
+        });
+
+    if (!result.success) {
+      return { success: false, error: `Transfer failed: ${result.error}` };
+    }
+
+    logSuccess(`✅ Token transfer (assumed ATAs) completed successfully!`);
+    logSignature(result.signature!, 'Token transfer (assumed)');
+
+    return { success: true, signature: result.signature, recipientAccount: recipientTokenAccount };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError('Token transfer (assumed ATAs) failed:', error);
+    return { success: false, error: `Token transfer error: ${errorMessage}` };
+  }
+}
+
+/**
  * Send tokens with automatic recipient account creation
  * This is a convenience function that always creates the recipient account if needed
  */

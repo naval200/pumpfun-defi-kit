@@ -6,6 +6,7 @@ import {
   Commitment,
   ComputeBudgetProgram,
   TransactionInstruction,
+  SystemProgram,
 } from '@solana/web3.js';
 import { log, logSuccess, logSignature, logError } from './debug';
 import type {
@@ -380,6 +381,39 @@ export function createTransactionWithComputeBudget(options: TransactionOptions =
   const transaction = new Transaction();
   addComputeBudgetInstructions(transaction, options);
   return transaction;
+}
+
+/**
+ * Send SOL (lamports) from one wallet to another
+ */
+export async function sendLamports(
+  connection: Connection,
+  sender: Keypair,
+  recipient: PublicKey,
+  lamports: number,
+  feePayer?: Keypair
+): Promise<string> {
+  const transferIx = SystemProgram.transfer({
+    fromPubkey: sender.publicKey,
+    toPubkey: recipient,
+    lamports,
+  });
+
+  const tx = new Transaction().add(transferIx);
+
+  const result = await sendAndConfirmTransactionWithFeePayer(
+    connection,
+    tx,
+    [sender],
+    feePayer ?? sender,
+    { preflightCommitment: 'confirmed' }
+  );
+
+  if (!result.success || !result.signature) {
+    throw new Error(`SOL transfer failed: ${result.error}`);
+  }
+
+  return result.signature;
 }
 
 /**

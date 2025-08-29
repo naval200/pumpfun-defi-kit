@@ -1,10 +1,17 @@
-import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
 import { debugLog, logError } from '../utils/debug';
 import type { BatchOperation, BatchResult, BatchExecutionOptions } from '../@types';
 import { sendToken, sendTokenWithAccountCreation } from '../sendToken';
+import { buyTokens as buyAmmTokens, createSignedAmmBuyTransaction } from '../amm/buy';
+import { buyPumpFunToken, createSignedBuyTransaction } from '../bonding-curve/buy';
 import { sellTokens } from '../amm';
 import { createSignedSellTransaction } from '../bonding-curve/sell';
 import { chunkArray } from './batch-helper';
+import { sendLamports } from '../utils/transaction';
+import { createBondingCurveBuyInstructionAssuming, createBondingCurveSellInstructionAssuming } from '../bonding-curve/instructions';
+import { createAmmBuyInstructionsAssuming, createAmmSellInstructionsAssuming } from '../amm/instructions';
+import { getAssociatedTokenAddressSync, createTransferInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 
 // Re-export types for external use
 export type { BatchOperation, BatchResult, BatchExecutionOptions };
@@ -24,28 +31,167 @@ export async function executePumpFunBatch(
   connection: Connection,
   wallet: Keypair,
   operations: BatchOperation[],
-  feePayer: Keypair,
+  feePayer?: Keypair,
   options: Partial<BatchExecutionOptions> = {}
 ): Promise<BatchResult[]> {
-  const { maxParallel = 3, delayBetween = 1000, retryFailed = false } = options;
+  const { maxParallel = 3, delayBetween = 1000, retryFailed = false, combinePerBatch = false, assumeAccountsExist = true } = options;
   const results: BatchResult[] = [];
 
-  // Validate fee payer is provided
-  if (!feePayer) {
-    throw new Error('Fee payer is required for batch transactions');
+  debugLog(`🚀 Executing ${operations.length} PumpFun operations in batches of ${maxParallel}`);
+  if (feePayer) {
+    debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
+  } else {
+    debugLog('💸 No fee payer provided: each signer will pay their own fees');
   }
 
-  debugLog(`🚀 Executing ${operations.length} PumpFun operations in batches of ${maxParallel}`);
-  debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
-
-  // Execute operations individually in batches
+  // Execute operations in batches
   const batches = chunkArray(operations, maxParallel);
 
   for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
     const batch = batches[batchIndex];
     debugLog(`🔄 Executing Batch ${batchIndex + 1}/${batches.length} (${batch.length} operations)`);
 
-    // Execute batch in parallel
+    if (combinePerBatch) {
+      // Combine all compatible operations in this batch into a single transaction per sender
+      const groupedBySender = new Map<string, { sender: Keypair; ops: BatchOperation[] }>();
+
+      for (const op of batch) {
+        const senderPubkey = (op.sender || wallet.publicKey.toString()).toString();
+        const sender = op.sender ? Keypair.fromSecretKey(Uint8Array.from(JSON.parse(op.sender))) : wallet;
+        const entry = groupedBySender.get(senderPubkey) || { sender, ops: [] };
+        entry.ops.push(op);
+        groupedBySender.set(senderPubkey, entry);
+      }
+
+      for (const [senderPubkey, group] of groupedBySender) {
+        try {
+          const instructions: any[] = [];
+          const sender = group.sender;
+          const ammSdk = new PumpAmmSdk(connection);
+
+          for (const operation of group.ops) {
+            switch (operation.type) {
+              case 'transfer': {
+                const { recipient, mint, amount } = operation.params;
+                if (!assumeAccountsExist) throw new Error('combinePerBatch requires assumeAccountsExist for transfers');
+                const sourceAta = getAssociatedTokenAddressSync(new PublicKey(mint), sender.publicKey, false);
+                const destAta = getAssociatedTokenAddressSync(new PublicKey(mint), new PublicKey(recipient), false);
+                instructions.push(
+                  createTransferInstruction(
+                    sourceAta,
+                    destAta,
+                    sender.publicKey,
+                    BigInt(amount),
+                    [],
+                    TOKEN_PROGRAM_ID
+                  )
+                );
+                break;
+              }
+              case 'sol-transfer': {
+                const { recipient, lamports } = operation.params;
+                // Build a SystemProgram transfer inside a combined tx
+                const { SystemProgram } = await import('@solana/web3.js');
+                instructions.push(
+                  SystemProgram.transfer({
+                    fromPubkey: sender.publicKey,
+                    toPubkey: new PublicKey(recipient),
+                    lamports: Number(lamports),
+                  })
+                );
+                break;
+              }
+              case 'buy-bonding-curve': {
+                const { mint, solAmount, slippage = 1000 } = operation.params;
+                instructions.push(
+                  createBondingCurveBuyInstructionAssuming(
+                    sender.publicKey,
+                    new PublicKey(mint),
+                    new (await import('bn.js')).default(Number(solAmount) * 1e9),
+                    Number(slippage)
+                  )
+                );
+                break;
+              }
+              case 'sell-bonding-curve': {
+                const { mint, amount, minSolOutputLamports = 1 } = operation.params;
+                instructions.push(
+                  createBondingCurveSellInstructionAssuming(
+                    sender.publicKey,
+                    new PublicKey(mint),
+                    new (await import('bn.js')).default(Number(amount)),
+                    new (await import('bn.js')).default(Number(minSolOutputLamports))
+                  )
+                );
+                break;
+              }
+              case 'buy-amm': {
+                const { poolKey, quoteAmount, slippage = 1, swapSolanaState } = operation.params;
+                const state = swapSolanaState || (await ammSdk.swapSolanaState(new PublicKey(poolKey), sender.publicKey));
+                const ixs = await createAmmBuyInstructionsAssuming(
+                  ammSdk,
+                  state,
+                  Number(quoteAmount),
+                  Number(slippage)
+                );
+                ixs.forEach(ix => instructions.push(ix));
+                break;
+              }
+              case 'sell-amm': {
+                const { poolKey, amount, slippage = 1, swapSolanaState } = operation.params;
+                const state = swapSolanaState || (await ammSdk.swapSolanaState(new PublicKey(poolKey), sender.publicKey));
+                const ixs = await createAmmSellInstructionsAssuming(
+                  ammSdk,
+                  state,
+                  Number(amount),
+                  Number(slippage)
+                );
+                ixs.forEach(ix => instructions.push(ix));
+                break;
+              }
+              default:
+                throw new Error(`Unknown operation type: ${operation.type}`);
+            }
+          }
+
+          // Assemble and send single transaction for this sender group
+          const tx = new Transaction();
+          instructions.forEach(ix => tx.add(ix));
+          const { blockhash } = await connection.getLatestBlockhash('confirmed');
+          tx.recentBlockhash = blockhash;
+          tx.feePayer = sender.publicKey; // sender pays fees
+          tx.sign(sender);
+          const signature = await connection.sendRawTransaction(tx.serialize(), {
+            skipPreflight: false,
+            preflightCommitment: 'confirmed',
+          });
+          const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+          if (confirmation.value.err) {
+            throw new Error(`Combined transaction failed: ${confirmation.value.err}`);
+          }
+
+          // Push a result per operation sharing the same signature
+          group.ops.forEach(op => {
+            results.push({ operationId: op.id, type: op.type, success: true, signature });
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          group.ops.forEach(op => {
+            results.push({ operationId: op.id, type: op.type, success: false, error: errorMessage });
+          });
+        }
+      }
+
+      // Delay between batches if configured
+      if (batchIndex < batches.length - 1 && delayBetween > 0) {
+        debugLog(`⏳ Waiting ${delayBetween}ms before next batch...`);
+        await new Promise(resolve => setTimeout(resolve, delayBetween));
+      }
+
+      continue;
+    }
+
+    // Execute batch in parallel (legacy per-op mode)
     const batchPromises = batch.map(async operation => {
       try {
         debugLog(`🚀 Executing ${operation.type}: ${operation.description}`);
@@ -56,11 +202,20 @@ export async function executePumpFunBatch(
           case 'transfer':
             result = await executeTransfer(connection, wallet, feePayer, operation.params);
             break;
+          case 'sol-transfer':
+            result = await executeSolTransfer(connection, wallet, operation.params);
+            break;
           case 'sell-bonding-curve':
             result = await executeBondingCurveSell(connection, wallet, feePayer, operation.params);
             break;
           case 'sell-amm':
             result = await executeAmmSell(connection, wallet, feePayer, operation.params);
+            break;
+          case 'buy-amm':
+            result = await executeAmmBuy(connection, wallet, operation.params);
+            break;
+          case 'buy-bonding-curve':
+            result = await executeBondingCurveBuy(connection, wallet, operation.params);
             break;
           default:
             throw new Error(`Unknown operation type: ${operation.type}`);
@@ -142,7 +297,7 @@ export async function executePumpFunBatch(
 async function executeOperation(
   connection: Connection,
   wallet: Keypair,
-  feePayer: Keypair,
+  feePayer: Keypair | undefined,
   operation: BatchOperation
 ): Promise<BatchResult> {
   try {
@@ -190,7 +345,7 @@ async function executeOperation(
 async function executeTransfer(
   connection: Connection,
   wallet: Keypair,
-  feePayer: Keypair,
+  feePayer: Keypair | undefined,
   params: any
 ): Promise<any> {
   const { recipient, mint, amount, createAccount = true } = params;
@@ -227,12 +382,41 @@ async function executeTransfer(
 }
 
 /**
+ * Execute SOL transfer (lamports -> lamports) with sender paying its own fee
+ */
+async function executeSolTransfer(
+  connection: Connection,
+  wallet: Keypair,
+  params: any
+): Promise<any> {
+  const { recipient, lamports, sender } = params;
+
+  try {
+    const senderKeypair = sender && sender !== wallet.publicKey.toString() ? Keypair.fromSecretKey(Buffer.from(JSON.parse(sender))) : wallet;
+    const signature = await sendLamports(
+      connection,
+      senderKeypair,
+      new PublicKey(recipient),
+      Number(lamports),
+      senderKeypair // sender pays fee
+    );
+
+    return { success: true, signature };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
  * Execute bonding curve sell operation
  */
 async function executeBondingCurveSell(
   connection: Connection,
   wallet: Keypair,
-  feePayer: Keypair,
+  feePayer: Keypair | undefined,
   params: any
 ): Promise<any> {
   const { mint, amount, slippage = 1000 } = params;
@@ -291,7 +475,7 @@ async function executeBondingCurveSell(
 async function executeAmmSell(
   connection: Connection,
   wallet: Keypair,
-  feePayer: Keypair,
+  feePayer: Keypair | undefined,
   params: any
 ): Promise<any> {
   const { poolKey, amount, slippage = 1 } = params;
@@ -310,6 +494,64 @@ async function executeAmmSell(
 }
 
 /**
+ * Execute AMM buy with wallet paying its own fee and optional ATA skip
+ */
+async function executeAmmBuy(
+  connection: Connection,
+  wallet: Keypair,
+  params: any
+): Promise<any> {
+  const { poolKey, quoteAmount, slippage = 1, assumeAccountsExist = true } = params;
+
+  try {
+    return await buyAmmTokens(
+      connection,
+      wallet,
+      new PublicKey(poolKey),
+      Number(quoteAmount),
+      Number(slippage),
+      wallet, // fee payer is the signer wallet
+      { assumeAccountsExist }
+    );
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Execute bonding curve buy with wallet paying its own fee and optional ATA skip
+ */
+async function executeBondingCurveBuy(
+  connection: Connection,
+  wallet: Keypair,
+  params: any
+): Promise<any> {
+  const { mint, solAmount, slippage = 1000, assumeAccountsExist = true } = params;
+
+  try {
+    const signature = await buyPumpFunToken(
+      connection,
+      wallet,
+      new PublicKey(mint),
+      Number(solAmount),
+      Number(slippage),
+      wallet, // signer pays fee
+      { assumeAccountsExist }
+    );
+
+    return { success: true, signature };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
  * Validate PumpFun batch operations structure
  */
 export function validatePumpFunBatchOperations(operations: BatchOperation[]): {
@@ -317,7 +559,14 @@ export function validatePumpFunBatchOperations(operations: BatchOperation[]): {
   errors: string[];
 } {
   const errors: string[] = [];
-  const validTypes = ['transfer', 'sell-bonding-curve', 'sell-amm'];
+  const validTypes = [
+    'transfer',
+    'sell-bonding-curve',
+    'sell-amm',
+    'buy-amm',
+    'buy-bonding-curve',
+    'sol-transfer',
+  ];
 
   if (!Array.isArray(operations) || operations.length === 0) {
     errors.push('Operations must be a non-empty array');
@@ -351,6 +600,11 @@ export function validatePumpFunBatchOperations(operations: BatchOperation[]): {
           errors.push(`Operation ${index}: Missing required transfer parameters`);
         }
         break;
+      case 'sol-transfer':
+        if (!op.params.recipient || op.params.lamports === undefined) {
+          errors.push(`Operation ${index}: Missing required SOL transfer parameters`);
+        }
+        break;
       case 'sell-amm':
         if (
           !op.params.poolKey ||
@@ -363,6 +617,16 @@ export function validatePumpFunBatchOperations(operations: BatchOperation[]): {
       case 'sell-bonding-curve':
         if (!op.params.mint || op.params.amount === undefined || op.params.slippage === undefined) {
           errors.push(`Operation ${index}: Missing required bonding curve parameters`);
+        }
+        break;
+      case 'buy-amm':
+        if (!op.params.poolKey || op.params.quoteAmount === undefined) {
+          errors.push(`Operation ${index}: Missing required buy AMM parameters`);
+        }
+        break;
+      case 'buy-bonding-curve':
+        if (!op.params.mint || op.params.solAmount === undefined) {
+          errors.push(`Operation ${index}: Missing required buy bonding curve parameters`);
         }
         break;
     }

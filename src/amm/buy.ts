@@ -4,6 +4,8 @@ import { retryWithBackoff } from '../utils/retry';
 import BN from 'bn.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 import { debugLog, log, logError, logSuccess } from '../utils/debug';
+import { ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { createAmmBuyInstructionsAssuming } from './instructions';
 
 /**
  * Buy tokens using SOL with retry logic and better error handling
@@ -14,7 +16,8 @@ export async function buyTokens(
   poolKey: PublicKey,
   quoteAmount: number,
   slippage: number = 1,
-  feePayer?: Keypair
+  feePayer?: Keypair,
+  options?: { assumeAccountsExist?: boolean; swapSolanaState?: any }
 ): Promise<{ success: boolean; signature?: string; baseAmount?: number; error?: string }> {
   try {
     log(`💰 Buying tokens from pool: ${poolKey.toString()}`);
@@ -50,16 +53,19 @@ export async function buyTokens(
 
     // Execute buy transaction with retry logic
     debugLog('📝 Executing buy transaction...');
-    const instructions = await retryWithBackoff(
-      async () => {
-        // Convert to BN for SDK compatibility
-        const quoteAmountBN = new BN(quoteAmount);
-
-        return await pumpAmmSdk.buyQuoteInput(swapSolanaState, quoteAmountBN, slippage);
-      },
-      3,
-      2000
+    // Build swap instructions (prefer provided swap state)
+    const effectiveState = options?.swapSolanaState || swapSolanaState;
+    let instructions = await createAmmBuyInstructionsAssuming(
+      pumpAmmSdk,
+      effectiveState,
+      new BN(quoteAmount),
+      slippage
     );
+
+    if (options?.assumeAccountsExist) {
+      debugLog('⛔ Assuming accounts exist: filtering out ATA creation instructions for AMM buy');
+      instructions = instructions.filter(ix => ix.programId.toString() !== ASSOCIATED_TOKEN_PROGRAM_ID.toString());
+    }
 
     // Send transaction with retry logic
     debugLog('📤 Sending buy transaction...');
@@ -112,7 +118,8 @@ export async function createSignedAmmBuyTransaction(
   quoteAmount: number,
   slippage: number = 1,
   feePayer?: Keypair,
-  blockhash?: string
+  blockhash?: string,
+  options?: { assumeAccountsExist?: boolean; swapSolanaState?: any }
 ): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
   try {
     debugLog(`🔧 Creating signed AMM buy transaction for ${quoteAmount} SOL`);
@@ -122,14 +129,24 @@ export async function createSignedAmmBuyTransaction(
     // Initialize SDKs directly
     const pumpAmmSdk = new PumpAmmSdk(connection);
 
-    // Get swap state
-    debugLog('🔍 Getting swap state...');
-    const swapSolanaState = await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey);
+    // Get swap state unless provided
+    const swapSolanaState = options?.swapSolanaState
+      ? options.swapSolanaState
+      : await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey);
 
     // Create buy instructions
     debugLog('📝 Creating buy instructions...');
-    const quoteAmountBN = new BN(quoteAmount);
-    const instructions = await pumpAmmSdk.buyQuoteInput(swapSolanaState, quoteAmountBN, slippage);
+    let instructions = await createAmmBuyInstructionsAssuming(
+      pumpAmmSdk,
+      swapSolanaState,
+      new BN(quoteAmount),
+      slippage
+    );
+
+    if (options?.assumeAccountsExist) {
+      debugLog('⛔ Assuming accounts exist: filtering ATA creation instructions for signed AMM buy');
+      instructions = instructions.filter(ix => ix.programId.toString() !== ASSOCIATED_TOKEN_PROGRAM_ID.toString());
+    }
 
     // Create transaction
     const transaction = new Transaction();

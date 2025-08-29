@@ -4,6 +4,7 @@ import { retryWithBackoff } from '../utils/retry';
 import BN from 'bn.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 import { debugLog, log, logError, logSuccess } from '../utils/debug';
+import { createAmmSellInstructionsAssuming } from './instructions';
 
 /**
  * Sell tokens for SOL with retry logic and better error handling
@@ -14,7 +15,8 @@ export async function sellTokens(
   poolKey: PublicKey,
   baseAmount: number,
   slippage: number = 1,
-  feePayer?: Keypair
+  feePayer?: Keypair,
+  options?: { assumeAccountsExist?: boolean; swapSolanaState?: any }
 ): Promise<{ success: boolean; signature?: string; quoteAmount?: number; error?: string }> {
   try {
     log(`💸 Selling tokens to pool: ${poolKey.toString()}`);
@@ -23,15 +25,17 @@ export async function sellTokens(
     // Initialize SDKs directly
     const pumpAmmSdk = new PumpAmmSdk(connection);
 
-    // Get swap state with retry logic
-    debugLog('🔍 Getting swap state...');
-    const swapSolanaState = await retryWithBackoff(
-      async () => {
-        return await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey);
-      },
-      3,
-      2000
-    );
+    // Get swap state with retry logic unless provided
+    const swapSolanaState = options?.swapSolanaState
+      ? options.swapSolanaState
+      : await retryWithBackoff(
+          async () => {
+            debugLog('🔍 Getting swap state...');
+            return await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey);
+          },
+          3,
+          2000
+        );
 
     const { poolBaseAmount, poolQuoteAmount } = swapSolanaState;
     const baseReserve = Number(poolBaseAmount);
@@ -50,15 +54,11 @@ export async function sellTokens(
 
     // Execute sell transaction with retry logic
     debugLog('📝 Executing sell transaction...');
-    const instructions = await retryWithBackoff(
-      async () => {
-        // Convert to BN for SDK compatibility and use type assertion to bypass TypeScript issues
-        const baseAmountBN = new BN(baseAmount);
-
-        return await pumpAmmSdk.sellBaseInput(swapSolanaState, baseAmountBN, slippage);
-      },
-      3,
-      2000
+    const instructions = await createAmmSellInstructionsAssuming(
+      pumpAmmSdk,
+      swapSolanaState,
+      new BN(baseAmount),
+      slippage
     );
 
     // Send transaction with retry logic

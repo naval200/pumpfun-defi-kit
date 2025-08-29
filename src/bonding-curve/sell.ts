@@ -1,120 +1,12 @@
-import {
-  Connection,
-  PublicKey,
-  Keypair,
-  Transaction,
-  TransactionInstruction,
-} from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
 import BN from 'bn.js';
-import { getOrCreateAssociatedTokenAccount } from '../createAccount';
-import {
-  deriveBondingCurveAddress,
-  getAllRequiredPDAsForBuy, // Can reuse this for sell
-} from './helper';
-import {
-  PUMP_PROGRAM_ID,
-  FEE_RECIPIENT,
-  TOKEN_PROGRAM_ID,
-  SYSTEM_PROGRAM_ID,
-  SELL_INSTRUCTION_DISCRIMINATOR,
-} from './constants';
+import { deriveBondingCurveAddress, ensureBondingCurveAtas } from './helper';
 import { debugLog, log, logError, logSignature, logSuccess } from '../utils/debug';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
+import { createBondingCurveSellInstructionAssuming } from './instructions';
 
-/**
- * Create complete sell instruction with robust PDA resolution
- */
-async function createCompleteSellInstruction(
-  connection: Connection,
-  programId: PublicKey,
-  seller: PublicKey,
-  mint: PublicKey,
-  tokenAmount: BN,
-  slippageBasisPoints: number = 1000
-): Promise<TransactionInstruction> {
-  // Calculate expected SOL output using bonding curve formula
-  // For now, use a conservative estimate based on token amount
-  // In a real implementation, you'd query the current bonding curve state
-  const expectedSolOutput = await calculateExpectedSolOutput(
-    connection,
-    mint,
-    tokenAmount,
-    slippageBasisPoints
-  );
-
-  debugLog(`🔧 Calculated expected SOL output: ${expectedSolOutput.toString()} lamports`);
-  debugLog(`📊 Applied slippage: ${slippageBasisPoints} basis points`);
-
-  // Get all required PDAs - but sell doesn't use all of them!
-  const { globalPDA, bondingCurvePDA, creatorVaultPDA, eventAuthorityPDA } =
-    getAllRequiredPDAsForBuy(programId, mint, seller);
-
-  // Get associated token addresses
-  const associatedBondingCurve = getAssociatedTokenAddressSync(
-    mint,
-    bondingCurvePDA,
-    true // allowOwnerOffCurve for program accounts
-  );
-
-  const associatedUser = getAssociatedTokenAddressSync(mint, seller, false);
-
-  debugLog('🔧 Creating complete sell instruction with correct SELL account order:');
-  debugLog(`   0. Global: ${globalPDA.toString()}`);
-  debugLog(`   1. FeeRecipient: ${FEE_RECIPIENT.toString()}`);
-  debugLog(`   2. Mint: ${mint.toString()}`);
-  debugLog(`   3. BondingCurve: ${bondingCurvePDA.toString()}`);
-  debugLog(`   4. AssociatedBondingCurve: ${associatedBondingCurve.toString()}`);
-  debugLog(`   5. AssociatedUser: ${associatedUser.toString()}`);
-  debugLog(`   6. User: ${seller.toString()}`);
-  debugLog(`   7. SystemProgram: ${SYSTEM_PROGRAM_ID.toString()}`);
-  debugLog(`   8. CreatorVault: ${creatorVaultPDA.toString()}`);
-  debugLog(`   9. TokenProgram: ${TOKEN_PROGRAM_ID.toString()}`);
-  debugLog(`  10. EventAuthority: ${eventAuthorityPDA.toString()}`);
-  debugLog(`  11. Program: ${programId.toString()}`);
-  debugLog(`💡 Note: Sell instruction has different account order than buy!`);
-
-  // Note: Sell instruction doesn't use volume accumulators like buy does
-
-  const instructionData = Buffer.alloc(100); // Smaller allocation for sell
-  let offset = 0;
-
-  // Write discriminator for sell instruction
-  instructionData.set(SELL_INSTRUCTION_DISCRIMINATOR, offset);
-  offset += 8;
-
-  // Write arguments: amount (u64), min_sol_output (u64) - NO track_volume for sell!
-  tokenAmount.toArrayLike(Buffer, 'le', 8).copy(instructionData, offset);
-  offset += 8;
-
-  expectedSolOutput.toArrayLike(Buffer, 'le', 8).copy(instructionData, offset);
-  offset += 8;
-
-  const finalInstructionData = instructionData.slice(0, offset);
-
-  // Create instruction with all required accounts in SELL IDL order (different from buy!)
-  const sellInstruction = new TransactionInstruction({
-    keys: [
-      // Sell instruction account order from IDL:
-      { pubkey: globalPDA, isSigner: false, isWritable: false }, // 0: global
-      { pubkey: FEE_RECIPIENT, isSigner: false, isWritable: true }, // 1: fee_recipient
-      { pubkey: mint, isSigner: false, isWritable: false }, // 2: mint
-      { pubkey: bondingCurvePDA, isSigner: false, isWritable: true }, // 3: bonding_curve
-      { pubkey: associatedBondingCurve, isSigner: false, isWritable: true }, // 4: associated_bonding_curve
-      { pubkey: associatedUser, isSigner: false, isWritable: true }, // 5: associated_user
-      { pubkey: seller, isSigner: true, isWritable: true }, // 6: user
-      { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false }, // 7: system_program
-      { pubkey: creatorVaultPDA, isSigner: false, isWritable: true }, // 8: creator_vault
-      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false }, // 9: token_program
-      { pubkey: eventAuthorityPDA, isSigner: false, isWritable: false }, // 10: event_authority
-      { pubkey: programId, isSigner: false, isWritable: false }, // 11: program
-    ],
-    programId: programId,
-    data: finalInstructionData,
-  });
-
-  return sellInstruction;
-}
+// Helper removed; logic inlined at call sites
 
 /**
  * Calculate expected SOL output for selling tokens
@@ -255,53 +147,26 @@ export async function sellPumpFunToken(
   mint: PublicKey,
   tokenAmount: number,
   feePayer?: Keypair,
-  slippageBasisPoints: number = 1000
+  slippageBasisPoints: number = 1000,
+  options?: { assumeAccountsExist?: boolean; assumeBalanceExists?: boolean; minSolOutputLamports?: number }
 ): Promise<string> {
   log('💸 Setting up sell transaction...');
 
-  // Check user's token balance first
-  const userBalance = await getUserTokenBalance(connection, wallet.publicKey, mint);
-  log(`💰 User token balance: ${userBalance} tokens`);
-
-  if (userBalance === 0) {
-    throw new Error('Cannot sell: User has no tokens to sell');
+  if (!options?.assumeBalanceExists) {
+    // Check user's token balance first
+    const userBalance = await getUserTokenBalance(connection, wallet.publicKey, mint);
+    log(`💰 User token balance: ${userBalance} tokens`);
+    if (userBalance === 0) {
+      throw new Error('Cannot sell: User has no tokens to sell');
+    }
+    if (tokenAmount > userBalance) {
+      throw new Error(`Cannot sell ${tokenAmount} tokens: User only has ${userBalance} tokens`);
+    }
   }
 
-  if (tokenAmount > userBalance) {
-    throw new Error(`Cannot sell ${tokenAmount} tokens: User only has ${userBalance} tokens`);
+  if (!options?.assumeAccountsExist) {
+    await ensureBondingCurveAtas(connection, wallet, mint);
   }
-
-  // Setup user ATA (should already exist if user has tokens)
-  debugLog('👤 Setting up user associated token account...');
-  const userAtaResult = await getOrCreateAssociatedTokenAccount(
-    connection,
-    wallet,
-    wallet.publicKey,
-    mint
-  );
-
-  if (!userAtaResult.success) {
-    throw new Error(`Failed to get user ATA: ${userAtaResult.error}`);
-  }
-  debugLog(`✅ User ATA ready: ${userAtaResult.account.toString()}`);
-
-  // Setup bonding curve ATA
-  const [bondingCurve] = deriveBondingCurveAddress(mint);
-  debugLog(`📈 Derived bonding curve: ${bondingCurve.toString()}`);
-
-  debugLog('🔗 Setting up bonding curve associated token account...');
-  const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
-    connection,
-    wallet,
-    bondingCurve,
-    mint,
-    true // allowOwnerOffCurve
-  );
-
-  if (!bondingCurveAtaResult.success) {
-    throw new Error(`Failed to get bonding curve ATA: ${bondingCurveAtaResult.error}`);
-  }
-  debugLog(`✅ Bonding curve ATA ready: ${bondingCurveAtaResult.account.toString()}`);
 
   // Create complete sell transaction
   let attempts = 0;
@@ -312,13 +177,18 @@ export async function sellPumpFunToken(
     debugLog(`📡 Creating complete sell transaction (attempt ${attempts}/${maxAttempts})...`);
 
     try {
-      const sellInstruction = await createCompleteSellInstruction(
-        connection,
-        PUMP_PROGRAM_ID,
+      // Compute expected SOL output (allow override to skip RPC)
+      const minSol = options?.minSolOutputLamports !== undefined
+        ? new BN(options.minSolOutputLamports)
+        : await calculateExpectedSolOutput(connection, mint, new BN(tokenAmount), slippageBasisPoints);
+      debugLog(`🔧 Calculated expected SOL output: ${minSol.toString()} lamports`);
+      debugLog(`📊 Applied slippage: ${slippageBasisPoints} basis points`);
+
+      const sellInstruction = createBondingCurveSellInstructionAssuming(
         wallet.publicKey,
         mint,
-        new BN(tokenAmount), // Token amount to sell
-        slippageBasisPoints
+        new BN(tokenAmount),
+        minSol
       );
 
       const transaction = new Transaction().add(sellInstruction);
@@ -426,17 +296,19 @@ export async function createSignedSellTransaction(
     debugLog(`🎯 Target mint: ${mint.toString()}`);
     debugLog(`📊 Slippage: ${slippageBasisPoints} basis points`);
 
-    // Note: PDAs are not currently used in this function but may be needed for future instruction building
-
-    // Create complete sell instruction
-    debugLog('📝 Creating complete sell instruction...');
-    const sellInstruction = await createCompleteSellInstruction(
+    // Compute expected SOL output (RPC read)
+    const minSol = await calculateExpectedSolOutput(
       connection,
-      PUMP_PROGRAM_ID,
-      wallet.publicKey,
       mint,
       new BN(tokenAmount),
       slippageBasisPoints
+    );
+    debugLog('📝 Creating complete sell instruction...');
+    const sellInstruction = createBondingCurveSellInstructionAssuming(
+      wallet.publicKey,
+      mint,
+      new BN(tokenAmount),
+      minSol
     );
 
     // Create transaction

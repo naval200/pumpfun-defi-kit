@@ -17,6 +17,15 @@ import { Connection, Keypair } from '@solana/web3.js';
  */
 const exampleOperations: BatchOperation[] = [
   {
+    type: 'sol-transfer',
+    id: 'sol-transfer-1',
+    description: 'Send 0.01 SOL to recipient X',
+    params: {
+      recipient: '11111111111111111111111111111111',
+      lamports: 10000000
+    }
+  },
+  {
     type: 'transfer',
     id: 'transfer-1',
     description: 'Send 100 tokens to user A',
@@ -25,6 +34,17 @@ const exampleOperations: BatchOperation[] = [
       mint: '22222222222222222222222222222222',
       amount: '100000000',
       createAccount: true
+    }
+  },
+  {
+    type: 'buy-amm',
+    id: 'buy-amm-1',
+    description: 'Buy via AMM without ATA creation',
+    params: {
+      poolKey: '33333333333333333333333333333333',
+      quoteAmount: 10000000,
+      slippage: 1,
+      assumeAccountsExist: true
     }
   },
   {

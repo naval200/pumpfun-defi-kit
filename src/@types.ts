@@ -69,7 +69,7 @@ export interface TransactionResult {
  * Batch Transactions types
  */
 export interface BatchOperation {
-  type: 'transfer' | 'sell-bonding-curve' | 'sell-amm';
+  type: 'transfer' | 'sell-bonding-curve' | 'sell-amm' | 'buy-bonding-curve' | 'buy-amm' | 'sol-transfer';
   id: string;
   description: string;
   params: any;
@@ -89,6 +89,8 @@ export interface BatchExecutionOptions {
   delayBetween?: number;
   retryFailed?: boolean;
   maxTransferInstructionsPerTx?: number;
+  combinePerBatch?: boolean;
+  assumeAccountsExist?: boolean;
 }
 
 /**

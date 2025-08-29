@@ -7,18 +7,12 @@ import {
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import { getOrCreateAssociatedTokenAccount } from '../createAccount';
-import { deriveBondingCurveAddress, getAllRequiredPDAsForBuy } from './helper';
-import {
-  BUY_INSTRUCTION_DISCRIMINATOR,
-  PUMP_PROGRAM_ID,
-  FEE_RECIPIENT,
-  TOKEN_PROGRAM_ID,
-  SYSTEM_PROGRAM_ID,
-  GLOBAL_VOLUME_ACCUMULATOR,
-} from './constants';
+import { deriveBondingCurveAddress, getAllRequiredPDAsForBuy, ensureBondingCurveAtas } from './helper';
+import { PUMP_PROGRAM_ID } from './constants';
 import { debugLog, log, logError, logSignature, logSuccess } from '../utils/debug';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
+import { createBondingCurveBuyInstructionAssuming } from './instructions';
 
 /**
  * Common setup for buy operations - gets PDAs and ensures ATAs exist
@@ -26,7 +20,8 @@ import { sendAndConfirmTransactionWithFeePayer } from '../utils/transaction';
 async function setupBuyOperation(
   connection: Connection,
   wallet: Keypair,
-  mint: PublicKey
+  mint: PublicKey,
+  options?: { assumeAccountsExist?: boolean }
 ): Promise<{
   success: boolean;
   pdas?: any;
@@ -47,20 +42,22 @@ async function setupBuyOperation(
 
     const associatedUser = getAssociatedTokenAddressSync(mint, wallet.publicKey, false);
 
-    // Ensure bonding curve ATA exists
-    debugLog('🔧 Ensuring bonding curve ATA exists...');
-    const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
-      connection,
-      wallet,
-      pdas.bondingCurvePDA,
-      mint,
-      true // allowOwnerOffCurve
-    );
+    if (!options?.assumeAccountsExist) {
+      // Ensure bonding curve ATA exists
+      debugLog('🔧 Ensuring bonding curve ATA exists...');
+      const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
+        connection,
+        wallet,
+        pdas.bondingCurvePDA,
+        mint,
+        true // allowOwnerOffCurve
+      );
 
-    if (!bondingCurveAtaResult.success) {
-      throw new Error(`Failed to create bonding curve ATA: ${bondingCurveAtaResult.error}`);
+      if (!bondingCurveAtaResult.success) {
+        throw new Error(`Failed to create bonding curve ATA: ${bondingCurveAtaResult.error}`);
+      }
+      debugLog(`✅ Bonding curve ATA ready: ${bondingCurveAtaResult.account.toString()}`);
     }
-    debugLog(`✅ Bonding curve ATA ready: ${bondingCurveAtaResult.account.toString()}`);
 
     return {
       success: true,
@@ -78,104 +75,60 @@ async function setupBuyOperation(
 }
 
 /**
+ * Ensure required ATAs for buy flow (user and bonding curve)
+ * - When assumeAccountsExist is true, this performs no RPC and only logs
+ * - Otherwise, it will create missing ATAs as needed
+ */
+async function ensureUserAndBondingCurveAtas(
+  connection: Connection,
+  wallet: Keypair,
+  mint: PublicKey,
+): Promise<void> {
+  // Setup user ATA
+  debugLog('👤 Ensuring user associated token account...');
+  const userAtaResult = await getOrCreateAssociatedTokenAccount(
+    connection,
+    wallet,
+    wallet.publicKey,
+    mint
+  );
+  if (!userAtaResult.success) {
+    throw new Error(`Failed to create user ATA: ${userAtaResult.error}`);
+  }
+  debugLog(`✅ User ATA ready: ${userAtaResult.account.toString()}`);
+
+  // Setup bonding curve ATA
+  const [bondingCurve] = deriveBondingCurveAddress(mint);
+  debugLog(`📈 Derived bonding curve: ${bondingCurve.toString()}`);
+  debugLog('🔗 Ensuring bonding curve associated token account...');
+  const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
+    connection,
+    wallet,
+    bondingCurve,
+    mint,
+    true // allowOwnerOffCurve
+  );
+  if (!bondingCurveAtaResult.success) {
+    throw new Error(`Failed to create bonding curve ATA: ${bondingCurveAtaResult.error}`);
+  }
+  debugLog(`✅ Bonding curve ATA ready: ${bondingCurveAtaResult.account.toString()}`);
+}
+
+/**
  * Create complete buy instruction with robust PDA resolution
  */
 async function createCompleteBuyInstruction(
-  programId: PublicKey,
+  _programId: PublicKey,
   buyer: PublicKey,
   mint: PublicKey,
   solAmount: BN,
   maxSlippageBasisPoints: number = 1000,
-  pdas: any,
-  associatedBondingCurve: PublicKey,
-  associatedUser: PublicKey
+  _pdas: any,
+  _associatedBondingCurve: PublicKey,
+  _associatedUser: PublicKey
 ): Promise<TransactionInstruction> {
-  // Calculate parameters
-  const expectedTokenAmount = new BN(100000000); // Reasonable estimate
-  const maxSolCost = solAmount.mul(new BN(10000 + maxSlippageBasisPoints)).div(new BN(10000));
-  const trackVolume = true; // Enable volume tracking
-
-  const {
-    globalPDA,
-    bondingCurvePDA,
-    creatorVaultPDA,
-    eventAuthorityPDA,
-    globalVolumeAccumulatorPDA,
-    userVolumeAccumulatorPDA,
-  } = pdas;
-
-  debugLog('🔧 Creating complete buy instruction with all required accounts:');
-  debugLog(`   0. Global: ${globalPDA.toString()}`);
-  debugLog(`   1. FeeRecipient: ${FEE_RECIPIENT.toString()}`);
-  debugLog(`   2. Mint: ${mint.toString()}`);
-  debugLog(`   3. BondingCurve: ${bondingCurvePDA.toString()}`);
-  debugLog(`   4. AssociatedBondingCurve: ${associatedBondingCurve.toString()}`);
-  debugLog(`   5. AssociatedUser: ${associatedUser.toString()}`);
-  debugLog(`   6. User: ${buyer.toString()}`);
-  debugLog(`   7. SystemProgram: ${SYSTEM_PROGRAM_ID.toString()}`);
-  debugLog(`   8. TokenProgram: ${TOKEN_PROGRAM_ID.toString()}`);
-  debugLog(`   9. CreatorVault: ${creatorVaultPDA.toString()}`);
-  debugLog(`  10. EventAuthority: ${eventAuthorityPDA.toString()}`);
-  debugLog(`  11. Program: ${programId.toString()}`);
-  debugLog(`  12. GlobalVolumeAccumulator: ${globalVolumeAccumulatorPDA.toString()}`);
-  debugLog(`  13. UserVolumeAccumulator: ${userVolumeAccumulatorPDA.toString()}`);
-
-  // Verify addresses
-  const expectedGlobal = GLOBAL_VOLUME_ACCUMULATOR;
-  if (globalVolumeAccumulatorPDA.toString() === expectedGlobal) {
-    debugLog('✅ Using correct GlobalVolumeAccumulator address');
-  } else {
-    logError('GlobalVolumeAccumulator address mismatch');
-  }
-
-  const instructionData = Buffer.alloc(1000); // Allocate enough space
-  let offset = 0;
-
-  // Write discriminator
-  instructionData.set(BUY_INSTRUCTION_DISCRIMINATOR, offset);
-  offset += 8;
-
-  // Write arguments: amount (u64), max_sol_cost (u64), track_volume (bool)
-  expectedTokenAmount.toArrayLike(Buffer, 'le', 8).copy(instructionData, offset);
-  offset += 8;
-
-  maxSolCost.toArrayLike(Buffer, 'le', 8).copy(instructionData, offset);
-  offset += 8;
-
-  // Write track_volume as boolean (1 byte)
-  instructionData.writeUInt8(trackVolume ? 1 : 0, offset);
-  offset += 1;
-
-  const finalInstructionData = instructionData.slice(0, offset);
-
-  // Create instruction with all required accounts in exact IDL order
-  const buyInstruction = new TransactionInstruction({
-    keys: [
-      // 0-6: Core accounts
-      { pubkey: globalPDA, isSigner: false, isWritable: true },
-      { pubkey: FEE_RECIPIENT, isSigner: false, isWritable: true },
-      { pubkey: mint, isSigner: false, isWritable: false },
-      { pubkey: bondingCurvePDA, isSigner: false, isWritable: true },
-      { pubkey: associatedBondingCurve, isSigner: false, isWritable: true },
-      { pubkey: associatedUser, isSigner: false, isWritable: true },
-      { pubkey: buyer, isSigner: true, isWritable: true },
-
-      // 7-8: System programs
-      { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
-      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-
-      // 9-13: Additional required accounts from IDL
-      { pubkey: creatorVaultPDA, isSigner: false, isWritable: true },
-      { pubkey: eventAuthorityPDA, isSigner: false, isWritable: false },
-      { pubkey: programId, isSigner: false, isWritable: false },
-      { pubkey: globalVolumeAccumulatorPDA, isSigner: false, isWritable: true },
-      { pubkey: userVolumeAccumulatorPDA, isSigner: false, isWritable: true },
-    ],
-    programId: programId,
-    data: finalInstructionData,
-  });
-
-  return buyInstruction;
+  // Reuse zero-RPC builder for consistency
+  return createBondingCurveBuyInstructionAssuming(buyer, mint, solAmount, maxSlippageBasisPoints);
 }
 
 /**
@@ -187,41 +140,14 @@ export async function buyPumpFunToken(
   mint: PublicKey,
   solAmount: number,
   slippageBasisPoints: number = 1000,
-  feePayer?: Keypair
+  feePayer?: Keypair,
+  options?: { assumeAccountsExist?: boolean }
 ): Promise<string> {
   log('🏗️ Setting up associated token accounts for buy...');
 
-  // Setup user ATA
-  debugLog('👤 Setting up user associated token account...');
-  const userAtaResult = await getOrCreateAssociatedTokenAccount(
-    connection,
-    wallet,
-    wallet.publicKey,
-    mint
-  );
-
-  if (!userAtaResult.success) {
-    throw new Error(`Failed to create user ATA: ${userAtaResult.error}`);
+  if (!options?.assumeAccountsExist) {
+    await ensureBondingCurveAtas(connection, wallet, mint);
   }
-  debugLog(`✅ User ATA ready: ${userAtaResult.account.toString()}`);
-
-  // Setup bonding curve ATA
-  const [bondingCurve] = deriveBondingCurveAddress(mint);
-  debugLog(`📈 Derived bonding curve: ${bondingCurve.toString()}`);
-
-  debugLog('🔗 Setting up bonding curve associated token account...');
-  const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
-    connection,
-    wallet,
-    bondingCurve,
-    mint,
-    true // allowOwnerOffCurve
-  );
-
-  if (!bondingCurveAtaResult.success) {
-    throw new Error(`Failed to create bonding curve ATA: ${bondingCurveAtaResult.error}`);
-  }
-  debugLog(`✅ Bonding curve ATA ready: ${bondingCurveAtaResult.account.toString()}`);
 
   // Create complete buy transaction
   let attempts = 0;
@@ -232,8 +158,8 @@ export async function buyPumpFunToken(
     debugLog(`📡 Creating complete buy transaction (attempt ${attempts}/${maxAttempts})...`);
 
     try {
-      // Setup the buy operation (get PDAs and ensure ATAs exist)
-      const setupResult = await setupBuyOperation(connection, wallet, mint);
+      // Setup the buy operation (deterministic addresses only when batching)
+      const setupResult = await setupBuyOperation(connection, wallet, mint, { assumeAccountsExist: true });
       if (!setupResult.success) {
         throw new Error(`Setup failed: ${setupResult.error}`);
       }
@@ -337,7 +263,8 @@ export async function createSignedBuyTransaction(
   solAmount: number,
   slippageBasisPoints: number = 1000,
   feePayer?: Keypair,
-  blockhash?: string
+  blockhash?: string,
+  options?: { assumeAccountsExist?: boolean }
 ): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
   try {
     debugLog(`🔧 Creating signed buy transaction for ${solAmount} SOL`);
@@ -345,7 +272,7 @@ export async function createSignedBuyTransaction(
     debugLog(`📊 Slippage: ${slippageBasisPoints} basis points`);
 
     // Setup the buy operation (get PDAs and ensure ATAs exist)
-    const setupResult = await setupBuyOperation(connection, wallet, mint);
+    const setupResult = await setupBuyOperation(connection, wallet, mint, options);
     if (!setupResult.success) {
       throw new Error(`Setup failed: ${setupResult.error}`);
     }
