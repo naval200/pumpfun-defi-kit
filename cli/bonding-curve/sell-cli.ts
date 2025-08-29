@@ -73,7 +73,7 @@ export async function sellToken() {
   }
 }
 
-// Run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Only run if this file is executed directly
+if (require.main === module) {
   sellToken().catch(logError);
 }

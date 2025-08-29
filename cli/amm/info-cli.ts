@@ -2,129 +2,142 @@ import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import fs from 'fs';
 import path from 'path';
 import { getPoolInfo } from '../../src/amm/info';
-import { findPoolsForToken } from '../../src/utils/amm';
+import { findPoolsForToken } from '../../src/amm/amm';
+import { loadWallet, loadTokenInfo } from '../cli-args';
+
+function showHelp() {
+  console.log(`
+Usage: npm run cli:amm:info -- [options]
+
+Options:
+  --help                    Show this help message
+  --wallet <path>          Path to wallet JSON file (default: wallets/creator-wallet.json)
+  --input-token <path>     Path to token info JSON file (default: wallets/token-info.json)
+  --pool-key <address>     Specific pool key to use (optional)
+
+Examples:
+  npm run cli:amm:info -- --help
+  npm run cli:amm:info -- --pool-key <pool-address>
+  npm run cli:amm:info -- --wallet ./my-wallet.json
+`);
+}
+
+function parseArgs() {
+  const args: any = {};
+  const argv = process.argv.slice(2);
+  
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    
+    switch (arg) {
+      case '--help':
+      case '-h':
+        args.help = true;
+        break;
+      case '--wallet':
+        args.wallet = argv[++i];
+        break;
+      case '--input-token':
+        args.inputToken = argv[++i];
+        break;
+      case '--pool-key':
+        args.poolKey = argv[++i];
+        break;
+    }
+  }
+  
+  return args;
+}
 
 /**
- * Test AMM pool info function
+ * CLI for getting AMM pool information
  */
-export async function testAMMPoolInfo() {
-  console.log('🧪 Testing AMM Pool Info Function');
-  console.log('==================================');
+async function main() {
+  const args = parseArgs();
+  
+  if (args.help) {
+    showHelp();
+    return;
+  }
 
-  // Load token information from configuration file
-  let tokenInfo: any;
   try {
-    const tokenInfoPath = path.join(process.cwd(), 'wallets', 'token-info.json');
-    tokenInfo = JSON.parse(fs.readFileSync(tokenInfoPath, 'utf8'));
-    console.log(`🎯 Testing with token: ${tokenInfo.name} (${tokenInfo.symbol})`);
+    console.log('🏊 AMM Pool Information');
+    console.log('========================');
+
+    // Load token information
+    const tokenInfo = loadTokenInfo(args.inputToken);
+    console.log(`🎯 Token: ${tokenInfo.name || 'Unknown'} (${tokenInfo.symbol || 'Unknown'})`);
     console.log(`📍 Token Mint: ${tokenInfo.mint}`);
     if (tokenInfo.poolKey) {
-      console.log(`🏊 Pool Key: ${tokenInfo.poolKey}`);
-    }
-  } catch (error) {
-    console.error('❌ Failed to load token-info.json:', error);
-    return;
-  }
-
-  // Setup connection and wallet
-  const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-
-  // Load test wallet from file
-  const walletPath = path.join(process.cwd(), 'wallets', 'creator-wallet.json');
-  let wallet: Keypair;
-
-  try {
-    const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
-    wallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
-    console.log(`👛 Using test wallet: ${wallet.publicKey.toString()}`);
-  } catch (error) {
-    console.error('❌ Failed to load test wallet:', error);
-    return;
-  }
-
-  // Check wallet balance
-  const balance = await connection.getBalance(wallet.publicKey);
-  console.log(`💰 Wallet balance: ${(balance / 1e9).toFixed(4)} SOL`);
-
-  // Import the findPoolsForToken function to locate pools
-  try {
-    const tokenMint = new PublicKey(tokenInfo.mint);
-    console.log('🔍 Searching for AMM pools for this token...');
-
-    const pools = await findPoolsForToken(connection, tokenMint);
-
-    if (pools.length === 0) {
-      console.log('❌ No AMM pools found for this token');
-      console.log(
-        '💡 The token may not have been migrated to AMM yet, or the search method needs adjustment'
-      );
-      return;
+      console.log(`🏊 Pool Key from config: ${tokenInfo.poolKey}`);
     }
 
-    // If we have a pool key from token-info.json, use it directly
-    if (tokenInfo.poolKey) {
-      console.log(`\n🏊 Using pool from token-info.json: ${tokenInfo.poolKey}`);
+    // Setup connection and wallet
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    const wallet = loadWallet(args.wallet);
+    console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
 
-      try {
-        const poolKey = new PublicKey(tokenInfo.poolKey);
-        const poolInfo = await getPoolInfo(connection, wallet, poolKey);
+    // Check wallet balance
+    const balance = await connection.getBalance(wallet.publicKey);
+    console.log(`💰 Wallet balance: ${(balance / 1e9).toFixed(4)} SOL`);
 
-        console.log('📊 Pool Information:');
-        console.log(`   Pool Key: ${poolInfo.poolKey}`);
-        console.log(`   Base Mint: ${poolInfo.baseMint}`);
-        console.log(`   Quote Mint: ${poolInfo.quoteMint}`);
-        console.log(`   Base Reserves: ${poolInfo.baseReserves}`);
-        console.log(`   Quote Reserves: ${poolInfo.quoteReserves}`);
-        console.log(`   Creator: ${poolInfo.creator}`);
-        console.log(`   Global Config: ${JSON.stringify(poolInfo.globalConfig, null, 2)}`);
-      } catch (error) {
-        console.error(`❌ Error getting info for pool from token-info.json:`, error);
+    let poolKey: PublicKey;
 
-        // Provide helpful debugging information
-        if (error.message?.includes('AccountNotFound')) {
-          console.log('💡 The pool account may not exist or be accessible');
-        } else if (error.message?.includes('InvalidAccountData')) {
-          console.log('💡 The pool account data may be corrupted or in wrong format');
-        }
+    // If pool key is provided via args, use it
+    if (args.poolKey) {
+      poolKey = new PublicKey(args.poolKey);
+      console.log(`🏊 Using provided pool key: ${poolKey.toString()}`);
+    }
+    // If pool key is in token info, use it
+    else if (tokenInfo.poolKey) {
+      poolKey = new PublicKey(tokenInfo.poolKey);
+      console.log(`🏊 Using pool key from config: ${poolKey.toString()}`);
+    }
+    // Otherwise search for pools
+    else {
+      console.log('🔍 Searching for AMM pools for this token...');
+      const tokenMint = new PublicKey(tokenInfo.mint);
+      const pools = await findPoolsForToken(connection, tokenMint);
+
+      if (pools.length === 0) {
+        console.log('❌ No AMM pools found for this token');
+        console.log('💡 The token may not have been migrated to AMM yet');
+        return;
       }
-    } else {
-      // Fallback to searching for pools
-      console.log('🔍 No pool key in token-info.json, searching for pools...');
 
-      // Test pool info for each pool found
-      for (let i = 0; i < pools.length; i++) {
-        const poolKey = pools[i];
-        console.log(`\n🏊 Pool ${i + 1}: ${poolKey.toString()}`);
+      console.log(`✅ Found ${pools.length} AMM pool(s) for this token`);
+      poolKey = pools[0];
+      console.log(`🏊 Using first pool: ${poolKey.toString()}`);
+    }
 
-        try {
-          const poolInfo = await getPoolInfo(connection, wallet, poolKey);
+    // Get pool information
+    console.log('\n📊 Getting pool information...');
+    try {
+      const poolInfo = await getPoolInfo(connection, poolKey, wallet);
 
-          console.log('📊 Pool Information:');
-          console.log(`   Pool Key: ${poolInfo.poolKey}`);
-          console.log(`   Base Mint: ${poolInfo.baseMint}`);
-          console.log(`   Quote Mint: ${poolInfo.quoteMint}`);
-          console.log(`   Base Reserves: ${poolInfo.baseReserves}`);
-          console.log(`   Quote Reserves: ${poolInfo.quoteReserves}`);
-          console.log(`   Creator: ${poolInfo.creator}`);
-          console.log(`   Global Config: ${JSON.stringify(poolInfo.globalConfig, null, 2)}`);
-        } catch (error) {
-          console.error(`❌ Error getting info for pool ${i + 1}:`, error);
+      if (poolInfo) {
+        console.log('\n📊 Pool Information:');
+        console.log(`   Pool Key: ${poolKey.toString()}`);
+        console.log(`   Pool Data: ${JSON.stringify(poolInfo, null, 2)}`);
+      } else {
+        console.log('❌ No pool information returned');
+      }
+    } catch (error) {
+      console.error(`❌ Error getting pool info:`, error);
 
-          // Provide helpful debugging information
-          if (error.message?.includes('AccountNotFound')) {
-            console.log('💡 The pool account may not exist or be accessible');
-          } else if (error.message?.includes('InvalidAccountData')) {
-            console.log('💡 The pool account data may be corrupted or in wrong format');
-          }
-        }
+      // Provide helpful debugging information
+      if (error.message?.includes('AccountNotFound')) {
+        console.log('💡 The pool account may not exist or be accessible');
+      } else if (error.message?.includes('InvalidAccountData')) {
+        console.log('💡 The pool account data may be corrupted or in wrong format');
       }
     }
   } catch (error) {
-    console.error('❌ Error during AMM pool info test:', error);
+    console.error(`❌ Error: ${error}`);
   }
 }
 
-// Run the test if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  testAMMPoolInfo().catch(console.error);
+// Only run if this file is executed directly
+if (require.main === module) {
+  main().catch(console.error);
 }

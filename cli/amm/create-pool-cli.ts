@@ -8,28 +8,90 @@ import { createPool } from '../../src/amm/createPool';
 import fs from 'fs';
 import path from 'path';
 
+function showHelp() {
+  console.log(`
+Usage: npm run cli:amm:create-pool -- [options]
+
+Options:
+  --help                    Show this help message
+  --wallet <path>          Path to wallet JSON file (default: wallets/creator-wallet.json)
+  --base-mint <address>    Base token mint address (default: from token-info.json)
+  --quote-mint <address>   Quote token mint address (default: So11111111111111111111111111111111111111112)
+  --base-amount <number>   Base token amount (default: 1000000)
+  --quote-amount <number>  Quote token amount in SOL (default: 0.1)
+  --pool-index <number>    Pool index (default: 0)
+
+Examples:
+  npm run cli:amm:create-pool -- --help
+  npm run cli:amm:create-pool -- --base-amount 500000 --quote-amount 0.05
+  npm run cli:amm:create-pool -- --wallet ./my-wallet.json --pool-index 1
+`);
+}
+
+function parseArgs() {
+  const args: any = {};
+  const argv = process.argv.slice(2);
+  
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    
+    switch (arg) {
+      case '--help':
+      case '-h':
+        args.help = true;
+        break;
+      case '--wallet':
+        args.wallet = argv[++i];
+        break;
+      case '--base-mint':
+        args.baseMint = argv[++i];
+        break;
+      case '--quote-mint':
+        args.quoteMint = argv[++i];
+        break;
+      case '--base-amount':
+        args.baseAmount = parseInt(argv[++i]);
+        break;
+      case '--quote-amount':
+        args.quoteAmount = parseFloat(argv[++i]);
+        break;
+      case '--pool-index':
+        args.poolIndex = parseInt(argv[++i]);
+        break;
+    }
+  }
+  
+  return args;
+}
+
 /**
- * Test script for creating a liquidity pool for a token
- * This script demonstrates how to create an AMM pool for trading
+ * CLI for creating a liquidity pool for a token
  */
-async function testCreatePool() {
+async function main() {
+  const args = parseArgs();
+  
+  if (args.help) {
+    showHelp();
+    return;
+  }
+
   try {
-    console.log('🚀 Starting AMM Pool Creation Test...\n');
+    console.log('🚀 Starting AMM Pool Creation...\n');
 
     // Setup connection and wallet
     const connection = new Connection("https://api.devnet.solana.com", "confirmed");
     console.log('✅ Connected to Solana devnet');
     
-    // Load test wallet from file
-    const walletPath = path.join(process.cwd(), 'wallets', 'creator-wallet.json');
+    // Load wallet from file
+    const walletPath = args.wallet || path.join(process.cwd(), 'wallets', 'creator-wallet.json');
     let wallet: Keypair;
     
     try {
       const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
       wallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
-      console.log(`👛 Using test wallet: ${wallet.publicKey.toString()}`);
+      console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
     } catch (error) {
-      console.error('❌ Failed to load test wallet:', error);
+      console.error('❌ Failed to load wallet:', error);
       return;
     }
     
@@ -42,31 +104,40 @@ async function testCreatePool() {
       return;
     }
 
-    // Load token info
+    // Load token info or use provided mint
+    let baseMint: PublicKey;
+    let tokenInfo: any = {};
     const tokenInfoPath = path.join(process.cwd(), 'token-info.json');
-    if (!fs.existsSync(tokenInfoPath)) {
-      throw new Error('token-info.json not found. Please create a token first.');
+    
+    if (args.baseMint) {
+      baseMint = new PublicKey(args.baseMint);
+      console.log(`✅ Using provided base mint: ${baseMint.toString()}`);
+    } else {
+      if (!fs.existsSync(tokenInfoPath)) {
+        throw new Error('token-info.json not found. Please provide --base-mint or create a token first.');
+      }
+
+      tokenInfo = JSON.parse(fs.readFileSync(tokenInfoPath, 'utf8'));
+      baseMint = new PublicKey(tokenInfo.mint);
+      console.log('✅ Token info loaded:', {
+        name: tokenInfo.name,
+        symbol: tokenInfo.symbol,
+        mint: tokenInfo.mint
+      });
     }
 
-    const tokenInfo = JSON.parse(fs.readFileSync(tokenInfoPath, 'utf8'));
-    console.log('✅ Token info loaded:', {
-      name: tokenInfo.name,
-      symbol: tokenInfo.symbol,
-      mint: tokenInfo.mint
-    });
-
     // Define pool parameters
-    const baseMint = new PublicKey(tokenInfo.mint); // Your token
-    const quoteMint = new PublicKey('So11111111111111111111111111111111111111112'); // SOL (wrapped SOL)
+    const quoteMint = new PublicKey(args.quoteMint || 'So11111111111111111111111111111111111111112'); // SOL (wrapped SOL)
     
-    // Pool amounts (adjust these based on your needs)
-    const baseIn = 1000000; // 1M tokens (assuming 6 decimals)
-    const quoteIn = 0.1; // 0.1 SOL
+    // Pool amounts (use provided values or defaults)
+    const baseIn = args.baseAmount || 1000000; // 1M tokens (assuming 6 decimals)
+    const quoteIn = args.quoteAmount || 0.1; // 0.1 SOL
+    const poolIndex = args.poolIndex || 0;
     
     console.log('\n📊 Pool Creation Parameters:');
-    console.log(`Base Token (${tokenInfo.symbol}): ${baseIn} tokens`);
+    console.log(`Base Token: ${baseIn} tokens`);
     console.log(`Quote Token (SOL): ${quoteIn} SOL`);
-    console.log(`Pool Index: 0`);
+    console.log(`Pool Index: ${poolIndex}`);
 
     // Create the pool
     console.log('\n🏊 Creating AMM liquidity pool...');
@@ -77,7 +148,7 @@ async function testCreatePool() {
       quoteMint,
       baseIn,
       quoteIn,
-      0 // pool index
+      poolIndex
     );
 
     if (result.success) {
@@ -85,42 +156,32 @@ async function testCreatePool() {
       console.log(`Pool Key: ${result.poolKey?.toString()}`);
       console.log(`Transaction: ${result.signature}`);
       
-      // Update token-info.json with pool information
-      const updatedTokenInfo = {
-        ...tokenInfo,
-        poolKey: result.poolKey?.toString(),
-        poolCreatedAt: new Date().toISOString(),
-        poolTransaction: result.signature,
-        poolConfig: {
-          baseAmount: baseIn,
-          quoteAmount: quoteIn,
-          poolIndex: 0
-        }
-      };
+      // Update token-info.json with pool information if it exists
+      if (Object.keys(tokenInfo).length > 0) {
+        const updatedTokenInfo = {
+          ...tokenInfo,
+          poolKey: result.poolKey?.toString(),
+          poolCreatedAt: new Date().toISOString(),
+          poolTransaction: result.signature,
+          poolConfig: {
+            baseAmount: baseIn,
+            quoteAmount: quoteIn,
+            poolIndex: poolIndex
+          }
+        };
 
-      // Write updated token info
-      fs.writeFileSync(tokenInfoPath, JSON.stringify(updatedTokenInfo, null, 2));
-      console.log('\n💾 Updated token-info.json with pool information');
-      
-      // Display final token info
-      console.log('\n📋 Updated Token Information:');
-      console.log(JSON.stringify(updatedTokenInfo, null, 2));
-      
+        fs.writeFileSync(tokenInfoPath, JSON.stringify(updatedTokenInfo, null, 2));
+        console.log('✅ Updated token-info.json with pool details');
+      }
     } else {
-      console.error('\n❌ Pool creation failed:', result.error);
-      process.exit(1);
+      console.log('\n❌ Pool creation failed:', result.error);
     }
-
-  } catch (error: any) {
-    console.error('\n💥 Test failed with error:', error);
-    console.error('Stack trace:', error.stack);
-    process.exit(1);
+  } catch (error) {
+    console.error('❌ Error creating pool:', error);
   }
 }
 
-// Run the test if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  testCreatePool();
+// Only run if this file is executed directly
+if (require.main === module) {
+  main().catch(console.error);
 }
-
-export { testCreatePool };

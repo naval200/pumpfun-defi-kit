@@ -3,11 +3,57 @@ import { checkGraduationStatus, getGraduationAnalysis } from '../src/utils/gradu
 import fs from 'fs';
 import path from 'path';
 
+function showHelp() {
+  console.log(`
+Usage: npm run cli:graduation-check -- [options]
+
+Options:
+  --help                    Show this help message
+  --input-token <path>     Path to token info JSON file (default: token-info.json)
+  --mint <address>         Token mint address (overrides input-token file)
+
+Examples:
+  npm run cli:graduation-check -- --help
+  npm run cli:graduation-check -- --mint <token-mint-address>
+  npm run cli:graduation-check -- --input-token ./my-token.json
+`);
+}
+
+function parseArgs() {
+  const args: any = {};
+  const argv = process.argv.slice(2);
+  
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    
+    switch (arg) {
+      case '--help':
+      case '-h':
+        args.help = true;
+        break;
+      case '--input-token':
+        args.inputToken = argv[++i];
+        break;
+      case '--mint':
+        args.mint = argv[++i];
+        break;
+    }
+  }
+  
+  return args;
+}
+
 /**
- * Test script for checking token graduation status
- * This script demonstrates how to check if a token has graduated from bonding curve to AMM
+ * CLI for checking token graduation status
  */
-async function testGraduationCheck() {
+async function main() {
+  const args = parseArgs();
+  
+  if (args.help) {
+    showHelp();
+    return;
+  }
+
   try {
     console.log('🚀 Starting Token Graduation Status Check...\n');
 
@@ -15,29 +61,40 @@ async function testGraduationCheck() {
     const connection = new Connection("https://api.devnet.solana.com", "confirmed");
     console.log('✅ Connected to Solana devnet');
     
-    // Load token info from file
-    const tokenInfoPath = path.join(process.cwd(), 'token-info.json');
-    if (!fs.existsSync(tokenInfoPath)) {
-      console.log('❌ token-info.json not found. Please create a token first.');
-      console.log('💡 Run: npm run test:create-token');
-      return;
-    }
-
-    const tokenInfo = JSON.parse(fs.readFileSync(tokenInfoPath, 'utf8'));
-    console.log('✅ Token info loaded:', {
-      name: tokenInfo.name,
-      symbol: tokenInfo.symbol,
-      mint: tokenInfo.mint
-    });
-
-    const tokenMint = new PublicKey(tokenInfo.mint);
+    let tokenMint: PublicKey;
     
-    // Check if token has a pool key (indicates AMM creation)
-    if (tokenInfo.poolKey) {
-      console.log(`🏊 Token has AMM pool: ${tokenInfo.poolKey}`);
-      console.log(`📅 Pool created: ${tokenInfo.poolCreatedAt}`);
-    } else {
-      console.log('📈 Token does not have AMM pool yet');
+    // If mint is provided via args, use it directly
+    if (args.mint) {
+      tokenMint = new PublicKey(args.mint);
+      console.log(`🎯 Using provided mint: ${tokenMint.toString()}`);
+    }
+    // Otherwise load from token info file
+    else {
+      const tokenInfoPath = args.inputToken || path.join(process.cwd(), 'token-info.json');
+      if (!fs.existsSync(tokenInfoPath)) {
+        console.log(`❌ Token info file not found: ${tokenInfoPath}`);
+        console.log('💡 Please provide --mint or create a token first with: npm run cli:curve:create-token');
+        return;
+      }
+
+      const tokenInfo = JSON.parse(fs.readFileSync(tokenInfoPath, 'utf8'));
+      console.log('✅ Token info loaded:', {
+        name: tokenInfo.name,
+        symbol: tokenInfo.symbol,
+        mint: tokenInfo.mint
+      });
+      
+      tokenMint = new PublicKey(tokenInfo.mint);
+      
+      // Check if token has a pool key (indicates AMM creation)
+      if (tokenInfo.poolKey) {
+        console.log(`🏊 Token has AMM pool: ${tokenInfo.poolKey}`);
+        if (tokenInfo.poolCreatedAt) {
+          console.log(`📅 Pool created: ${tokenInfo.poolCreatedAt}`);
+        }
+      } else {
+        console.log('📈 Token does not have AMM pool yet');
+      }
     }
 
     console.log('\n🔍 Checking graduation status...');
@@ -73,11 +130,11 @@ async function testGraduationCheck() {
     } else if (analysis.hasAMMPools && !analysis.hasSufficientLiquidity) {
       console.log('📊 Token has AMM pools but needs more liquidity');
       console.log('   • Add more liquidity to the pool');
-      console.log('   • Consider running: npm run test:amm:liquidity');
+      console.log('   • Consider running: npm run cli:amm:liquidity');
     } else if (!analysis.hasAMMPools && analysis.bondingCurveActive) {
       console.log('📈 Token is still in bonding curve mode');
       console.log('   • Create AMM pool to enable graduation');
-      console.log('   • Run: npm run test:create-pool');
+      console.log('   • Run: npm run cli:amm:create-pool');
     } else {
       console.log('❓ Token status unclear');
       console.log('   • Check if token was created properly');
@@ -87,13 +144,14 @@ async function testGraduationCheck() {
     console.log('\n✅ Graduation check completed!');
 
   } catch (error: any) {
-    console.error('\n💥 Test failed with error:', error);
-    console.error('Stack trace:', error.stack);
-    process.exit(1);
+    console.error('\n💥 Error during graduation check:', error);
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
   }
 }
 
-// Run the test if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  testGraduationCheck();
+// Only run if this file is executed directly
+if (require.main === module) {
+  main().catch(console.error);
 }
