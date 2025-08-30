@@ -1,6 +1,18 @@
 import { PublicKey } from '@solana/web3.js';
 
 // ============================================================================
+// UPDATED IDL STRUCTURE NOTES
+// ============================================================================
+
+// The updated IDL now includes:
+// 1. New FeeConfig account type with discriminator [143, 52, 146, 187, 219, 123, 76, 155]
+// 2. Updated buy and sell instructions that require fee_config and fee_program accounts
+// 3. FeeConfig PDA is derived using FEE_PROGRAM_ID with seeds:
+//    - First seed: "fee_config" (FEE_CONFIG_SEED)
+//    - Second seed: [1, 86, 224, 246, 147, 102, 90, 207, 68, 219, 21, 104, 191, 23, 91, 170, 81, 137, 203, 151, 245, 210, 255, 59, 101, 93, 43, 182, 253, 109, 24, 176]
+// 4. The fee_program account is always "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ"
+
+// ============================================================================
 // PUMP.FUN PROGRAM CONSTANTS
 // ============================================================================
 
@@ -48,6 +60,12 @@ export const PUMP_AMM_PROGRAM_ID = new PublicKey('pAMMBay6oceH9fJKBRHGP5D4bD4sWp
 export const WSOL_MINT = new PublicKey('So11111111111111111111111111111111111111112');
 
 // ============================================================================
+// FEE PROGRAM ID
+// ============================================================================
+
+export const FEE_PROGRAM_ID = new PublicKey('pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ');
+
+// ============================================================================
 // PDA SEED CONSTANTS (from IDL)
 // ============================================================================
 
@@ -86,6 +104,18 @@ export const POOL_LP_MINT_SEED = Buffer.from('pool_lp_mint');
 
 // Global config seed
 export const GLOBAL_CONFIG_SEED = Buffer.from('global_config');
+
+// Fee config seed
+export const FEE_CONFIG_SEED = Buffer.from('fee_config');
+
+// Fee config seed value from IDL (matches the const value in the diff)
+// The IDL shows: [102, 101, 101, 95, 99, 111, 110, 102, 105, 103]
+// Which corresponds to "fee_config" in ASCII
+export const FEE_CONFIG_SEED_BYTES = [102, 101, 101, 95, 99, 111, 110, 102, 105, 103];
+
+// Fee config PDA second seed value from IDL (the hardcoded bytes)
+// The IDL shows: [1, 86, 224, 246, 147, 102, 90, 207, 68, 219, 21, 104, 191, 23, 91, 170, 81, 137, 203, 151, 245, 210, 255, 59, 101, 93, 43, 182, 253, 109, 24, 176]
+export const FEE_CONFIG_PDA_SECOND_SEED = [1, 86, 224, 246, 147, 102, 90, 207, 68, 219, 21, 104, 191, 23, 91, 170, 81, 137, 203, 151, 245, 210, 255, 59, 101, 93, 43, 182, 253, 109, 24, 176];
 
 // ============================================================================
 // INSTRUCTION DISCRIMINATORS (from IDL)
@@ -167,6 +197,9 @@ export const UPDATE_GLOBAL_AUTHORITY_INSTRUCTION_DISCRIMINATOR = [
 // BondingCurve account discriminator
 export const BONDING_CURVE_ACCOUNT_DISCRIMINATOR = [23, 183, 248, 55, 96, 216, 172, 96];
 
+// FeeConfig account discriminator (NEW from updated IDL)
+export const FEE_CONFIG_ACCOUNT_DISCRIMINATOR = [143, 52, 146, 187, 219, 123, 76, 155];
+
 // Global account discriminator
 export const GLOBAL_ACCOUNT_DISCRIMINATOR = [167, 232, 232, 177, 200, 108, 114, 127];
 
@@ -177,6 +210,16 @@ export const GLOBAL_VOLUME_ACCUMULATOR_ACCOUNT_DISCRIMINATOR = [
 
 // UserVolumeAccumulator account discriminator
 export const USER_VOLUME_ACCUMULATOR_ACCOUNT_DISCRIMINATOR = [86, 255, 112, 14, 102, 53, 154, 250];
+
+// ============================================================================
+// TYPE DISCRIMINATORS (from IDL)
+// ============================================================================
+
+// FeeTier type discriminator (NEW from updated IDL)
+export const FEE_TIER_TYPE_DISCRIMINATOR = [143, 52, 146, 187, 219, 123, 76, 155];
+
+// Fees type discriminator (NEW from updated IDL)
+export const FEES_TYPE_DISCRIMINATOR = [143, 52, 146, 187, 219, 123, 76, 155];
 
 // ============================================================================
 // EVENT DISCRIMINATORS (from IDL)
@@ -300,6 +343,8 @@ export const FEE_RECIPIENT = new PublicKey('68yFSZxzLWJXkxxRGydZ63C6mHx1NLEDWmwN
 export const CREATOR_VAULT = new PublicKey('72ZnbPGyFHR1Bz1pmVK4cgWNRUT9pCcapNiiUcWKWsDg');
 export const EVENT_AUTHORITY = new PublicKey('Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1');
 export const GLOBAL_VOLUME_ACCUMULATOR = 'Hq2wp8uJ9jCPsYgNHex8RtqdvMPfVGoYwjvF1ATiwn2Y';
+
+
 
 // ============================================================================
 // COMPUTE BUDGET CONSTANTS

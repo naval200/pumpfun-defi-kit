@@ -18,15 +18,13 @@ import {
   USER_VOLUME_ACCUMULATOR_SEED,
   EVENT_AUTHORITY_SEED,
   COMPUTE_BUDGET_INSTRUCTIONS,
-} from './constants';
-import { log, logWarning, logSuccess } from '../utils/debug';
+} from './idl/constants';
+import { log, logWarning, logSuccess, logError } from '../utils/debug';
 import { getOrCreateAssociatedTokenAccount } from '../createAccount';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 
-// ============================================================================
-// PUMP.FUN PROGRAM CONSTANTS
-// ============================================================================
-
-// Constants moved to constants.ts
+// Import fee config PDA derivation from instructions
+import { deriveFeeConfigPDA } from './idl/instructions';
 
 // ============================================================================
 // PDA DERIVATION FUNCTIONS
@@ -280,6 +278,86 @@ export function getCreatorVaultPDAFromWallet(programId: PublicKey, wallet: Publi
 }
 
 /**
+ * Fetch bonding curve account data and extract creator
+ */
+export async function getBondingCurveCreator(
+  connection: Connection,
+  mint: PublicKey
+): Promise<PublicKey> {
+  const [bondingCurvePDA] = deriveBondingCurveAddress(mint);
+  
+  try {
+    const accountInfo = await connection.getAccountInfo(bondingCurvePDA);
+    if (!accountInfo) {
+      throw new Error(`Bonding curve account not found: ${bondingCurvePDA.toString()}`);
+    }
+
+    // Bonding curve account layout (based on IDL):
+    // - discriminator: [u8; 8] (8 bytes) - Anchor account discriminator
+    // - virtual_token_reserves: u64 (8 bytes)
+    // - virtual_sol_reserves: u64 (8 bytes) 
+    // - real_token_reserves: u64 (8 bytes)
+    // - real_sol_reserves: u64 (8 bytes)
+    // - token_total_supply: u64 (8 bytes)
+    // - complete: bool (1 byte)
+    // - creator: pubkey (32 bytes)
+    
+    const data = accountInfo.data;
+    const creatorOffset = 8 + 8 + 8 + 8 + 8 + 8 + 1; // Skip discriminator + fields to creator field (49 bytes)
+    const creatorBytes = data.slice(creatorOffset, creatorOffset + 32);
+    const creator = new PublicKey(creatorBytes);
+    
+    log(`✅ Fetched creator from bonding curve: ${creator.toString()}`);
+    return creator;
+  } catch (error) {
+    logWarning(`Failed to fetch bonding curve creator: ${error}`);
+    throw error;
+  }
+}
+
+/**
+ * Get all required PDAs for buy operations with robust resolution
+ * Consolidates all PDA derivation in one place for reuse
+ * Now includes async creator resolution from bonding curve
+ */
+export async function getAllRequiredPDAsForBuyAsync(
+  connection: Connection,
+  programId: PublicKey, 
+  mint: PublicKey, 
+  user: PublicKey
+) {
+  // Global PDA
+  const globalPDA = getGlobalPDA(programId);
+
+  // Bonding curve PDA
+  const [bondingCurvePDA] = deriveBondingCurveAddress(mint);
+
+  // Get actual creator from bonding curve account
+  const creator = await getBondingCurveCreator(connection, mint);
+  
+  // Creator vault PDA - use actual creator from bonding curve
+  const [creatorVaultPDA] = deriveCreatorVaultAddress(creator);
+
+  // Event authority PDA - standard Anchor pattern
+  const [eventAuthorityPDA] = PublicKey.findProgramAddressSync([EVENT_AUTHORITY_SEED], programId);
+
+  // Global volume accumulator - known constant
+  const [globalVolumeAccumulatorPDA] = deriveGlobalVolumeAccumulatorAddress();
+
+  // User volume accumulator - derived from user
+  const userVolumeAccumulatorPDA = getUserVolumeAccumulator(programId, user);
+
+  return {
+    globalPDA,
+    bondingCurvePDA,
+    creatorVaultPDA,
+    eventAuthorityPDA,
+    globalVolumeAccumulatorPDA,
+    userVolumeAccumulatorPDA,
+  };
+}
+
+/**
  * Get all required PDAs for buy operations with robust resolution
  * Consolidates all PDA derivation in one place for reuse
  */
@@ -341,15 +419,23 @@ export function getGlobalPDA(programId: PublicKey): PublicKey {
   return globalPDA;
 }
 
+// REMOVED: onboardUserForBondingCurve function - redundant with createAccount.ts
+
+// REMOVED: isUserOnboardedForBondingCurve function - redundant with createAccount.ts
+
 /**
  * Ensure required ATAs (user and bonding curve) for buy/sell flows.
  * When assumeAccountsExist is true, this is a no-op (no RPC).
+ * 
+ * @deprecated Use createAccount.ts functions instead for comprehensive setup
  */
 export async function ensureBondingCurveAtas(
   connection: Connection,
   wallet: Keypair,
   mint: PublicKey
 ): Promise<void> {
+  logWarning('⚠️ ensureBondingCurveAtas is deprecated. Use onboardUserForBondingCurve for comprehensive setup.');
+  
   // Ensure user ATA
   const userAtaResult = await getOrCreateAssociatedTokenAccount(
     connection,

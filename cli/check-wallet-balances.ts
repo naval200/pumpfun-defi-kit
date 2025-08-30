@@ -11,8 +11,10 @@ import path from 'path';
  * Check wallet balances for all known tokens
  */
 async function checkWalletBalances() {
+  console.log('🚀 Starting checkWalletBalances function...');
   try {
     const args = parseArgs();
+    console.log('📋 Parsed args:', args);
 
     if (args.help) {
       console.log(
@@ -40,33 +42,44 @@ async function checkWalletBalances() {
       return;
     }
 
+    console.log('🔍 Checking Wallet Balances...\n');
     debugLog('🔍 Checking Wallet Balances...\n');
 
     // Connect to devnet
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
+    console.log(`👤 Wallet: ${walletKeypair.publicKey.toString()}`);
     debugLog(`👤 Wallet: ${walletKeypair.publicKey.toString()}`);
+    console.log(`🔗 Network: ${connection.rpcEndpoint}\n`);
     debugLog(`🔗 Network: ${connection.rpcEndpoint}\n`);
 
     // Check SOL balance
+    console.log('🔍 Getting SOL balance...');
     const solBalance = await connection.getBalance(walletKeypair.publicKey);
+    console.log(`💰 SOL Balance: ${(solBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL\n`);
     debugLog(`💰 SOL Balance: ${(solBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL\n`);
 
     // Check specific token balance if mint is provided
     if (args.mint) {
+      console.log('🔍 Checking specific token balance...');
       try {
         const mintPublicKey = new PublicKey(args.mint);
+        console.log('✅ Created mint public key');
         const tokenAccount = await getAssociatedTokenAddress(
           mintPublicKey,
           walletKeypair.publicKey
         );
+        console.log('✅ Got associated token address');
 
         debugLog(`🪙 Checking specific token: ${args.mint}`);
         debugLog(`   Token Account: ${tokenAccount.toString()}`);
 
         try {
+          console.log('🔍 Getting account info...');
           const accountInfo = await getAccount(connection, tokenAccount);
+          console.log('✅ Token Account found');
           debugLog(`   ✅ Token Account found`);
+          console.log(`💰 Balance: ${accountInfo.amount}`);
           debugLog(`   💰 Balance: ${accountInfo.amount}`);
 
           if (Number(accountInfo.amount) > 0) {
@@ -120,6 +133,15 @@ async function checkWalletBalances() {
 }
 
 // Run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  checkWalletBalances().catch(logError);
+console.log('🔍 Script loaded, checking if main module...');
+console.log('require.main:', require.main);
+console.log('module:', module);
+if (require.main === module) {
+  console.log('✅ Running main function...');
+  checkWalletBalances().catch((error) => {
+    console.error('❌ Error caught:', error);
+    logError(error);
+  });
+} else {
+  console.log('❌ Not main module, skipping execution');
 }

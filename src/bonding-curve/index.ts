@@ -1,15 +1,10 @@
 // Main bonding curve functions
 export { createPumpFunToken } from './createToken';
-export { buyPumpFunToken, createSignedBuyTransaction } from './buy';
-export {
-  sellPumpFunToken,
-  createSignedSellTransaction,
-  sellAllPumpFunTokens,
-  sellPercentagePumpFunTokens,
-} from './sell';
+export { buyPumpFunToken } from './buy';
+export { sellPumpFunToken } from './sell';
 
 // Instruction builders (zero-RPC)
 export {
-  createBondingCurveBuyInstructionAssuming,
-  createBondingCurveSellInstructionAssuming,
-} from './instructions';
+  createBondingCurveBuyInstruction,
+  createBondingCurveSellInstruction,
+} from './idl/instructions';

@@ -1,0 +1,36 @@
+{
+  "mint": "3mF9HMkrScuFfDHLvHwYqSNLAApu3LdqjHaufequvgB6",
+  "name": "TestToken",
+  "symbol": "TEST",
+  "description": "A test token created with new IDL",
+  "bondingCurve": "CDxKez2LdmqipwHg6LMU7TH6AShYNficqDVwtdpvTXq3",
+  "createdAt": "2025-08-30T10:33:18.209Z",
+  "network": "devnet",
+  "explorer": "https://explorer.solana.com/tx/8pHr4PMoq7g9nQ4dMTB5yokPvPhCBUV3uDyjDuCVZSyKycg4triuLaWxQNGYpPk5yVftqzkQwmWFBM844vayfeX?cluster=devnet",
+  "pumpFun": "https://pump.fun/coin/3mF9HMkrScuFfDHLvHwYqSNLAApu3LdqjHaufequvgB6",
+  "creatorWallet": "4m3zWwvK9dgtfdz3teFeAFQTzjpsyuFdu2uaDZk8qBP8",
+  "globalPDA": "4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf",
+  "status": "created_with_new_idl",
+  "testResults": {
+    "buy": {
+      "status": "successful",
+      "signature": "f3ZKJttY9KUmXw6ZnkWHZVkj9htQ9iuPrMcHQ4w77QqC7GnXsxcF1wFBuA8DGkLiae2ixS5C2c77eahEPZFbFXM",
+      "amount": "0.01 SOL",
+      "explorer": "https://explorer.solana.com/tx/f3ZKJttY9KUmXw6ZnkWHZVkj9htQ9iuPrMcHQ4w77QqC7GnXsxcF1wFBuA8DGkLiae2ixS5C2c77eahEPZFbFXM?cluster=devnet"
+    },
+    "sell": {
+      "status": "failed",
+      "error": "AccountOwnedByWrongProgram - The given account is owned by a different program than expected",
+      "details": "The fee_config account ownership issue prevents sell operations. The new IDL requires fee_config and fee_program accounts, but the fee_config account either doesn't exist or has incorrect ownership.",
+      "note": "Fee system integration is mandatory in new IDL - cannot remove fee accounts from sell instruction"
+    }
+  },
+  "technicalAnalysis": {
+    "idlChanges": "New IDL adds fee_config and fee_program accounts to buy/sell operations",
+    "unitConversion": "Fixed ZeroTradeSize error by correcting token amount handling (similar to ZeroBaseAmount fix)",
+    "accountStructure": "Sell instruction requires volume accumulator accounts + fee accounts",
+    "feeSystem": "Fee system integration is mandatory and working (pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ program invoked)",
+    "remainingIssue": "fee_config account needs to be created or has incorrect ownership"
+  },
+  "notes": "This token demonstrates successful new IDL integration for buy operations. Sell operations fail due to fee_config account setup issues, but the core fee system integration is confirmed working. The ZeroTradeSize error was successfully resolved through proper unit conversion and account structure."
+}

@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { PUMP_PROGRAM_ID } from '../bonding-curve/constants';
+import { PUMP_PROGRAM_ID } from '../bonding-curve/idl/constants';
 import { deriveBondingCurveAddress } from '../bonding-curve/bc-helper';
 import { log, debugLog, logWarning } from './debug';
 import {

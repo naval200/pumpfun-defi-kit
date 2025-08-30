@@ -9,10 +9,10 @@ import { buyPumpFunToken } from './buy';
 import { TokenConfig, CreateTokenResult } from '../@types';
 import { sendAndConfirmRawTransaction, getExplorerUrl } from '../utils/transaction';
 import { getGlobalPDA, isGlobalAccountInitialized, initializeGlobalAccount } from './bc-helper';
-import { PUMP_PROGRAM_ID } from './constants';
+import { PUMP_PROGRAM_ID } from './idl/constants';
 
 import { SimpleWallet } from '../utils/wallet';
-import IDL from '../idl/pump_program.json';
+import IDL from './idl/pump_program.json';
 
 // Constants for token creation
 const MPL_TOKEN_METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
@@ -223,7 +223,7 @@ export async function createPumpFunToken(
         // Additional wait to ensure all accounts are properly initialized
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Execute the initial buy using buyPumpFunToken (no creator vault needed)
+        // Execute the initial buy using buy (no creator vault needed)
         const buySignature = await buyPumpFunToken(
           connection,
           wallet,

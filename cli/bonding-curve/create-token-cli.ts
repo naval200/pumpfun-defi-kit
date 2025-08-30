@@ -2,7 +2,7 @@
 
 import { Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { createPumpFunToken } from '../../src/bonding-curve/createToken';
-import { deriveBondingCurveAddress } from '../../src/bonding-curve/helper';
+import { deriveBondingCurveAddress } from '../../src/bonding-curve/bc-helper';
 import { parseArgs, loadWallet, saveTokenInfo, printUsage } from '../cli-args';
 
 /**

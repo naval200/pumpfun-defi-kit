@@ -97,7 +97,7 @@ ehthumbs.db
 Thumbs.db
 
 # Test wallets and keys
-wallets/
+fixtures/
 *.key
 *.pem
 

@@ -9,15 +9,15 @@ import BN from 'bn.js';
 
 import {
   buyTokens as buyAmmTokens,
-  sellTokens,
+  sellTokens as sellAmmTokens,
   createAmmBuyInstructionsAssuming,
   createAmmSellInstructionsAssuming,
 } from '../amm';
 import {
   buyPumpFunToken,
-  createSignedSellTransaction,
-  createBondingCurveBuyInstructionAssuming,
-  createBondingCurveSellInstructionAssuming,
+  sellPumpFunToken,
+  createBondingCurveBuyInstruction,
+  createBondingCurveSellInstruction,
 } from '../bonding-curve';
 import { chunkArray } from './batch-helper';
 import { sendLamports } from '../utils/transaction';
@@ -180,11 +180,10 @@ export async function executePumpFunBatch(
               case 'buy-bonding-curve': {
                 const { mint, solAmount, slippage = 1000 } = operation.params;
                 instructions.push(
-                  createBondingCurveBuyInstructionAssuming(
+                  createBondingCurveBuyInstruction(
                     sender.publicKey,
                     new PublicKey(mint),
                     new BN(Number(solAmount) * 1e9),
-                    Number(slippage)
                   )
                 );
                 break;
@@ -192,7 +191,7 @@ export async function executePumpFunBatch(
               case 'sell-bonding-curve': {
                 const { mint, amount, minSolOutputLamports = 1 } = operation.params;
                 instructions.push(
-                  createBondingCurveSellInstructionAssuming(
+                  createBondingCurveSellInstruction(
                     sender.publicKey,
                     new PublicKey(mint),
                     new BN(Number(amount)),
@@ -514,7 +513,7 @@ async function executeBondingCurveSell(
     debugLog(`🎯 Mint: ${mint}`);
     debugLog(`📊 Slippage: ${slippage} basis points`);
 
-    const result = await createSignedSellTransaction(
+    const result = await createBondingCurveSellInstruction(
       connection,
       wallet,
       new PublicKey(mint),
@@ -572,7 +571,7 @@ async function executeAmmSell(
     debugLog(`💸 Selling tokens to pool: ${poolKey}`);
     debugLog(`Token amount: ${amount}`);
 
-    return await sellTokens(connection, wallet, new PublicKey(poolKey), amount, slippage, feePayer);
+    return await sellAmmTokens as sellAmmTokens(connection, wallet, new PublicKey(poolKey), amount, slippage, feePayer);
   } catch (error) {
     return {
       success: false,
@@ -620,7 +619,7 @@ async function executeBondingCurveBuy(
   const { mint, solAmount, slippage = 1000, assumeAccountsExist = true } = params;
 
   try {
-    const signature = await buyPumpFunToken(
+    const signature = await    buyBcurve(
       connection,
       wallet,
       new PublicKey(mint),
