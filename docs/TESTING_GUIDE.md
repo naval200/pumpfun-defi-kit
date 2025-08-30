@@ -81,6 +81,25 @@ npm run test:trading       # Trading operations only
 npm run test:amm           # AMM operations only
 ```
 
+### Debug Scripts (Recommended for Testing)
+
+The debug system provides comprehensive testing capabilities:
+
+```bash
+cd debug
+
+# Master test script (runs all phases)
+./00-run-complete-test.sh
+
+# Individual test phases
+./01-setup-user-wallets.sh      # Create and fund test wallets
+./02-test-batch-send-and-sell.sh  # Test batch transfers
+./02-test-batch-send-and-buy.sh   # Test batch buys and SOL transfers
+./09-test-comprehensive-batch.sh  # Test mixed operations
+```
+
+**Note**: The `wallets/` directory has been renamed to `fixtures/` to better reflect its contents.
+
 ### Utility Scripts
 
 ```bash
@@ -146,12 +165,28 @@ PRIORITY_FEE_MULTIPLIER=1.5
 
 ## 🚨 Troubleshooting
 
+### Current Testing Status
+
+#### ✅ Working Components
+- User wallet creation and funding
+- Token transfers between wallets
+- Batch operation file generation
+- CLI parameter validation
+- Setup phase execution
+
+#### ⚠️ Known Issues
+- Batch transactions CLI has import error: `executeBatch is not a function`
+- Need to investigate the batch transactions module exports
+- Some batch operations may fail due to CLI import issues
+
 ### Common Issues
 
 1. **Insufficient Balance**: Ensure wallet has at least 0.1 SOL
 2. **Network Congestion**: Increase priority fees for faster execution
 3. **RPC Rate Limits**: Use dedicated RPC endpoint for testing
 4. **Transaction Failures**: Check Solana network status
+5. **Missing wallet files**: Ensure all required files exist in `fixtures/` directory
+6. **Import errors**: Check that batch transactions module exports are correct
 
 ### Error Recovery
 

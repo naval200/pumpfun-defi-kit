@@ -89,6 +89,23 @@ export declare function getUserVolumeAccumulator(programId: PublicKey, user: Pub
  */
 export declare function getCreatorVaultPDAFromWallet(programId: PublicKey, wallet: PublicKey): PublicKey;
 /**
+ * Fetch bonding curve account data and extract creator
+ */
+export declare function getBondingCurveCreator(connection: Connection, mint: PublicKey): Promise<PublicKey>;
+/**
+ * Get all required PDAs for buy operations with robust resolution
+ * Consolidates all PDA derivation in one place for reuse
+ * Now includes async creator resolution from bonding curve
+ */
+export declare function getAllRequiredPDAsForBuyAsync(connection: Connection, programId: PublicKey, mint: PublicKey, user: PublicKey): Promise<{
+    globalPDA: PublicKey;
+    bondingCurvePDA: PublicKey;
+    creatorVaultPDA: PublicKey;
+    eventAuthorityPDA: PublicKey;
+    globalVolumeAccumulatorPDA: PublicKey;
+    userVolumeAccumulatorPDA: PublicKey;
+}>;
+/**
  * Get all required PDAs for buy operations with robust resolution
  * Consolidates all PDA derivation in one place for reuse
  */
@@ -104,6 +121,22 @@ export declare function getAllRequiredPDAsForBuy(programId: PublicKey, mint: Pub
  * Get event authority PDA (alias for deriveEventAuthorityAddress)
  */
 export declare function getEventAuthorityPDA(): PublicKey;
+/**
+ * Get bonding curve PDAs for batch operations
+ * This function provides a clean interface for batch operations to get required PDAs
+ * @param connection - Solana connection
+ * @param mint - Token mint public key
+ * @param user - User public key
+ * @returns Object containing all required PDAs for bonding curve operations
+ */
+export declare function getBondingCurvePDAs(connection: Connection, mint: PublicKey, user: PublicKey): Promise<{
+    globalPDA: PublicKey;
+    bondingCurvePDA: PublicKey;
+    creatorVaultPDA: PublicKey;
+    eventAuthorityPDA: PublicKey;
+    globalVolumeAccumulatorPDA: PublicKey;
+    userVolumeAccumulatorPDA: PublicKey;
+}>;
 /**
  * Get the global PDA for the PumpFun program
  */
@@ -121,4 +154,4 @@ export declare function initializeGlobalAccount(connection: Connection, wallet: 
     signature?: string;
     error?: string;
 }>;
-//# sourceMappingURL=helper.d.ts.map
+//# sourceMappingURL=bc-helper.d.ts.map

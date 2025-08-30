@@ -1,5 +1,5 @@
 import { Connection, Keypair } from '@solana/web3.js';
-import { TokenConfig, CreateTokenResult } from '../types';
+import { TokenConfig, CreateTokenResult } from '../@types';
 /**
  * Create a real PumpFun token with bonding curve (appears on pump.fun)
  * @param connection - Solana connection instance

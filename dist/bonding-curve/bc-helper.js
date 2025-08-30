@@ -21,18 +21,17 @@ exports.getGlobalIncentiveTokenAccountPDA = getGlobalIncentiveTokenAccountPDA;
 exports.getUserVolumeAccumulatorPDA = getUserVolumeAccumulatorPDA;
 exports.getUserVolumeAccumulator = getUserVolumeAccumulator;
 exports.getCreatorVaultPDAFromWallet = getCreatorVaultPDAFromWallet;
+exports.getBondingCurveCreator = getBondingCurveCreator;
+exports.getAllRequiredPDAsForBuyAsync = getAllRequiredPDAsForBuyAsync;
 exports.getAllRequiredPDAsForBuy = getAllRequiredPDAsForBuy;
 exports.getEventAuthorityPDA = getEventAuthorityPDA;
+exports.getBondingCurvePDAs = getBondingCurvePDAs;
 exports.getGlobalPDA = getGlobalPDA;
 exports.isGlobalAccountInitialized = isGlobalAccountInitialized;
 exports.initializeGlobalAccount = initializeGlobalAccount;
 const web3_js_1 = require("@solana/web3.js");
-const constants_1 = require("./constants");
+const constants_1 = require("./idl/constants");
 const debug_1 = require("../utils/debug");
-// ============================================================================
-// PUMP.FUN PROGRAM CONSTANTS
-// ============================================================================
-// Constants moved to constants.ts
 // ============================================================================
 // PDA DERIVATION FUNCTIONS
 // ============================================================================
@@ -227,6 +226,66 @@ function getCreatorVaultPDAFromWallet(programId, wallet) {
     return pda;
 }
 /**
+ * Fetch bonding curve account data and extract creator
+ */
+async function getBondingCurveCreator(connection, mint) {
+    const [bondingCurvePDA] = deriveBondingCurveAddress(mint);
+    try {
+        const accountInfo = await connection.getAccountInfo(bondingCurvePDA);
+        if (!accountInfo) {
+            throw new Error(`Bonding curve account not found: ${bondingCurvePDA.toString()}`);
+        }
+        // Bonding curve account layout (based on IDL):
+        // - discriminator: [u8; 8] (8 bytes) - Anchor account discriminator
+        // - virtual_token_reserves: u64 (8 bytes)
+        // - virtual_sol_reserves: u64 (8 bytes)
+        // - real_token_reserves: u64 (8 bytes)
+        // - real_sol_reserves: u64 (8 bytes)
+        // - token_total_supply: u64 (8 bytes)
+        // - complete: bool (1 byte)
+        // - creator: pubkey (32 bytes)
+        const data = accountInfo.data;
+        const creatorOffset = 8 + 8 + 8 + 8 + 8 + 8 + 1; // Skip discriminator + fields to creator field (49 bytes)
+        const creatorBytes = data.slice(creatorOffset, creatorOffset + 32);
+        const creator = new web3_js_1.PublicKey(creatorBytes);
+        (0, debug_1.log)(`✅ Fetched creator from bonding curve: ${creator.toString()}`);
+        return creator;
+    }
+    catch (error) {
+        (0, debug_1.logWarning)(`Failed to fetch bonding curve creator: ${error}`);
+        throw error;
+    }
+}
+/**
+ * Get all required PDAs for buy operations with robust resolution
+ * Consolidates all PDA derivation in one place for reuse
+ * Now includes async creator resolution from bonding curve
+ */
+async function getAllRequiredPDAsForBuyAsync(connection, programId, mint, user) {
+    // Global PDA
+    const globalPDA = getGlobalPDA(programId);
+    // Bonding curve PDA
+    const [bondingCurvePDA] = deriveBondingCurveAddress(mint);
+    // Get actual creator from bonding curve account
+    const creator = await getBondingCurveCreator(connection, mint);
+    // Creator vault PDA - use actual creator from bonding curve
+    const [creatorVaultPDA] = deriveCreatorVaultAddress(creator);
+    // Event authority PDA - standard Anchor pattern
+    const [eventAuthorityPDA] = web3_js_1.PublicKey.findProgramAddressSync([constants_1.EVENT_AUTHORITY_SEED], programId);
+    // Global volume accumulator - known constant
+    const [globalVolumeAccumulatorPDA] = deriveGlobalVolumeAccumulatorAddress();
+    // User volume accumulator - derived from user
+    const userVolumeAccumulatorPDA = getUserVolumeAccumulator(programId, user);
+    return {
+        globalPDA,
+        bondingCurvePDA,
+        creatorVaultPDA,
+        eventAuthorityPDA,
+        globalVolumeAccumulatorPDA,
+        userVolumeAccumulatorPDA,
+    };
+}
+/**
  * Get all required PDAs for buy operations with robust resolution
  * Consolidates all PDA derivation in one place for reuse
  */
@@ -266,6 +325,17 @@ function getAllRequiredPDAsForBuy(programId, mint, user) {
 function getEventAuthorityPDA() {
     const [eventAuthority] = deriveEventAuthorityAddress();
     return eventAuthority;
+}
+/**
+ * Get bonding curve PDAs for batch operations
+ * This function provides a clean interface for batch operations to get required PDAs
+ * @param connection - Solana connection
+ * @param mint - Token mint public key
+ * @param user - User public key
+ * @returns Object containing all required PDAs for bonding curve operations
+ */
+async function getBondingCurvePDAs(connection, mint, user) {
+    return await getAllRequiredPDAsForBuyAsync(connection, constants_1.PUMP_PROGRAM_ID, mint, user);
 }
 // ============================================================================
 // GLOBAL ACCOUNT INITIALIZATION
@@ -348,4 +418,4 @@ async function initializeGlobalAccount(connection, wallet, programId) {
         };
     }
 }
-//# sourceMappingURL=helper.js.map
+//# sourceMappingURL=bc-helper.js.map

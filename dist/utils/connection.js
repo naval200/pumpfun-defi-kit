@@ -10,6 +10,7 @@ const dotenv_1 = require("dotenv");
 const debug_1 = require("./debug");
 // Load environment variables
 (0, dotenv_1.config)();
+// ConnectionConfig moved to src/@types.ts
 /**
  * Default devnet configuration
  */

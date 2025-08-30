@@ -1,12 +1,5 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-/**
- * Solana connection configuration
- */
-export interface ConnectionConfig {
-    rpcUrl: string;
-    wsUrl: string;
-    network: 'mainnet' | 'devnet';
-}
+import type { ConnectionConfig } from '../@types';
 /**
  * Default devnet configuration
  */

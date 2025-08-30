@@ -1,8 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CLOSE_USER_VOLUME_ACCUMULATOR_EVENT_DISCRIMINATOR = exports.CLAIM_TOKEN_INCENTIVES_EVENT_DISCRIMINATOR = exports.ADMIN_UPDATE_TOKEN_INCENTIVES_EVENT_DISCRIMINATOR = exports.ADMIN_SET_IDL_AUTHORITY_EVENT_DISCRIMINATOR = exports.ADMIN_SET_CREATOR_EVENT_DISCRIMINATOR = exports.USER_VOLUME_ACCUMULATOR_ACCOUNT_DISCRIMINATOR = exports.GLOBAL_VOLUME_ACCUMULATOR_ACCOUNT_DISCRIMINATOR = exports.GLOBAL_ACCOUNT_DISCRIMINATOR = exports.BONDING_CURVE_ACCOUNT_DISCRIMINATOR = exports.UPDATE_GLOBAL_AUTHORITY_INSTRUCTION_DISCRIMINATOR = exports.SYNC_USER_VOLUME_ACCUMULATOR_INSTRUCTION_DISCRIMINATOR = exports.MIGRATE_INSTRUCTION_DISCRIMINATOR = exports.INIT_USER_VOLUME_ACCUMULATOR_INSTRUCTION_DISCRIMINATOR = exports.EXTEND_ACCOUNT_INSTRUCTION_DISCRIMINATOR = exports.COMPLETE_INSTRUCTION_DISCRIMINATOR = exports.COLLECT_CREATOR_FEE_INSTRUCTION_DISCRIMINATOR = exports.CLOSE_USER_VOLUME_ACCUMULATOR_INSTRUCTION_DISCRIMINATOR = exports.CLAIM_TOKEN_INCENTIVES_INSTRUCTION_DISCRIMINATOR = exports.ADMIN_UPDATE_TOKEN_INCENTIVES_INSTRUCTION_DISCRIMINATOR = exports.ADMIN_SET_IDL_AUTHORITY_INSTRUCTION_DISCRIMINATOR = exports.SET_METAPLEX_CREATOR_INSTRUCTION_DISCRIMINATOR = exports.SET_CREATOR_INSTRUCTION_DISCRIMINATOR = exports.ADMIN_SET_CREATOR_INSTRUCTION_DISCRIMINATOR = exports.SET_PARAMS_INSTRUCTION_DISCRIMINATOR = exports.INITIALIZE_INSTRUCTION_DISCRIMINATOR = exports.CREATE_INSTRUCTION_DISCRIMINATOR = exports.SELL_INSTRUCTION_DISCRIMINATOR = exports.BUY_INSTRUCTION_DISCRIMINATOR = exports.GLOBAL_CONFIG_SEED = exports.POOL_LP_MINT_SEED = exports.POOL_AUTHORITY_SEED = exports.POOL_SEED = exports.METADATA_SEED = exports.MINT_AUTHORITY_SEED = exports.EVENT_AUTHORITY_SEED = exports.USER_VOLUME_ACCUMULATOR_SEED = exports.GLOBAL_VOLUME_ACCUMULATOR_SEED = exports.CREATOR_VAULT_SEED = exports.BONDING_CURVE_SEED = exports.GLOBAL_SEED = exports.WSOL_MINT = exports.PUMP_AMM_PROGRAM_ID = exports.TOKEN_2022_PROGRAM_ID = exports.METAPLEX_TOKEN_METADATA_PROGRAM_ID = exports.RENT_SYSVAR = exports.COMPUTE_BUDGET_PROGRAM_ID = exports.SYSTEM_PROGRAM_ID = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.PUMP_PROGRAM_ID = void 0;
-exports.COMPUTE_BUDGET_INSTRUCTIONS = exports.GLOBAL_VOLUME_ACCUMULATOR = exports.EVENT_AUTHORITY = exports.CREATOR_VAULT = exports.FEE_RECIPIENT = exports.GLOBAL_ACCOUNT = exports.ERROR_CODES = exports.UPDATE_GLOBAL_AUTHORITY_EVENT_DISCRIMINATOR = exports.TRADE_EVENT_DISCRIMINATOR = exports.SYNC_USER_VOLUME_ACCUMULATOR_EVENT_DISCRIMINATOR = exports.SET_PARAMS_EVENT_DISCRIMINATOR = exports.SET_METAPLEX_CREATOR_EVENT_DISCRIMINATOR = exports.SET_CREATOR_EVENT_DISCRIMINATOR = exports.INIT_USER_VOLUME_ACCUMULATOR_EVENT_DISCRIMINATOR = exports.EXTEND_ACCOUNT_EVENT_DISCRIMINATOR = exports.CREATE_EVENT_DISCRIMINATOR = exports.COMPLETE_PUMP_AMM_MIGRATION_EVENT_DISCRIMINATOR = exports.COMPLETE_EVENT_DISCRIMINATOR = exports.COLLECT_CREATOR_FEE_EVENT_DISCRIMINATOR = void 0;
+exports.USER_VOLUME_ACCUMULATOR_ACCOUNT_DISCRIMINATOR = exports.GLOBAL_VOLUME_ACCUMULATOR_ACCOUNT_DISCRIMINATOR = exports.GLOBAL_ACCOUNT_DISCRIMINATOR = exports.FEE_CONFIG_ACCOUNT_DISCRIMINATOR = exports.BONDING_CURVE_ACCOUNT_DISCRIMINATOR = exports.UPDATE_GLOBAL_AUTHORITY_INSTRUCTION_DISCRIMINATOR = exports.SYNC_USER_VOLUME_ACCUMULATOR_INSTRUCTION_DISCRIMINATOR = exports.MIGRATE_INSTRUCTION_DISCRIMINATOR = exports.INIT_USER_VOLUME_ACCUMULATOR_INSTRUCTION_DISCRIMINATOR = exports.EXTEND_ACCOUNT_INSTRUCTION_DISCRIMINATOR = exports.COMPLETE_INSTRUCTION_DISCRIMINATOR = exports.COLLECT_CREATOR_FEE_INSTRUCTION_DISCRIMINATOR = exports.CLOSE_USER_VOLUME_ACCUMULATOR_INSTRUCTION_DISCRIMINATOR = exports.CLAIM_TOKEN_INCENTIVES_INSTRUCTION_DISCRIMINATOR = exports.ADMIN_UPDATE_TOKEN_INCENTIVES_INSTRUCTION_DISCRIMINATOR = exports.ADMIN_SET_IDL_AUTHORITY_INSTRUCTION_DISCRIMINATOR = exports.SET_METAPLEX_CREATOR_INSTRUCTION_DISCRIMINATOR = exports.SET_CREATOR_INSTRUCTION_DISCRIMINATOR = exports.ADMIN_SET_CREATOR_INSTRUCTION_DISCRIMINATOR = exports.SET_PARAMS_INSTRUCTION_DISCRIMINATOR = exports.INITIALIZE_INSTRUCTION_DISCRIMINATOR = exports.CREATE_INSTRUCTION_DISCRIMINATOR = exports.SELL_INSTRUCTION_DISCRIMINATOR = exports.BUY_INSTRUCTION_DISCRIMINATOR = exports.FEE_CONFIG_PDA_SECOND_SEED = exports.FEE_CONFIG_SEED_BYTES = exports.FEE_CONFIG_SEED = exports.GLOBAL_CONFIG_SEED = exports.POOL_LP_MINT_SEED = exports.POOL_AUTHORITY_SEED = exports.POOL_SEED = exports.METADATA_SEED = exports.MINT_AUTHORITY_SEED = exports.EVENT_AUTHORITY_SEED = exports.USER_VOLUME_ACCUMULATOR_SEED = exports.GLOBAL_VOLUME_ACCUMULATOR_SEED = exports.CREATOR_VAULT_SEED = exports.BONDING_CURVE_SEED = exports.GLOBAL_SEED = exports.FEE_PROGRAM_ID = exports.WSOL_MINT = exports.PUMP_AMM_PROGRAM_ID = exports.TOKEN_2022_PROGRAM_ID = exports.METAPLEX_TOKEN_METADATA_PROGRAM_ID = exports.RENT_SYSVAR = exports.COMPUTE_BUDGET_PROGRAM_ID = exports.SYSTEM_PROGRAM_ID = exports.ASSOCIATED_TOKEN_PROGRAM_ID = exports.TOKEN_PROGRAM_ID = exports.PUMP_PROGRAM_ID = void 0;
+exports.COMPUTE_BUDGET_INSTRUCTIONS = exports.GLOBAL_VOLUME_ACCUMULATOR = exports.EVENT_AUTHORITY = exports.CREATOR_VAULT = exports.FEE_RECIPIENT = exports.GLOBAL_ACCOUNT = exports.ERROR_CODES = exports.UPDATE_GLOBAL_AUTHORITY_EVENT_DISCRIMINATOR = exports.TRADE_EVENT_DISCRIMINATOR = exports.SYNC_USER_VOLUME_ACCUMULATOR_EVENT_DISCRIMINATOR = exports.SET_PARAMS_EVENT_DISCRIMINATOR = exports.SET_METAPLEX_CREATOR_EVENT_DISCRIMINATOR = exports.SET_CREATOR_EVENT_DISCRIMINATOR = exports.INIT_USER_VOLUME_ACCUMULATOR_EVENT_DISCRIMINATOR = exports.EXTEND_ACCOUNT_EVENT_DISCRIMINATOR = exports.CREATE_EVENT_DISCRIMINATOR = exports.COMPLETE_PUMP_AMM_MIGRATION_EVENT_DISCRIMINATOR = exports.COMPLETE_EVENT_DISCRIMINATOR = exports.COLLECT_CREATOR_FEE_EVENT_DISCRIMINATOR = exports.CLOSE_USER_VOLUME_ACCUMULATOR_EVENT_DISCRIMINATOR = exports.CLAIM_TOKEN_INCENTIVES_EVENT_DISCRIMINATOR = exports.ADMIN_UPDATE_TOKEN_INCENTIVES_EVENT_DISCRIMINATOR = exports.ADMIN_SET_IDL_AUTHORITY_EVENT_DISCRIMINATOR = exports.ADMIN_SET_CREATOR_EVENT_DISCRIMINATOR = exports.FEES_TYPE_DISCRIMINATOR = exports.FEE_TIER_TYPE_DISCRIMINATOR = void 0;
 const web3_js_1 = require("@solana/web3.js");
+// ============================================================================
+// UPDATED IDL STRUCTURE NOTES
+// ============================================================================
+// The updated IDL now includes:
+// 1. New FeeConfig account type with discriminator [143, 52, 146, 187, 219, 123, 76, 155]
+// 2. Updated buy and sell instructions that require fee_config and fee_program accounts
+// 3. FeeConfig PDA is derived using FEE_PROGRAM_ID with seeds:
+//    - First seed: "fee_config" (FEE_CONFIG_SEED)
+//    - Second seed: [1, 86, 224, 246, 147, 102, 90, 207, 68, 219, 21, 104, 191, 23, 91, 170, 81, 137, 203, 151, 245, 210, 255, 59, 101, 93, 43, 182, 253, 109, 24, 176]
+// 4. The fee_program account is always "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ"
 // ============================================================================
 // PUMP.FUN PROGRAM CONSTANTS
 // ============================================================================
@@ -33,6 +43,10 @@ exports.PUMP_AMM_PROGRAM_ID = new web3_js_1.PublicKey('pAMMBay6oceH9fJKBRHGP5D4b
 // ============================================================================
 exports.WSOL_MINT = new web3_js_1.PublicKey('So11111111111111111111111111111111111111112');
 // ============================================================================
+// FEE PROGRAM ID
+// ============================================================================
+exports.FEE_PROGRAM_ID = new web3_js_1.PublicKey('pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ');
+// ============================================================================
 // PDA SEED CONSTANTS (from IDL)
 // ============================================================================
 // Global account seed
@@ -59,6 +73,15 @@ exports.POOL_AUTHORITY_SEED = Buffer.from('pool-authority');
 exports.POOL_LP_MINT_SEED = Buffer.from('pool_lp_mint');
 // Global config seed
 exports.GLOBAL_CONFIG_SEED = Buffer.from('global_config');
+// Fee config seed
+exports.FEE_CONFIG_SEED = Buffer.from('fee_config');
+// Fee config seed value from IDL (matches the const value in the diff)
+// The IDL shows: [102, 101, 101, 95, 99, 111, 110, 102, 105, 103]
+// Which corresponds to "fee_config" in ASCII
+exports.FEE_CONFIG_SEED_BYTES = [102, 101, 101, 95, 99, 111, 110, 102, 105, 103];
+// Fee config PDA second seed value from IDL (the hardcoded bytes)
+// The IDL shows: [1, 86, 224, 246, 147, 102, 90, 207, 68, 219, 21, 104, 191, 23, 91, 170, 81, 137, 203, 151, 245, 210, 255, 59, 101, 93, 43, 182, 253, 109, 24, 176]
+exports.FEE_CONFIG_PDA_SECOND_SEED = [1, 86, 224, 246, 147, 102, 90, 207, 68, 219, 21, 104, 191, 23, 91, 170, 81, 137, 203, 151, 245, 210, 255, 59, 101, 93, 43, 182, 253, 109, 24, 176];
 // ============================================================================
 // INSTRUCTION DISCRIMINATORS (from IDL)
 // ============================================================================
@@ -117,6 +140,8 @@ exports.UPDATE_GLOBAL_AUTHORITY_INSTRUCTION_DISCRIMINATOR = [
 // ============================================================================
 // BondingCurve account discriminator
 exports.BONDING_CURVE_ACCOUNT_DISCRIMINATOR = [23, 183, 248, 55, 96, 216, 172, 96];
+// FeeConfig account discriminator (NEW from updated IDL)
+exports.FEE_CONFIG_ACCOUNT_DISCRIMINATOR = [143, 52, 146, 187, 219, 123, 76, 155];
 // Global account discriminator
 exports.GLOBAL_ACCOUNT_DISCRIMINATOR = [167, 232, 232, 177, 200, 108, 114, 127];
 // GlobalVolumeAccumulator account discriminator
@@ -125,6 +150,13 @@ exports.GLOBAL_VOLUME_ACCUMULATOR_ACCOUNT_DISCRIMINATOR = [
 ];
 // UserVolumeAccumulator account discriminator
 exports.USER_VOLUME_ACCUMULATOR_ACCOUNT_DISCRIMINATOR = [86, 255, 112, 14, 102, 53, 154, 250];
+// ============================================================================
+// TYPE DISCRIMINATORS (from IDL)
+// ============================================================================
+// FeeTier type discriminator (NEW from updated IDL)
+exports.FEE_TIER_TYPE_DISCRIMINATOR = [143, 52, 146, 187, 219, 123, 76, 155];
+// Fees type discriminator (NEW from updated IDL)
+exports.FEES_TYPE_DISCRIMINATOR = [143, 52, 146, 187, 219, 123, 76, 155];
 // ============================================================================
 // EVENT DISCRIMINATORS (from IDL)
 // ============================================================================

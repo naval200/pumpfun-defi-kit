@@ -11,10 +11,11 @@ const debug_1 = require("../utils/debug");
 // getBondingCurveState moved to helper.ts
 const buy_1 = require("./buy");
 const transaction_1 = require("../utils/transaction");
-const helper_1 = require("./helper");
-const constants_1 = require("./constants");
+const bc_helper_1 = require("./bc-helper");
+const constants_1 = require("./idl/constants");
+const createAccount_1 = require("../createAccount");
 const wallet_1 = require("../utils/wallet");
-const pump_program_json_1 = tslib_1.__importDefault(require("../idl/pump_program.json"));
+const pump_program_json_1 = tslib_1.__importDefault(require("./idl/pump_program.json"));
 // Constants for token creation
 const MPL_TOKEN_METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
 const METADATA_SEED = 'metadata';
@@ -71,9 +72,9 @@ async function createPumpFunToken(connection, wallet, tokenConfig, isMainnet = f
         // Check and initialize global account if needed
         (0, debug_1.log)('🌍 Checking global account initialization...');
         const programId = constants_1.PUMP_PROGRAM_ID;
-        if (!(await (0, helper_1.isGlobalAccountInitialized)(connection, programId))) {
+        if (!(await (0, bc_helper_1.isGlobalAccountInitialized)(connection, programId))) {
             (0, debug_1.log)('⚠️ Global account not initialized. Attempting to initialize...');
-            const globalInitResult = await (0, helper_1.initializeGlobalAccount)(connection, wallet, programId);
+            const globalInitResult = await (0, bc_helper_1.initializeGlobalAccount)(connection, wallet, programId);
             if (!globalInitResult.success) {
                 (0, debug_1.log)(`❌ Global account initialization failed: ${globalInitResult.error}`);
                 (0, debug_1.log)('💡 The PumpFun program requires a global account to be initialized before creating tokens.');
@@ -153,7 +154,17 @@ async function createPumpFunToken(connection, wallet, tokenConfig, isMainnet = f
                 }, 'confirmed');
                 // Additional wait to ensure all accounts are properly initialized
                 await new Promise(resolve => setTimeout(resolve, 2000));
-                // Execute the initial buy using buyPumpFunToken (no creator vault needed)
+                // Create associated token account for the wallet to hold the tokens
+                (0, debug_1.log)('🏗️ Creating associated token account for wallet...');
+                const createAtaResult = await (0, createAccount_1.createAssociatedTokenAccount)(connection, wallet, // payer
+                wallet.publicKey, // owner
+                mint.publicKey // mint
+                );
+                if (!createAtaResult.success) {
+                    throw new Error(`Failed to create associated token account: ${createAtaResult.error}`);
+                }
+                (0, debug_1.logSuccess)(`✅ Associated token account created: ${createAtaResult.account?.toString()}`);
+                // Execute the initial buy using buy (no creator vault needed)
                 const buySignature = await (0, buy_1.buyPumpFunToken)(connection, wallet, mint.publicKey, buyAmountSol, 1000 // slippageBasisPoints
                 );
                 (0, debug_1.logSuccess)('Initial buy completed successfully!');
@@ -184,7 +195,7 @@ async function createPumpFunToken(connection, wallet, tokenConfig, isMainnet = f
             (0, debug_1.log)('   Complete: false');
             // Show global account info
             (0, debug_1.log)('🌍 Global Account Info:');
-            (0, debug_1.log)(`   Global PDA: ${(0, helper_1.getGlobalPDA)(programId).toString()}`);
+            (0, debug_1.log)(`   Global PDA: ${(0, bc_helper_1.getGlobalPDA)(programId).toString()}`);
             (0, debug_1.log)('   Status: Initialized');
         }
         catch (error) {

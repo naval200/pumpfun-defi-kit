@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkGraduationStatus = checkGraduationStatus;
 exports.getGraduationAnalysis = getGraduationAnalysis;
 const web3_js_1 = require("@solana/web3.js");
-const constants_1 = require("../bonding-curve/constants");
-const helper_1 = require("../bonding-curve/helper");
+const constants_1 = require("../bonding-curve/idl/constants");
+const bc_helper_1 = require("../bonding-curve/bc-helper");
 const debug_1 = require("./debug");
 const pump_swap_sdk_1 = require("@pump-fun/pump-swap-sdk");
 /**
@@ -170,7 +170,7 @@ async function checkBondingCurveStatus(connection, tokenMint) {
     try {
         (0, debug_1.debugLog)(`📈 Checking bonding curve status...`);
         // Derive bonding curve PDA
-        const [bondingCurvePDA] = (0, helper_1.deriveBondingCurveAddress)(tokenMint);
+        const [bondingCurvePDA] = (0, bc_helper_1.deriveBondingCurveAddress)(tokenMint);
         (0, debug_1.debugLog)(`📍 Bonding curve PDA: ${bondingCurvePDA.toString()}`);
         // Check if bonding curve account exists and is owned by the program
         const accountInfo = await connection.getAccountInfo(bondingCurvePDA);

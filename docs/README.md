@@ -21,10 +21,19 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 - **[Testing Guide](./TESTING_GUIDE.md)** - Comprehensive testing strategies and examples
 - **[Test Suite Summary](./TEST_SUITE_SUMMARY.md)** - Overview of test coverage and structure
 
+### Development Tools
+
+- **[Debug Guide](./DEBUG_README.md)** - Debug mode and logging configuration
+- **[Commit Summary](./COMMIT_SUMMARY.md)** - Detailed documentation of major changes
+
 ### AMM (Automated Market Maker)
 
 - **[AMM Usage Guide](./amm-usage.md)** - How to use AMM functionality and testing
 - **[Pool Creation Guide](./pool-creation-guide.md)** - Creating and managing liquidity pools
+
+### Batch Operations
+
+- **[Batch Transactions Usage](./batch-transactions-usage.md)** - CLI and programmatic API for batch operations
 
 ### Bonding Curve
 
@@ -34,6 +43,11 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 
 - **[PumpSDK Documentation](./pumpsdk-documentation.md)** - PumpSDK integration guide
 - **[PumpSwap Documentation](./pumpswap-documentation.md)** - PumpSwap SDK usage
+
+### Advanced Features
+
+- **[Fee Payer Implementation](./FEE_PAYER_IMPLEMENTATION.md)** - Technical details of fee payer system
+- **[Fee Payer Usage](./fee-payer-usage.md)** - Practical examples and usage guide
 
 ## 🚀 Publishing & Deployment
 
@@ -59,6 +73,7 @@ docs/
 ├── README.md                           # This index file
 ├── TESTING_GUIDE.md                   # Comprehensive testing guide
 ├── TEST_SUITE_SUMMARY.md              # Test coverage overview
+├── batch-transactions-usage.md        # Batch operations CLI and API
 ├── amm-usage.md                       # AMM functionality and testing guide
 ├── pool-creation-guide.md             # Pool management
 ├── sell-testing-guide.md              # Selling functionality
@@ -67,7 +82,11 @@ docs/
 ├── PUBLISHING_CHECKLIST.md            # NPM publishing guide
 ├── CONTRIBUTING.md                    # Contribution guidelines
 ├── SECURITY.md                        # Security policies
-└── CHANGELOG.md                       # Version history
+├── CHANGELOG.md                       # Version history
+├── COMMIT_SUMMARY.md                  # Detailed commit documentation
+├── DEBUG_README.md                    # Debug mode and logging guide
+├── FEE_PAYER_IMPLEMENTATION.md        # Fee payer technical details
+└── fee-payer-usage.md                 # Fee payer usage examples
 ```
 
 ## 📞 Support

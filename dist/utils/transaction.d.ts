@@ -1,24 +1,5 @@
 import { Connection, Transaction, Keypair, PublicKey, Commitment, TransactionInstruction } from '@solana/web3.js';
-/**
- * Transaction sending options with sensible defaults
- */
-export interface TransactionOptions {
-    skipPreflight?: boolean;
-    preflightCommitment?: Commitment;
-    maxRetries?: number;
-    retryDelay?: number;
-    computeUnitLimit?: number;
-    computeUnitPrice?: number;
-}
-/**
- * Result of a transaction operation
- */
-export interface TransactionResult {
-    success: boolean;
-    signature?: string;
-    error?: string;
-    slot?: number;
-}
+import type { TransactionOptions, TransactionWithFeePayerOptions, TransactionResult } from '../@types';
 /**
  * Add compute budget instructions to a transaction
  * @param transaction - The transaction to add compute budget instructions to
@@ -67,7 +48,17 @@ export declare function confirmTransaction(connection: Connection, signature: st
  * @param options - Transaction options
  * @returns Promise resolving to TransactionResult with confirmation details
  */
-export declare function sendAndConfirmTransaction(connection: Connection, transaction: Transaction, signers: Keypair[], options?: TransactionOptions): Promise<TransactionResult>;
+export declare function sendAndConfirmTransaction(connection: Connection, transaction: Transaction, signers: Keypair[], options?: TransactionWithFeePayerOptions): Promise<TransactionResult>;
+/**
+ * Send and confirm a transaction with separate fee payer and signers
+ * @param connection - Solana connection
+ * @param transaction - Transaction to send
+ * @param signers - Array of keypairs to sign the transaction
+ * @param feePayer - Keypair for the fee payer (if different from signers)
+ * @param options - Transaction options
+ * @returns Promise resolving to TransactionResult with confirmation details
+ */
+export declare function sendAndConfirmTransactionWithFeePayer(connection: Connection, transaction: Transaction, signers: Keypair[], feePayer?: Keypair, options?: TransactionWithFeePayerOptions): Promise<TransactionResult>;
 /**
  * Send and confirm a raw transaction in one operation
  * @param connection - Solana connection
@@ -83,6 +74,10 @@ export declare function sendAndConfirmRawTransaction(connection: Connection, raw
  */
 export declare function createTransactionWithComputeBudget(options?: TransactionOptions): Transaction;
 /**
+ * Send SOL (lamports) from one wallet to another
+ */
+export declare function sendLamports(connection: Connection, sender: Keypair, recipient: PublicKey, lamports: number, feePayer?: Keypair): Promise<string>;
+/**
  * Create and send a transaction with the given instructions
  * @param connection - Solana connection
  * @param wallet - Keypair to sign the transaction
@@ -90,6 +85,15 @@ export declare function createTransactionWithComputeBudget(options?: Transaction
  * @returns Promise resolving to transaction signature
  */
 export declare function sendTransaction(connection: Connection, wallet: Keypair, instructions: TransactionInstruction[]): Promise<string>;
+/**
+ * Create and send a transaction with the given instructions and separate fee payer
+ * @param connection - Solana connection
+ * @param wallet - Keypair to sign the transaction
+ * @param instructions - Array of transaction instructions
+ * @param feePayer - Keypair for the fee payer (if different from wallet)
+ * @returns Promise resolving to transaction signature
+ */
+export declare function sendTransactionWithFeePayer(connection: Connection, wallet: Keypair, instructions: TransactionInstruction[], feePayer?: Keypair): Promise<string>;
 /**
  * Get transaction explorer URL
  * @param signature - Transaction signature

@@ -6,12 +6,27 @@ exports.sendTransactionWithRetry = sendTransactionWithRetry;
 exports.sendRawTransactionWithRetry = sendRawTransactionWithRetry;
 exports.confirmTransaction = confirmTransaction;
 exports.sendAndConfirmTransaction = sendAndConfirmTransaction;
+exports.sendAndConfirmTransactionWithFeePayer = sendAndConfirmTransactionWithFeePayer;
 exports.sendAndConfirmRawTransaction = sendAndConfirmRawTransaction;
 exports.createTransactionWithComputeBudget = createTransactionWithComputeBudget;
+exports.sendLamports = sendLamports;
 exports.sendTransaction = sendTransaction;
+exports.sendTransactionWithFeePayer = sendTransactionWithFeePayer;
 exports.getExplorerUrl = getExplorerUrl;
 const web3_js_1 = require("@solana/web3.js");
 const debug_1 = require("./debug");
+/**
+ * Transaction sending options with sensible defaults
+ */
+// TransactionOptions moved to src/@types.ts
+/**
+ * Transaction options with fee payer support
+ */
+// TransactionWithFeePayerOptions moved to src/@types.ts
+/**
+ * Result of a transaction operation
+ */
+// TransactionResult moved to src/@types.ts
 /**
  * Default transaction options
  */
@@ -201,6 +216,39 @@ async function sendAndConfirmTransaction(connection, transaction, signers, optio
     };
 }
 /**
+ * Send and confirm a transaction with separate fee payer and signers
+ * @param connection - Solana connection
+ * @param transaction - Transaction to send
+ * @param signers - Array of keypairs to sign the transaction
+ * @param feePayer - Keypair for the fee payer (if different from signers)
+ * @param options - Transaction options
+ * @returns Promise resolving to TransactionResult with confirmation details
+ */
+async function sendAndConfirmTransactionWithFeePayer(connection, transaction, signers, feePayer, options = {}) {
+    // Set fee payer if provided
+    if (feePayer) {
+        transaction.feePayer = feePayer.publicKey;
+    }
+    // Prepare transaction with recent blockhash
+    const preparedTransaction = await prepareTransaction(connection, transaction, transaction.feePayer || signers[0].publicKey, options.preflightCommitment);
+    // Combine all signers (fee payer + transaction signers)
+    const allSigners = feePayer ? [feePayer, ...signers] : signers;
+    // Send the transaction
+    const sendResult = await sendTransactionWithRetry(connection, preparedTransaction, allSigners, options);
+    if (!sendResult.success || !sendResult.signature) {
+        return sendResult;
+    }
+    // Confirm the transaction
+    const confirmResult = await confirmTransaction(connection, sendResult.signature, options.preflightCommitment);
+    // Merge the results
+    return {
+        success: true,
+        signature: sendResult.signature,
+        error: confirmResult.error,
+        slot: confirmResult.slot,
+    };
+}
+/**
  * Send and confirm a raw transaction in one operation
  * @param connection - Solana connection
  * @param rawTransaction - Serialized transaction bytes
@@ -234,6 +282,22 @@ function createTransactionWithComputeBudget(options = {}) {
     return transaction;
 }
 /**
+ * Send SOL (lamports) from one wallet to another
+ */
+async function sendLamports(connection, sender, recipient, lamports, feePayer) {
+    const transferIx = web3_js_1.SystemProgram.transfer({
+        fromPubkey: sender.publicKey,
+        toPubkey: recipient,
+        lamports,
+    });
+    const tx = new web3_js_1.Transaction().add(transferIx);
+    const result = await sendAndConfirmTransactionWithFeePayer(connection, tx, [sender], feePayer ?? sender, { preflightCommitment: 'confirmed' });
+    if (!result.success || !result.signature) {
+        throw new Error(`SOL transfer failed: ${result.error}`);
+    }
+    return result.signature;
+}
+/**
  * Create and send a transaction with the given instructions
  * @param connection - Solana connection
  * @param wallet - Keypair to sign the transaction
@@ -250,6 +314,27 @@ async function sendTransaction(connection, wallet, instructions) {
     const result = await sendAndConfirmTransaction(connection, transaction, [wallet], {
         preflightCommitment: 'confirmed',
     });
+    if (!result.success) {
+        throw new Error(`Transaction failed: ${result.error}`);
+    }
+    return result.signature;
+}
+/**
+ * Create and send a transaction with the given instructions and separate fee payer
+ * @param connection - Solana connection
+ * @param wallet - Keypair to sign the transaction
+ * @param instructions - Array of transaction instructions
+ * @param feePayer - Keypair for the fee payer (if different from wallet)
+ * @returns Promise resolving to transaction signature
+ */
+async function sendTransactionWithFeePayer(connection, wallet, instructions, feePayer) {
+    const transaction = new web3_js_1.Transaction();
+    // Add all instructions
+    instructions.forEach(instruction => {
+        transaction.add(instruction);
+    });
+    // Send and confirm transaction using fee payer utility
+    const result = await sendAndConfirmTransactionWithFeePayer(connection, transaction, [wallet], feePayer, { preflightCommitment: 'confirmed' });
     if (!result.success) {
         throw new Error(`Transaction failed: ${result.error}`);
     }

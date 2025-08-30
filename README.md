@@ -1,6 +1,8 @@
-# @pumpfun/defi-kit
+# PumpFun DeFi Kit
 
 A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM support. This library provides a clean, type-safe interface for creating tokens, managing liquidity pools, and executing trades on the Solana blockchain.
+
+**🚧 Beta Version - Currently in Testing**
 
 ## Features
 
@@ -12,19 +14,37 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 📱 **TypeScript Support**: Full TypeScript support with comprehensive type definitions
 - 🧪 **Devnet Ready**: Test on Solana devnet before mainnet deployment
 - 📤 **Token Transfer**: Send tokens between wallets with automatic account creation
+- 🎯 **Graduation Support**: Check token graduation status and requirements
+- 🔧 **CLI Tools**: Comprehensive command-line interface for all operations
+- 💸 **Fee Payer Support**: Optional separate fee payer wallets for treasury operations and batch transactions
+
+## Project Structure
+
+```
+pumpfun-defikit/
+├── src/                    # Source code
+│   ├── amm/               # AMM trading functionality
+│   ├── bonding-curve/     # Bonding curve trading
+│   ├── utils/             # Utility functions
+│   └── types.ts           # TypeScript definitions
+├── cli/                   # Command-line tools
+│   ├── amm/               # AMM CLI commands
+│   ├── bonding-curve/     # Bonding curve CLI commands
+│   └── graduation-check-cli.ts
+├── tests/                 # Test suite
+├── debug/                 # Debug scripts for testing
+├── docs/                  # Documentation
+└── fixtures/              # Test wallet configurations and token info
+```
 
 ## Installation
 
-### From NPM Registry
+**⚠️ Beta Version**: This library is currently in beta testing and not yet available on npm.
+
+### From GitHub Repository (Recommended)
 
 ```bash
-npm install @pumpfun/defi-kit
-```
-
-### From GitHub Repository
-
-```bash
-npm install github:naval200/pumpfun-defi-kit
+npm install github:naval200/pumpfun-defi-kit#dist
 ```
 
 **Note**: When installing from GitHub, the package will be built automatically. If you encounter any issues, you can build manually:
@@ -34,12 +54,41 @@ npm install
 npm run build
 ```
 
+### From Source (Development)
+
+```bash
+git clone https://github.com/naval200/pumpfun-defi-kit.git
+cd pumpfun-defi-kit
+npm install
+npm run build
+```
+
 ## Quick Start
+
+**Note**: Since this is a beta version, you'll need to clone the repository and build it locally before running the examples.
+
+### Testing with Debug Scripts
+
+For comprehensive testing and debugging, use the included debug scripts:
+
+```bash
+cd debug
+chmod +x *.sh
+./00-run-complete-test.sh
+```
+
+This will:
+- Create 20 test user wallets
+- Fund 10 wallets with PumpFun tokens
+- Test batch operations and transfers
+- Generate detailed logs and reports
+
+See [Debug Scripts Guide](./docs/debug-scripts-guide.md) for detailed usage information.
 
 ### Creating a Token
 
 ```typescript
-import { createToken } from '@pumpfun/defi-kit';
+import { createToken } from './src';
 import { Connection, Keypair } from '@solana/web3.js';
 
 const connection = new Connection('https://api.devnet.solana.com');
@@ -65,7 +114,7 @@ console.log('Token created:', result.tokenMint);
 ### Buying Tokens (Bonding Curve)
 
 ```typescript
-import { buyToken } from '@pumpfun/defi-kit';
+import { buyToken } from './src';
 
 const buyResult = await buyToken({
   connection,
@@ -78,10 +127,85 @@ const buyResult = await buyToken({
 console.log('Tokens purchased:', buyResult.tokensReceived);
 ```
 
+### Selling Tokens (Bonding Curve)
+
+```typescript
+import { sellToken } from './src';
+
+const sellResult = await sellToken({
+  connection,
+  wallet,
+  tokenMint,
+  amount: 1000,
+  network: 'devnet',
+});
+
+console.log('Sale successful:', sellResult.signature);
+```
+
+### Fee Payer Support
+
+The library now supports optional fee payer wallets, allowing you to separate the wallet that pays transaction fees from the wallet that owns the tokens:
+
+```typescript
+import { buyToken, sendToken } from './src';
+
+// Treasury wallet pays fees for user operations
+const treasuryWallet = loadWallet('./wallets/treasury.json');
+const userWallet = loadWallet('./wallets/user.json');
+
+// Buy tokens with treasury covering fees
+const buyResult = await buyToken({
+  connection,
+  wallet: userWallet,        // User owns the tokens
+  tokenMint,
+  amount: 0.1,
+  network: 'devnet',
+  feePayer: treasuryWallet  // Treasury pays the fees
+});
+
+// Send tokens with treasury covering fees
+const sendResult = await sendToken({
+  connection,
+  sender: userWallet,        // User owns the tokens
+  recipient: recipientAddress,
+  mint: tokenMint,
+  amount: 1000,
+  feePayer: treasuryWallet  // Treasury pays the fees
+});
+```
+
+**CLI Usage:**
+
+```bash
+# Buy tokens with separate fee payer
+npm run cli:bc-buy \
+  --amount 0.1 \
+  --input-token ./wallets/token-info.json \
+  --wallet ./wallets/user-wallet.json \
+  --fee-payer ./wallets/treasury-wallet.json
+
+# Send tokens with separate fee payer
+npm run cli:send-token \
+  --recipient <RECIPIENT_ADDRESS> \
+  --mint <TOKEN_MINT> \
+  --amount 1000 \
+  --wallet ./wallets/sender-wallet.json \
+  --fee-payer ./wallets/treasury-wallet.json
+```
+
+**Use Cases:**
+- **Treasury Operations**: Central wallet covers fees for multiple users
+- **Batch Transactions**: Efficient bulk operations with single fee payer
+- **Relayer Services**: Service covers costs for user transactions
+- **Gasless UX**: Users don't need SOL for transaction fees
+
+For detailed fee payer documentation, see [docs/fee-payer-usage.md](docs/fee-payer-usage.md).
+
 ### AMM Trading
 
 ```typescript
-import { createPool, buyFromPool } from '@pumpfun/defi-kit';
+import { createPool, buyFromPool } from './src';
 
 // Create a liquidity pool
 const pool = await createPool({
@@ -105,7 +229,7 @@ const ammBuyResult = await buyFromPool({
 ### Sending Tokens
 
 ```typescript
-import { sendTokenWithAccountCreation } from '@pumpfun/defi-kit';
+import { sendTokenWithAccountCreation } from './src';
 
 // Send tokens to another wallet
 const transferResult = await sendTokenWithAccountCreation(
@@ -134,6 +258,17 @@ The library has been thoroughly tested on Solana devnet with real transactions:
 - **Balance Verification**: Transfer amounts verified and balances updated
 
 **Test Transaction**: [View on Solana Explorer](https://explorer.solana.com/tx/tbVkBnQyM2MRZic9VVoBJwXtTW6U9LRYMEPfJ1QWcaMt214tKESjY5hEEg1xXoQ4ee3ZoQKmJcENBX7U5hdVVJZ?cluster=devnet)
+
+### Test Coverage
+
+The library includes comprehensive tests covering:
+- ✅ Token creation and metadata
+- ✅ Bonding curve trading (buy/sell)
+- ✅ AMM pool operations
+- ✅ Liquidity management
+- ✅ Token transfers with account creation
+- ✅ Error handling and edge cases
+- ✅ CLI command functionality
 
 ### Running Tests
 
@@ -216,6 +351,14 @@ Adds liquidity to an existing pool.
 
 Removes liquidity from a pool.
 
+## Technologies
+
+- **@pump-fun/pump-swap-sdk**: Core PumpFun trading functionality
+- **@solana/web3.js**: Solana blockchain interaction
+- **@solana/spl-token**: SPL token operations
+- **@coral-xyz/anchor**: Solana program interaction
+- **TypeScript**: Full type safety and modern ES6+ features
+
 ## Configuration
 
 The library supports configuration through environment variables:
@@ -229,6 +372,9 @@ SOLANA_NETWORK=devnet
 
 # Default priority fee (in lamports)
 DEFAULT_PRIORITY_FEE=1000
+
+# Environment file
+cp env.example .env
 ```
 
 ## Error Handling
@@ -236,7 +382,7 @@ DEFAULT_PRIORITY_FEE=1000
 The library provides comprehensive error handling with specific error types:
 
 ```typescript
-import { PumpFunError, InsufficientFundsError } from '@pumpfun/defi-kit';
+import { PumpFunError, InsufficientFundsError } from './src';
 
 try {
   await buyToken(options);
@@ -285,19 +431,43 @@ npm run lint
 npm run lint:fix
 ```
 
-## CLI Tools
-
-The library includes command-line tools for testing and development:
+### Available Scripts
 
 ```bash
-# Create a token
-npm run cli:bc:create-token -- --name "Test Token" --symbol "TEST"
+npm run help                    # Show all available CLI commands
+npm run build                   # Build the project
+npm run build:clean            # Clean build with dist removal
+npm run test                   # Run tests
+npm run test:watch            # Run tests in watch mode
+npm run test:coverage         # Run tests with coverage
+npm run format                # Format code with Prettier
+npm run check-format          # Check code formatting
+npm run deploy:dist           # Deploy distribution files
+```
 
-# Buy tokens
-npm run cli:bc:buy -- --token <TOKEN_MINT> --amount 1000000
+## CLI Tools
 
-# Create AMM pool
-npm run cli:amm:create-pool -- --token <TOKEN_MINT> --liquidity 1000000
+The library includes comprehensive command-line tools for testing and development:
+
+```bash
+# Bonding Curve (BC) Operations
+npm run cli:curve:create-token -- --help    # Create new tokens
+npm run cli:curve:buy -- --help             # Buy tokens via bonding curve
+npm run cli:curve:sell -- --help            # Sell tokens via bonding curve
+npm run cli:curve:sdk-buy -- --help         # SDK-based token buying
+
+# AMM Operations
+npm run cli:amm:buy -- --help               # Buy tokens from AMM pool
+npm run cli:amm:create-pool -- --help       # Create new AMM pool
+npm run cli:amm:create-pool-or-use -- --help # Create pool or use existing
+npm run cli:amm:info -- --help              # Get pool information
+npm run cli:amm:liquidity -- --help         # Manage pool liquidity
+npm run cli:amm:add-only -- --help          # Add liquidity only
+
+# Utility Commands
+npm run cli:graduation-check                # Check token graduation status
+npm run cli:send-token -- --help           # Send tokens between wallets
+npm run help                                # Show all available CLI commands
 ```
 
 ## Documentation
@@ -329,11 +499,23 @@ See [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for detailed guidelines.
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## Support
+## Support & Feedback
+
+Since this is a beta version, your feedback is crucial:
 
 - 📖 [Documentation](https://github.com/naval200/pumpfun-defi-kit#readme)
-- 🐛 [Issue Tracker](https://github.com/naval200/pumpfun-defi-kit/issues)
-- 💬 [Discussions](https://github.com/naval200/pumpfun-defi-kit/discussions)
+- 🐛 [Report Issues](https://github.com/naval200/pumpfun-defi-kit/issues) - Please report any bugs you find
+- 💬 [Discussions](https://github.com/naval200/pumpfun-defi-kit/discussions) - Share your experience and suggestions
+- ⭐ [Star the Repo](https://github.com/naval200/pumpfun-defi-kit) - Show your support for the project
+
+## Beta Status
+
+This library is currently in **beta testing** and should be used with caution:
+
+- 🧪 **Testing Phase**: All functionality is being tested on Solana devnet
+- 🚧 **API Changes**: The API may change between beta releases
+- 🐛 **Bug Reports**: Please report any issues you encounter
+- 📝 **Feedback Welcome**: We welcome feedback and suggestions for improvements
 
 ## Disclaimer
 
