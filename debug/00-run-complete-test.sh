@@ -49,11 +49,11 @@ if ! command -v npm &> /dev/null; then
 fi
 
 # Check if required wallets exist
-WALLETS_DIR="$DEBUG_DIR/../wallets"
+WALLETS_DIR="$DEBUG_DIR/../fixtures"
 REQUIRED_FILES=(
     "creator-wallet.json"
     "treasury-wallet.json"
-    "token-info.json"
+    "token-info-1756564695373.json"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
@@ -147,7 +147,7 @@ cat > "$REPORT_FILE" << EOF
 4. ✅ **Comprehensive Test**: Mixed operations (transfers, sells, AMM)
 
 ## Configuration
-- **Token Mint**: $(jq -r '.mint' "$WALLETS_DIR/token-info.json")
+- **Token Mint**: $(jq -r '.mint' "$WALLETS_DIR/token-info-1756564695373.json")
 - **Treasury Wallet**: $(solana-keygen pubkey "$WALLETS_DIR/treasury-wallet.json")
 - **Creator Wallet**: $(solana-keygen pubkey "$WALLETS_DIR/creator-wallet.json")
 - **User Wallets**: 20 created, 10 funded

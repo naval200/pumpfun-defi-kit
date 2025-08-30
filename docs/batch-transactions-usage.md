@@ -128,7 +128,7 @@ Sell tokens via the bonding curve mechanism.
 The batch transactions functionality is also available as a programmatic API for integration into your own applications:
 
 ```typescript
-import { executePumpFunBatch as batchTransactions, BatchOperation } from '../src/batch';
+import { executeBatch as batchTransactions, BatchOperation } from '../src/batch';
 
 const operations: BatchOperation[] = [
   // ... your operations
@@ -150,7 +150,7 @@ const results = await batchTransactions(
 ### Function Signature
 
 ```typescript
-export async function executePumpFunBatch(
+export async function executeBatch(
   connection: Connection,
   wallet: Keypair,
   operations: BatchOperation[],

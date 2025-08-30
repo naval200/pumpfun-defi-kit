@@ -1,4 +1,4 @@
-import { executePumpFunBatch as batchTransactions, validatePumpFunBatchOperations as validateBatchOperations } from '../src/batch';
+import { executeBatch as batchTransactions, validatePumpFunBatchOperations as validateBatchOperations } from '../src/batch';
 
 // Mock the dependencies
 jest.mock('../src/sendToken');

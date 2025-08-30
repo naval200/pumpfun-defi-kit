@@ -3,7 +3,7 @@
 import { Connection, Keypair } from '@solana/web3.js';
 import { parseArgs } from './cli-args';
 import {
-  executePumpFunBatch as batchTransactions,
+  executeBatch as batchTransactions,
   validatePumpFunBatchOperations as validateBatchOperations,
 } from '../src/batch';
 import type { BatchOperation } from '../src/@types';
@@ -95,7 +95,7 @@ async function main() {
     console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
 
     // Load default wallet (for operations that need a sender)
-    const defaultWalletPath = path.resolve('wallets/creator-wallet.json');
+    const defaultWalletPath = path.resolve('fixtures/creator-wallet.json');
     let defaultWallet: Keypair;
 
     if (fs.existsSync(defaultWalletPath)) {

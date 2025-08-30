@@ -6,7 +6,7 @@
  */
 
 import {
-  executePumpFunBatch as batchTransactions,
+  executeBatch as batchTransactions,
   validatePumpFunBatchOperations as validateBatchOperations,
 } from '../src/batch';
 import { Connection, Keypair } from '@solana/web3.js';

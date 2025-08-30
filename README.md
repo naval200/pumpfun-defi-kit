@@ -32,8 +32,9 @@ pumpfun-defikit/
 │   ├── bonding-curve/     # Bonding curve CLI commands
 │   └── graduation-check-cli.ts
 ├── tests/                 # Test suite
+├── debug/                 # Debug scripts for testing
 ├── docs/                  # Documentation
-└── wallets/               # Test wallet configurations
+└── fixtures/              # Test wallet configurations and token info
 ```
 
 ## Installation
@@ -65,6 +66,24 @@ npm run build
 ## Quick Start
 
 **Note**: Since this is a beta version, you'll need to clone the repository and build it locally before running the examples.
+
+### Testing with Debug Scripts
+
+For comprehensive testing and debugging, use the included debug scripts:
+
+```bash
+cd debug
+chmod +x *.sh
+./00-run-complete-test.sh
+```
+
+This will:
+- Create 20 test user wallets
+- Fund 10 wallets with PumpFun tokens
+- Test batch operations and transfers
+- Generate detailed logs and reports
+
+See [Debug Scripts Guide](./docs/debug-scripts-guide.md) for detailed usage information.
 
 ### Creating a Token
 

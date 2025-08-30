@@ -13,7 +13,7 @@ WALLET_COUNT=20
 FUNDED_COUNT=10
 TOKENS_PER_WALLET=1000  # Amount of tokens to send to each funded wallet
 DEBUG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WALLETS_DIR="$DEBUG_DIR/../wallets"
+WALLETS_DIR="$DEBUG_DIR/../fixtures"
 USER_WALLETS_DIR="$DEBUG_DIR/user-wallets"
 
 # Create directories
@@ -39,7 +39,7 @@ if [ ! -f "$CREATOR_WALLET" ]; then
 fi
 
 # Use the token info with bonding curve info
-TOKEN_INFO="$WALLETS_DIR/token-info.json"
+TOKEN_INFO="$WALLETS_DIR/token-info-1756564695373.json"
 if [ ! -f "$TOKEN_INFO" ]; then
     echo "❌ Error: Token info not found at $TOKEN_INFO"
     echo "Please ensure token info exists."

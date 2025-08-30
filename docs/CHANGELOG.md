@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fee Payer Integration**: Support for separate fee payer wallets in token transfers
 - **Automatic Account Creation**: CLI automatically creates recipient token accounts when needed
 - **Transaction Confirmation**: Enhanced transaction handling with explorer links and balance verification
+- **Debug Scripts**: Comprehensive testing scripts for batch operations and wallet management
+- **Batch Operations Testing**: End-to-end testing of token transfers, buys, and SOL transfers
+
+### Changed
+- **Directory Structure**: Renamed `wallets/` directory to `fixtures/` to better reflect its contents
+- **Debug Scripts**: Updated all debug scripts to use the new `fixtures/` directory path
+- **Documentation**: Updated documentation to reflect directory structure changes and current testing capabilities
 
 ### Enhanced
 - **CLI Infrastructure**: Improved command-line argument parsing and validation
