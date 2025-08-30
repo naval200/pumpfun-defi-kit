@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from '@solana/web3.js';
-import { getPoolInfo } from '../../src/amm/info';
+import { getPoolInfo } from '../../src/amm';
 import { parseArgs, loadWallet, loadTokenInfo, printUsage } from '../cli-args';
 
 function showHelp() {
@@ -9,12 +9,13 @@ Usage: npm run cli:amm:info -- [options]
 Options:
   --help                    Show this help message
   --input-token <path>     Path to token-info.json file (required)
+  --wallet <path>          Path to wallet.json file (required)
   --pool-key <address>     Pool key address (optional, will search if not provided)
 
 Examples:
   npm run cli:amm:info -- --help
-  npm run cli:amm:info -- --input-token ./token-info.json
-  npm run cli:amm:info -- --input-token ./token-info.json --pool-key <pool-address>
+  npm run cli:amm:info -- --input-token ./token-info.json --wallet ./wallets/creator-wallet.json
+  npm run cli:amm:info -- --input-token ./token-info.json --wallet ./wallets/creator-wallet.json --pool-key <pool-address>
 `);
 }
 
@@ -30,8 +31,8 @@ async function main() {
   }
 
   // Validate required arguments
-  if (!args.inputToken) {
-    console.error('❌ Error: --input-token is required');
+  if (!args.inputToken || !args.wallet) {
+    console.error('❌ Error: --input-token and --wallet are required');
     printUsage('cli:amm:info');
     return;
   }
@@ -40,6 +41,7 @@ async function main() {
     console.log('🔍 AMM Pool Info CLI');
     console.log('=====================');
     console.log(`Input Token: ${args.inputToken}`);
+    console.log(`Wallet: ${args.wallet}`);
 
     // Setup connection
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
@@ -51,7 +53,7 @@ async function main() {
     console.log(`📍 Token Mint: ${tokenInfo.mint}`);
 
     // Load wallet for pool info
-    const wallet = loadWallet(args.inputToken);
+    const wallet = loadWallet(args.wallet);
     console.log(`👛 Wallet: ${wallet.publicKey.toString()}`);
 
     // Determine pool key
