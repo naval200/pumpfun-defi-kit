@@ -19,12 +19,7 @@ import {
   EVENT_AUTHORITY_SEED,
   COMPUTE_BUDGET_INSTRUCTIONS,
 } from './idl/constants';
-import { log, logWarning, logSuccess, logError } from '../utils/debug';
-import { getOrCreateAssociatedTokenAccount } from '../createAccount';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-
-// Import fee config PDA derivation from instructions
-import { deriveFeeConfigPDA } from './idl/instructions';
+import { log, logWarning, logSuccess } from '../utils/debug';
 
 // ============================================================================
 // PDA DERIVATION FUNCTIONS
@@ -285,7 +280,7 @@ export async function getBondingCurveCreator(
   mint: PublicKey
 ): Promise<PublicKey> {
   const [bondingCurvePDA] = deriveBondingCurveAddress(mint);
-  
+
   try {
     const accountInfo = await connection.getAccountInfo(bondingCurvePDA);
     if (!accountInfo) {
@@ -295,18 +290,18 @@ export async function getBondingCurveCreator(
     // Bonding curve account layout (based on IDL):
     // - discriminator: [u8; 8] (8 bytes) - Anchor account discriminator
     // - virtual_token_reserves: u64 (8 bytes)
-    // - virtual_sol_reserves: u64 (8 bytes) 
+    // - virtual_sol_reserves: u64 (8 bytes)
     // - real_token_reserves: u64 (8 bytes)
     // - real_sol_reserves: u64 (8 bytes)
     // - token_total_supply: u64 (8 bytes)
     // - complete: bool (1 byte)
     // - creator: pubkey (32 bytes)
-    
+
     const data = accountInfo.data;
     const creatorOffset = 8 + 8 + 8 + 8 + 8 + 8 + 1; // Skip discriminator + fields to creator field (49 bytes)
     const creatorBytes = data.slice(creatorOffset, creatorOffset + 32);
     const creator = new PublicKey(creatorBytes);
-    
+
     log(`✅ Fetched creator from bonding curve: ${creator.toString()}`);
     return creator;
   } catch (error) {
@@ -322,8 +317,8 @@ export async function getBondingCurveCreator(
  */
 export async function getAllRequiredPDAsForBuyAsync(
   connection: Connection,
-  programId: PublicKey, 
-  mint: PublicKey, 
+  programId: PublicKey,
+  mint: PublicKey,
   user: PublicKey
 ) {
   // Global PDA
@@ -334,7 +329,7 @@ export async function getAllRequiredPDAsForBuyAsync(
 
   // Get actual creator from bonding curve account
   const creator = await getBondingCurveCreator(connection, mint);
-  
+
   // Creator vault PDA - use actual creator from bonding curve
   const [creatorVaultPDA] = deriveCreatorVaultAddress(creator);
 

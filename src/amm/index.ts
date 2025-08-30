@@ -1,7 +1,7 @@
 // Core AMM operations
 export { addLiquidity, removeLiquidity } from './liquidity';
-export { buyTokens, createSignedAmmBuyTransaction } from './buy';
-export { sellTokens, createSignedAmmSellTransaction } from './sell';
+export { buyAmmTokens, createSignedAmmBuyTransaction } from './buy';
+export { sellAmmTokens, createSignedAmmSellTransaction } from './sell';
 export { getPoolInfo } from './info';
 export { createPool } from './createPool';
 

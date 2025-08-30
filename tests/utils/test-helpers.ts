@@ -23,16 +23,25 @@ export class TestHelpers {
   }
 
   /**
-   * Load test wallet from file
+   * Load test wallet from file or generate a new one for testing
    */
   static loadTestWallet(): Keypair {
     if (!this.testWallet) {
       try {
+        // First try to load from file if it exists
         const walletPath = path.join(process.cwd(), 'wallets', 'creator-wallet.json');
-        const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
-        this.testWallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
+        if (fs.existsSync(walletPath)) {
+          const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
+          this.testWallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
+        } else {
+          // Generate a new wallet for testing if file doesn't exist
+          console.log('⚠️  Test wallet file not found, generating new wallet for testing');
+          this.testWallet = Keypair.generate();
+        }
       } catch (error) {
-        throw new Error(`Failed to load test wallet: ${error}`);
+        // Fallback to generated wallet if loading fails
+        console.log('⚠️  Failed to load test wallet, generating new wallet for testing');
+        this.testWallet = Keypair.generate();
       }
     }
     return this.testWallet;

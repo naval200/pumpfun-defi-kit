@@ -44,7 +44,6 @@ const exampleOperations: BatchOperation[] = [
       poolKey: '33333333333333333333333333333333',
       quoteAmount: 10000000,
       slippage: 1,
-      assumeAccountsExist: true,
     },
   },
   {

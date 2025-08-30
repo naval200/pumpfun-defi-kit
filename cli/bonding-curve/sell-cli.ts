@@ -31,7 +31,9 @@ export async function sellToken() {
 
   debugLog('💸 Selling PumpFun Tokens via Bonding Curve');
   debugLog('============================================');
-  debugLog(`Amount: ${args.amount} tokens (will be converted to smallest unit: ${args.amount * Math.pow(10, 0)})`);
+  debugLog(
+    `Amount: ${args.amount} tokens (will be converted to smallest unit: ${args.amount * Math.pow(10, 0)})`
+  );
   debugLog(`Slippage: ${args.slippage || 1000} basis points (${(args.slippage || 1000) / 100}%)`);
 
   try {

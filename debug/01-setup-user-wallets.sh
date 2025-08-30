@@ -74,9 +74,63 @@ done
 
 echo "✅ All $WALLET_COUNT user wallets created/verified"
 
-# Step 2: Transfer PumpFun tokens to first 10 wallets
+# Step 2: Create and activate token accounts for first 10 wallets
 echo ""
-echo "💰 Step 2: Transferring $TOKENS_PER_WALLET tokens to first $FUNDED_COUNT wallets..."
+echo "🏗️  Step 2: Creating and activating token accounts for first $FUNDED_COUNT wallets..."
+echo "🎯 Token mint: $TOKEN_MINT"
+
+# Create token accounts first
+ACCOUNT_CREATION_SUCCESS=0
+for i in $(seq 1 $FUNDED_COUNT); do
+    WALLET_FILE="$USER_WALLETS_DIR/user-wallet-$i.json"
+    WALLET_ADDRESS=$(solana-keygen pubkey "$WALLET_FILE")
+    
+    echo "  Creating token account for wallet $i/$FUNDED_COUNT: $WALLET_ADDRESS"
+    
+    # Use the create-ata CLI to create the token account
+    if npm run cli:create-ata \
+        -- --wallet "$CREATOR_WALLET" \
+        --mint "$TOKEN_MINT" \
+        --owner "$WALLET_ADDRESS" > /dev/null 2>&1; then
+        echo "    ✅ Token account created/activated successfully"
+        ACCOUNT_CREATION_SUCCESS=$((ACCOUNT_CREATION_SUCCESS + 1))
+    else
+        echo "    ❌ Token account creation failed"
+        echo "    ⚠️  Continuing with next wallet..."
+    fi
+done
+
+echo "✅ Successfully created/activated $ACCOUNT_CREATION_SUCCESS out of $FUNDED_COUNT token accounts"
+
+# Verify token accounts exist before proceeding
+echo ""
+echo "🔍 Verifying token accounts before transfers..."
+VERIFICATION_SUCCESS=0
+for i in $(seq 1 $FUNDED_COUNT); do
+    WALLET_FILE="$USER_WALLETS_DIR/user-wallet-$i.json"
+    WALLET_ADDRESS=$(solana-keygen pubkey "$WALLET_FILE")
+    
+    echo "  Verifying token account for wallet $i/$FUNDED_COUNT: $WALLET_ADDRESS"
+    
+    # Use the create-ata CLI to check if the token account exists
+    if npm run cli:create-ata \
+        -- --wallet "$CREATOR_WALLET" \
+        --mint "$TOKEN_MINT" \
+        --owner "$WALLET_ADDRESS" \
+        --check-only > /dev/null 2>&1; then
+        echo "    ✅ Token account verified"
+        VERIFICATION_SUCCESS=$((VERIFICATION_SUCCESS + 1))
+    else
+        echo "    ❌ Token account verification failed"
+        echo "    ⚠️  This wallet will be skipped for transfers"
+    fi
+done
+
+echo "✅ Successfully verified $VERIFICATION_SUCCESS out of $ACCOUNT_CREATION_SUCCESS token accounts"
+
+# Step 3: Transfer PumpFun tokens to wallets with verified accounts
+echo ""
+echo "💰 Step 3: Transferring $TOKENS_PER_WALLET tokens to wallets with verified accounts..."
 echo "💸 Amount per wallet: $TOKENS_PER_WALLET tokens"
 
 # Check if creator wallet has tokens first
@@ -84,21 +138,26 @@ echo "🔍 Checking creator wallet token balance..."
 CREATOR_ADDRESS=$(solana-keygen pubkey "$CREATOR_WALLET")
 echo "  Creator wallet address: $CREATOR_ADDRESS"
 
-# Transfer tokens to first 10 wallets
+# Transfer tokens to wallets that have verified accounts
 SUCCESS_COUNT=0
 for i in $(seq 1 $FUNDED_COUNT); do
     WALLET_FILE="$USER_WALLETS_DIR/user-wallet-$i.json"
     WALLET_ADDRESS=$(solana-keygen pubkey "$WALLET_FILE")
     
+    # Skip wallets that don't have verified token accounts
+    if [ $i -gt $VERIFICATION_SUCCESS ]; then
+        echo "  ⏭️  Skipping wallet $i/$FUNDED_COUNT: $WALLET_ADDRESS (no verified token account)"
+        continue
+    fi
+    
     echo "  Transferring to wallet $i/$FUNDED_COUNT: $WALLET_ADDRESS"
     
-    # Use the send-token CLI to transfer tokens
+    # Use the send-token CLI to transfer tokens (no need for --create-account since we already created them)
     if npm run cli:send-token \
         -- --wallet "$CREATOR_WALLET" \
         --recipient "$WALLET_ADDRESS" \
         --mint "$TOKEN_MINT" \
-        --amount "$TOKENS_PER_WALLET" \
-        --create-account > /dev/null 2>&1; then
+        --amount "$TOKENS_PER_WALLET" > /dev/null 2>&1; then
         echo "    ✅ Transfer successful"
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
     else
@@ -111,10 +170,20 @@ echo ""
 echo "📋 Summary of Setup Phase:"
 echo "=========================="
 echo "✅ Created $WALLET_COUNT user wallets in $USER_WALLETS_DIR"
-echo "💰 Successfully funded $SUCCESS_COUNT out of $FUNDED_COUNT wallets with $TOKENS_PER_WALLET tokens each"
+echo "🏗️  Successfully created/activated $ACCOUNT_CREATION_SUCCESS out of $FUNDED_COUNT token accounts"
+echo "🔍 Successfully verified $VERIFICATION_SUCCESS out of $ACCOUNT_CREATION_SUCCESS token accounts"
+echo "💰 Successfully funded $SUCCESS_COUNT out of $VERIFICATION_SUCCESS wallets with $TOKENS_PER_WALLET tokens each"
 
-if [ $SUCCESS_COUNT -eq 0 ]; then
-    echo "⚠️  Warning: No wallets were funded. This might be due to:"
+if [ $ACCOUNT_CREATION_SUCCESS -eq 0 ]; then
+    echo "⚠️  Warning: No token accounts were created. This might be due to:"
+    echo "   - Creator wallet has insufficient SOL for account creation fees"
+    echo "   - Token mint address is incorrect"
+    echo "   - Network connectivity issues"
+    echo ""
+    echo "💡 You can still test batch operations with the created wallets,"
+    echo "   but they won't have token accounts to receive tokens."
+elif [ $SUCCESS_COUNT -eq 0 ]; then
+    echo "⚠️  Warning: Token accounts were created but no transfers succeeded. This might be due to:"
     echo "   - Creator wallet has insufficient tokens"
     echo "   - Token mint address is incorrect"
     echo "   - Network connectivity issues"
@@ -132,10 +201,18 @@ for i in $(seq 1 $WALLET_COUNT); do
     WALLET_ADDRESS=$(solana-keygen pubkey "$WALLET_FILE")
     STATUS=""
     if [ $i -le $FUNDED_COUNT ]; then
-        if [ $i -le $SUCCESS_COUNT ]; then
-            STATUS=" (funded)"
+        if [ $i -le $ACCOUNT_CREATION_SUCCESS ]; then
+            if [ $i -le $VERIFICATION_SUCCESS ]; then
+                if [ $i -le $SUCCESS_COUNT ]; then
+                    STATUS=" (account created + verified + funded)"
+                else
+                    STATUS=" (account created + verified, funding failed)"
+                fi
+            else
+                STATUS=" (account created, verification failed)"
+            fi
         else
-            STATUS=" (funding failed)"
+            STATUS=" (account creation failed)"
         fi
     fi
     echo "  user-wallet-$i.json: $WALLET_ADDRESS$STATUS"
@@ -145,8 +222,19 @@ echo ""
 if [ $SUCCESS_COUNT -gt 0 ]; then
     echo "🎉 Setup Phase Complete! Ready for batch operations."
     echo "💡 Next: Run 02-test-batch-operations.sh to test batch transfers"
-else
-    echo "⚠️  Setup Phase Complete with warnings."
+elif [ $VERIFICATION_SUCCESS -gt 0 ]; then
+    echo "⚠️  Setup Phase Complete with partial success."
+    echo "✅ Token accounts were created and verified, but token transfers failed."
     echo "💡 You can still test batch operations, but wallets have no tokens to transfer."
     echo "   Consider funding some wallets manually or using a different token."
+elif [ $ACCOUNT_CREATION_SUCCESS -gt 0 ]; then
+    echo "⚠️  Setup Phase Complete with partial success."
+    echo "✅ Token accounts were created, but verification failed."
+    echo "💡 You can still test batch operations, but wallets have no verified token accounts."
+    echo "   Consider checking network connectivity and retrying verification."
+else
+    echo "⚠️  Setup Phase Complete with warnings."
+    echo "❌ No token accounts were created successfully."
+    echo "💡 You can still test batch operations, but wallets have no token accounts or tokens."
+    echo "   Consider checking network connectivity and creator wallet balance."
 fi

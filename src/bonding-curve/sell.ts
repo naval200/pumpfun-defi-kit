@@ -17,24 +17,29 @@ export async function sellPumpFunToken(
     if (tokenAmount === undefined) {
       return {
         success: false,
-        error: 'Token amount is required. Please specify the number of tokens to sell.'
+        error: 'Token amount is required. Please specify the number of tokens to sell.',
       };
     }
-    
+
     log('🔄 Executing sell of', tokenAmount, 'tokens...');
-    
+
     // Calculate minSolOutput based on bonding curve price
     // For now, use a very low minimum to avoid slippage issues
     // TODO: Calculate this properly based on bonding curve reserves
     const minSolOutput = 0.000001; // Very low minimum to avoid slippage rejection
-    
+
     // Get all required PDAs (including correct creator vault)
-    const pdas = await getAllRequiredPDAsForBuyAsync(connection, PUMP_PROGRAM_ID, mint, wallet.publicKey);
-    
+    const pdas = await getAllRequiredPDAsForBuyAsync(
+      connection,
+      PUMP_PROGRAM_ID,
+      mint,
+      wallet.publicKey
+    );
+
     // Create sell instruction using simple approach
     // Convert token amount to smallest units (6 decimals based on buy instruction)
     const tokenAmountInSmallestUnits = tokenAmount * Math.pow(10, 6);
-    
+
     const sellInstruction = createBondingCurveSellInstruction(
       wallet.publicKey,
       mint,
@@ -72,10 +77,10 @@ export async function sellPumpFunToken(
     logSuccess('Sell transaction confirmed successfully!');
     log(`💰 Sold ${tokenAmount} tokens for ${minSolOutput} SOL`);
     logSignature(signature, 'Sell');
-    
+
     return {
       success: true,
-      signature
+      signature,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -89,7 +94,7 @@ export async function sellPumpFunToken(
 
     return {
       success: false,
-      error: errorMessage
+      error: errorMessage,
     };
   }
 }

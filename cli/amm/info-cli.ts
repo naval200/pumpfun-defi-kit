@@ -76,14 +76,16 @@ async function main() {
 
     if (poolInfo) {
       console.log('✅ Pool information retrieved successfully');
-      
+
       // Safely serialize pool info without BigInt issues
       try {
-        const safePoolInfo = JSON.parse(JSON.stringify(poolInfo, (key, value) =>
-          typeof value === 'bigint' ? value.toString() : value
-        ));
+        const safePoolInfo = JSON.parse(
+          JSON.stringify(poolInfo, (key, value) =>
+            typeof value === 'bigint' ? value.toString() : value
+          )
+        );
         console.log('📊 Pool Data:', JSON.stringify(safePoolInfo, null, 2));
-        
+
         // Extract key pool metrics
         if (safePoolInfo.poolBaseAmount && safePoolInfo.poolQuoteAmount) {
           console.log('\n🏊 Pool Liquidity Summary:');

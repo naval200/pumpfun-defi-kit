@@ -5,18 +5,19 @@ import BN from 'bn.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 import { debugLog, log, logError, logSuccess } from '../utils/debug';
 import { createAmmSellInstructionsAssuming } from './instructions';
+import type { AmmSwapState } from '../@types';
 
 /**
- * Sell tokens for SOL with retry logic and better error handling
+ * Sell tokens for SOL using AMM
  */
-export async function sellTokens(
+export async function sellAmmTokens(
   connection: Connection,
   wallet: Keypair,
   poolKey: PublicKey,
   baseAmount: number,
   slippage: number = 1,
   feePayer?: Keypair,
-  options?: { assumeAccountsExist?: boolean; swapSolanaState?: any }
+  options?: { swapSolanaState?: AmmSwapState }
 ): Promise<{ success: boolean; signature?: string; quoteAmount?: number; error?: string }> {
   try {
     log(`💸 Selling tokens to pool: ${poolKey.toString()}`);
@@ -112,7 +113,8 @@ export async function createSignedAmmSellTransaction(
   baseAmount: number,
   slippage: number = 1,
   feePayer?: Keypair,
-  blockhash?: string
+  blockhash?: string,
+  _options?: { swapSolanaState?: AmmSwapState }
 ): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
   try {
     debugLog(`🔧 Creating signed AMM sell transaction for ${baseAmount} tokens`);
@@ -122,9 +124,10 @@ export async function createSignedAmmSellTransaction(
     // Initialize SDKs directly
     const pumpAmmSdk = new PumpAmmSdk(connection);
 
-    // Get swap state
+    // Get swap state (use provided one if available, otherwise fetch)
     debugLog('🔍 Getting swap state...');
-    const swapSolanaState = await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey);
+    const swapSolanaState =
+      _options?.swapSolanaState || (await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey));
 
     // Create sell instructions
     debugLog('📝 Creating sell instructions...');

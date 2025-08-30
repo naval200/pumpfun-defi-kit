@@ -66,6 +66,14 @@ export interface TransactionResult {
 }
 
 /**
+ * Result of a batch operation with additional metadata
+ */
+export interface OperationResult extends TransactionResult {
+  amount?: number;
+  mint?: string;
+}
+
+/**
  * Batch Transactions types
  */
 export interface BatchOperation {
@@ -90,7 +98,6 @@ export interface BatchExecutionOptions {
   retryFailed?: boolean;
   maxTransferInstructionsPerTx?: number;
   combinePerBatch?: boolean;
-  assumeAccountsExist?: boolean;
 }
 
 /**

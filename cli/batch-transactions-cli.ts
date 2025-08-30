@@ -3,7 +3,7 @@
 import { Connection, Keypair } from '@solana/web3.js';
 import { parseArgs } from './cli-args';
 import {
-  executeBatch as batchTransactions,
+  batchTransactions,
   validatePumpFunBatchOperations as validateBatchOperations,
 } from '../src/batch';
 import type { BatchOperation } from '../src/@types';
@@ -95,19 +95,32 @@ async function main() {
     console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
 
     // Load default wallet (for operations that need a sender)
-    const defaultWalletPath = path.resolve('fixtures/creator-wallet.json');
     let defaultWallet: Keypair;
-
-    if (fs.existsSync(defaultWalletPath)) {
-      const walletData = JSON.parse(fs.readFileSync(defaultWalletPath, 'utf8'));
+    
+    if (args.wallet) {
+      // Use the provided wallet parameter
+      const walletPath = path.resolve(args.wallet);
+      if (!fs.existsSync(walletPath)) {
+        console.error(`❌ Error: Wallet file not found: ${walletPath}`);
+        process.exit(1);
+      }
+      const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
       defaultWallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
-      console.log(`👛 Using default wallet: ${defaultWallet.publicKey.toString()}`);
+      console.log(`👛 Using provided wallet: ${defaultWallet.publicKey.toString()}`);
     } else {
-      // Create a dummy wallet if none exists (for testing)
-      defaultWallet = Keypair.generate();
-      console.log(
-        `⚠️  No default wallet found, using generated wallet: ${defaultWallet.publicKey.toString()}`
-      );
+      // Fallback to default wallet
+      const defaultWalletPath = path.resolve('fixtures/creator-wallet.json');
+      if (fs.existsSync(defaultWalletPath)) {
+        const walletData = JSON.parse(fs.readFileSync(defaultWalletPath, 'utf8'));
+        defaultWallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
+        console.log(`👛 Using default wallet: ${defaultWallet.publicKey.toString()}`);
+      } else {
+        // Create a dummy wallet if none exists (for testing)
+        defaultWallet = Keypair.generate();
+        console.log(
+          `⚠️  No default wallet found, using generated wallet: ${defaultWallet.publicKey.toString()}`
+        );
+      }
     }
 
     // Validate operations

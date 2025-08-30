@@ -1,10 +1,5 @@
 import { getAllRequiredPDAsForBuyAsync } from './bc-helper';
-import {
-  Connection,
-  Keypair,
-  PublicKey,
-  Transaction,
-} from '@solana/web3.js';
+import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
 import { debugLog, logError, log, logSuccess, logSignature } from '../utils/debug';
 import { PUMP_PROGRAM_ID } from './idl/constants';
 import { createBondingCurveBuyInstruction } from './idl/instructions';
@@ -22,8 +17,13 @@ export async function buyPumpFunToken(
   try {
     log('🛒 Executing buy of', solAmount, 'SOL worth of tokens...');
     // Get all required PDAs (including correct creator vault)
-    const pdas = await getAllRequiredPDAsForBuyAsync(connection, PUMP_PROGRAM_ID, mint, wallet.publicKey);
-    
+    const pdas = await getAllRequiredPDAsForBuyAsync(
+      connection,
+      PUMP_PROGRAM_ID,
+      mint,
+      wallet.publicKey
+    );
+
     // Create buy instruction using simple approach
     const buyInstruction = createBondingCurveBuyInstruction(
       wallet.publicKey,
@@ -62,7 +62,7 @@ export async function buyPumpFunToken(
     logSuccess('Buy transaction confirmed successfully!');
     log(`💰 Purchased tokens for ${solAmount} SOL`);
     logSignature(signature, 'Buy');
-    
+
     return signature;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -77,4 +77,3 @@ export async function buyPumpFunToken(
     throw error; // Re-throw to match expected behavior
   }
 }
-

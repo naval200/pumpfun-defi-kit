@@ -232,13 +232,13 @@ export async function createPumpFunToken(
           wallet.publicKey, // owner
           mint.publicKey // mint
         );
-        
+
         if (!createAtaResult.success) {
           throw new Error(`Failed to create associated token account: ${createAtaResult.error}`);
         }
-        
+
         logSuccess(`✅ Associated token account created: ${createAtaResult.account?.toString()}`);
-        
+
         // Execute the initial buy using buy (no creator vault needed)
         const buySignature = await buyPumpFunToken(
           connection,
