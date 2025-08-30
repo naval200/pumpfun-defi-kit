@@ -10,15 +10,16 @@ Options:
   --help                    Show this help message
   --action <action>         Action to perform: 'add' or 'remove' (required)
   --input-token <path>      Path to token-info.json file (required)
+  --wallet <path>           Path to wallet.json file (required)
   --amount <number>         Amount for liquidity operation (required)
   --pool-key <address>      Pool key address (optional, will use from token info)
   --slippage <number>       Slippage tolerance in basis points (default: 1)
 
 Examples:
   npm run cli:amm:liquidity -- --help
-  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --amount 1000
-  npm run cli:amm:liquidity -- --action remove --input-token ./token-info.json --amount 500 --pool-key <pool-address>
-  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --amount 1000 --slippage 100
+  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --wallet ./wallets/creator-wallet.json --amount 1000
+  npm run cli:amm:liquidity -- --action remove --input-token ./token-info.json --wallet ./wallets/creator-wallet.json --amount 500 --pool-key <pool-address>
+  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --wallet ./wallets/creator-wallet.json --amount 1000 --slippage 100
 `);
 }
 
@@ -34,8 +35,8 @@ async function main() {
   }
 
   // Validate required arguments
-  if (!args.action || !args.inputToken || !args.amount) {
-    console.error('❌ Error: --action, --input-token, and --amount are required');
+  if (!args.action || !args.inputToken || !args.amount || !args.wallet) {
+    console.error('❌ Error: --action, --input-token, --amount, and --wallet are required');
     printUsage('cli:amm:liquidity');
     return;
   }
@@ -63,6 +64,7 @@ async function main() {
     console.log('=====================================');
     console.log(`Action: ${args.action}`);
     console.log(`Input Token: ${args.inputToken}`);
+    console.log(`Wallet: ${args.wallet}`);
     console.log(`Amount: ${args.amount}`);
     console.log(`Slippage: ${slippage} basis points`);
 
@@ -76,7 +78,7 @@ async function main() {
     console.log(`📍 Token Mint: ${tokenInfo.mint}`);
 
     // Load wallet
-    const wallet = loadWallet(args.inputToken);
+    const wallet = loadWallet(args.wallet);
     console.log(`👛 Wallet: ${wallet.publicKey.toString()}`);
 
     // Determine pool key
