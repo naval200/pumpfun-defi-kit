@@ -28,6 +28,7 @@ export interface CliArgs {
   delayBetween?: number;
   dryRun?: boolean;
   help?: boolean;
+  action?: string;
 }
 
 export function parseArgs(): CliArgs {
@@ -41,6 +42,9 @@ export function parseArgs(): CliArgs {
       case '--wallet':
       case '-w':
         args.wallet = argv[++i];
+        break;
+      case '--action':
+        args.action = argv[++i];
         break;
       case '--input-token':
       case '-i':

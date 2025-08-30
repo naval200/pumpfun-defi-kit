@@ -70,7 +70,6 @@
     "cli:amm:create-pool-or-use": "tsx cli/amm/create-pool-or-use-existing-cli.ts",
     "cli:amm:info": "tsx cli/amm/info-cli.ts",
     "cli:amm:liquidity": "tsx cli/amm/liquidity-cli.ts",
-    "cli:amm:add-only": "tsx cli/amm/liquidity-cli.ts --add-only",
     "cli:graduation-check": "tsx cli/graduation-check-cli.ts",
     "cli:send-token": "tsx cli/send-token-cli.ts",
     "cli:send-sol": "tsx cli/send-sol-cli.ts",
