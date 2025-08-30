@@ -19,11 +19,10 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 ### Testing
 
 - **[Testing Guide](./TESTING_GUIDE.md)** - Comprehensive testing strategies and examples
-- **[Test Suite Summary](./TEST_SUITE_SUMMARY.md)** - Overview of test coverage and structure
 
 ### Development Tools
 
-- **[Debug Guide](./DEBUG_README.md)** - Debug mode and logging configuration
+- **[Debug Scripts Guide](./debug-scripts-guide.md)** - Debug mode, logging configuration, and testing scripts
 - **[Commit Summary](./COMMIT_SUMMARY.md)** - Detailed documentation of major changes
 
 ### AMM (Automated Market Maker)
@@ -46,8 +45,7 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 
 ### Advanced Features
 
-- **[Fee Payer Implementation](./FEE_PAYER_IMPLEMENTATION.md)** - Technical details of fee payer system
-- **[Fee Payer Usage](./fee-payer-usage.md)** - Practical examples and usage guide
+- **[Fee Payer Usage](./fee-payer-usage.md)** - Practical examples and usage guide for fee payer system
 
 ## 🚀 Publishing & Deployment
 
@@ -72,7 +70,6 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 docs/
 ├── README.md                           # This index file
 ├── TESTING_GUIDE.md                   # Comprehensive testing guide
-├── TEST_SUITE_SUMMARY.md              # Test coverage overview
 ├── batch-transactions-usage.md        # Batch operations CLI and API
 ├── amm-usage.md                       # AMM functionality and testing guide
 ├── pool-creation-guide.md             # Pool management
@@ -84,9 +81,10 @@ docs/
 ├── SECURITY.md                        # Security policies
 ├── CHANGELOG.md                       # Version history
 ├── COMMIT_SUMMARY.md                  # Detailed commit documentation
-├── DEBUG_README.md                    # Debug mode and logging guide
-├── FEE_PAYER_IMPLEMENTATION.md        # Fee payer technical details
-└── fee-payer-usage.md                 # Fee payer usage examples
+├── debug-scripts-guide.md             # Debug mode, logging, and testing scripts
+├── fee-payer-usage.md                 # Fee payer usage examples and guide
+├── graduation-utils-usage.md          # Graduation utilities guide
+└── send-token-usage.md                # Token transfer usage guide
 ```
 
 ## 📞 Support
