@@ -1,9 +1,5 @@
-import { Connection, PublicKey, Keypair, Transaction, SystemProgram } from '@solana/web3.js';
-import {
-  getAssociatedTokenAddressSync,
-  createTransferInstruction,
-  TOKEN_PROGRAM_ID,
-} from '@solana/spl-token';
+import { Connection, PublicKey, Keypair, Transaction, SystemProgram, TransactionInstruction } from '@solana/web3.js';
+
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 import BN from 'bn.js';
 
@@ -18,13 +14,13 @@ import {
   sellPumpFunToken,
   createBondingCurveBuyInstruction,
   createBondingCurveSellInstruction,
+  getBondingCurvePDAs,
 } from '../bonding-curve';
 import { chunkArray } from './batch-helper';
-import { sendLamports } from '../utils/transaction';
+import { createSendSolInstruction, sendSol } from '../sendSol';
 import { debugLog, logError } from '../utils/debug';
 import type { BatchOperation, BatchResult, BatchExecutionOptions } from '../@types';
-import { sendToken, sendTokenWithAccountCreation } from '../sendToken';
-import { TransactionInstruction } from '@solana/web3.js';
+import { sendToken, sendTokenWithAccountCreation, createTokenTransferInstruction } from '../sendToken';
 
 // Re-export types for external use
 export type { BatchOperation, BatchResult, BatchExecutionOptions };
@@ -50,44 +46,33 @@ interface SolTransferParams {
   sender?: string;
 }
 
-interface BondingCurveSellParams {
-  mint: string;
-  amount: number;
-  slippage?: number;
-}
-
-interface AmmSellParams {
-  poolKey: string;
-  amount: number;
-  slippage?: number;
-}
-
-interface AmmBuyParams {
-  poolKey: string;
-  quoteAmount: number;
-  slippage?: number;
-  assumeAccountsExist?: boolean;
-}
-
-interface BondingCurveBuyParams {
-  mint: string;
-  solAmount: number;
-  slippage?: number;
-  assumeAccountsExist?: boolean;
-}
-
 /**
  * Execute PumpFun token batch transactions
  *
- * Note: Only consuming operations (transfers, sell-amm, sell-bonding-curve) can be batched together.
- * Buy operations (buy-amm, buy-bonding-curve) cannot be batched because:
- * - They create tokens and often require creating new Associated Token Accounts (ATAs)
- * - They have different account setup requirements than sell operations
- * - They may have interdependencies that make batching complex
- * - They change pool state which could affect subsequent operations
- * - They have different signing and authorization patterns
+ * This function supports both combined transactions (combinePerBatch=true) and individual operations.
+ * 
+ * **Combined Transactions Mode (combinePerBatch=true):**
+ * - Groups operations by sender into single transactions
+ * - Better gas efficiency and atomicity
+ * - Requires assumeAccountsExist=true for transfers
+ * - Supports fee payer for transaction costs
+ * 
+ * **Individual Operations Mode (combinePerBatch=false):**
+ * - Executes each operation separately
+ * - Better error isolation and retry capabilities
+ * - Supports parallel execution with maxParallel limit
+ * 
+ * **Supported Operation Types:**
+ * - `transfer`: Token transfers between addresses
+ * - `sol-transfer`: SOL transfers between addresses  
+ * - `sell-bonding-curve`: Sell tokens via bonding curve
+ * - `sell-amm`: Sell tokens via AMM pools
+ * - `buy-amm`: Buy tokens via AMM pools
+ * - `buy-bonding-curve`: Buy tokens via bonding curve
+ * 
+ * **Note:** Buy operations can be batched but may have interdependencies that affect success rates.
  */
-export async function executePumpFunBatch(
+export async function executeBatch(
   connection: Connection,
   wallet: Keypair,
   operations: BatchOperation[],
@@ -104,6 +89,7 @@ export async function executePumpFunBatch(
   const results: BatchResult[] = [];
 
   debugLog(`🚀 Executing ${operations.length} PumpFun operations in batches of ${maxParallel}`);
+  debugLog(`📊 Batch options: maxParallel=${maxParallel}, delayBetween=${delayBetween}ms, retryFailed=${retryFailed}, combinePerBatch=${combinePerBatch}`);
   if (feePayer) {
     debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
   } else {
@@ -143,59 +129,60 @@ export async function executePumpFunBatch(
                 const { recipient, mint, amount } = operation.params;
                 if (!assumeAccountsExist)
                   throw new Error('combinePerBatch requires assumeAccountsExist for transfers');
-                const sourceAta = getAssociatedTokenAddressSync(
-                  new PublicKey(mint),
+                
+                // Use the utility function from sendToken.ts for consistency
+                const transferInstruction = createTokenTransferInstruction(
                   sender.publicKey,
-                  false
-                );
-                const destAta = getAssociatedTokenAddressSync(
-                  new PublicKey(mint),
                   new PublicKey(recipient),
-                  false
+                  new PublicKey(mint),
+                  BigInt(amount),
+                  false // allowOwnerOffCurve
                 );
-                instructions.push(
-                  createTransferInstruction(
-                    sourceAta,
-                    destAta,
-                    sender.publicKey,
-                    BigInt(amount),
-                    [],
-                    TOKEN_PROGRAM_ID
-                  )
-                );
+                instructions.push(transferInstruction);
                 break;
               }
               case 'sol-transfer': {
                 const { recipient, lamports } = operation.params;
-                // Build a SystemProgram transfer inside a combined tx
-                instructions.push(
-                  SystemProgram.transfer({
-                    fromPubkey: sender.publicKey,
-                    toPubkey: new PublicKey(recipient),
-                    lamports: Number(lamports),
-                  })
+                // Use the utility function from sendSol.ts for consistency
+                const solTransferInstruction = createSendSolInstruction(
+                  sender,
+                  new PublicKey(recipient),
+                  Number(lamports) / 1e9, // Convert lamports to SOL
+                  feePayer?.publicKey
                 );
+                instructions.push(solTransferInstruction);
                 break;
               }
               case 'buy-bonding-curve': {
                 const { mint, solAmount, slippage = 1000 } = operation.params;
+                // Get PDAs for bonding curve buy
+                const pdas = await getBondingCurvePDAs(connection, new PublicKey(mint), sender.publicKey);
                 instructions.push(
                   createBondingCurveBuyInstruction(
                     sender.publicKey,
                     new PublicKey(mint),
                     new BN(Number(solAmount) * 1e9),
+                    pdas,
+                    slippage
                   )
                 );
                 break;
               }
               case 'sell-bonding-curve': {
-                const { mint, amount, minSolOutputLamports = 1 } = operation.params;
+                const { mint, amount, slippage = 1000 } = operation.params;
+                // Get PDAs for bonding curve sell
+                const pdas = await getBondingCurvePDAs(connection, new PublicKey(mint), sender.publicKey);
+                // Convert amount to smallest units (6 decimals)
+                const tokenAmountInSmallestUnits = amount * Math.pow(10, 6);
+                // Calculate min SOL output (very low to avoid slippage issues)
+                const minSolOutput = 0.000001 * 1e9; // 0.000001 SOL in lamports
                 instructions.push(
                   createBondingCurveSellInstruction(
                     sender.publicKey,
                     new PublicKey(mint),
-                    new BN(Number(amount)),
-                    new BN(Number(minSolOutputLamports))
+                    tokenAmountInSmallestUnits,
+                    minSolOutput,
+                    pdas
                   )
                 );
                 break;
@@ -238,8 +225,11 @@ export async function executePumpFunBatch(
           instructions.forEach(ix => tx.add(ix));
           const { blockhash } = await connection.getLatestBlockhash('confirmed');
           tx.recentBlockhash = blockhash;
-          tx.feePayer = sender.publicKey; // sender pays fees
+          tx.feePayer = feePayer?.publicKey || sender.publicKey; // Use fee payer if provided
           tx.sign(sender);
+          if (feePayer && !feePayer.publicKey.equals(sender.publicKey)) {
+            tx.sign(feePayer);
+          }
           const signature = await connection.sendRawTransaction(tx.serialize(), {
             skipPreflight: false,
             preflightCommitment: 'confirmed',
@@ -283,24 +273,129 @@ export async function executePumpFunBatch(
         let result: OperationResult;
 
         switch (operation.type) {
-          case 'transfer':
-            result = await executeTransfer(connection, wallet, feePayer, operation.params);
+          case 'transfer': {
+            const { recipient, mint, amount, createAccount = true } = operation.params;
+            
+            if (createAccount) {
+              const transferResult = await sendTokenWithAccountCreation(
+                connection,
+                wallet,
+                new PublicKey(recipient),
+                new PublicKey(mint),
+                BigInt(amount),
+                false, // allowOwnerOffCurve
+                feePayer
+              );
+              if (transferResult.success && transferResult.signature) {
+                result = { success: true, signature: transferResult.signature, amount, mint };
+              } else {
+                result = { success: false, error: transferResult.error || 'Transfer failed' };
+              }
+            } else {
+              const transferResult = await sendToken(
+                connection,
+                wallet,
+                new PublicKey(recipient),
+                new PublicKey(mint),
+                BigInt(amount),
+                false, // allowOwnerOffCurve
+                false, // createRecipientAccount
+                feePayer
+              );
+              if (transferResult.success && transferResult.signature) {
+                result = { success: true, signature: transferResult.signature, amount, mint };
+              } else {
+                result = { success: false, error: transferResult.error || 'Transfer failed' };
+              }
+            }
             break;
-          case 'sol-transfer':
-            result = await executeSolTransfer(connection, wallet, operation.params);
+          }
+          case 'sol-transfer': {
+            const { recipient, lamports, sender } = operation.params;
+            // Convert lamports to SOL and use sendSol for consistency
+            const amountSol = Number(lamports) / 1e9;
+            const senderKeypair = sender && sender !== wallet.publicKey.toString()
+              ? Keypair.fromSecretKey(Buffer.from(JSON.parse(sender)))
+              : wallet;
+            
+            const sendResult = await sendSol(
+              connection,
+              senderKeypair,
+              new PublicKey(recipient),
+              amountSol,
+              feePayer
+            );
+            
+            if (sendResult.success && sendResult.signature) {
+              result = { success: true, signature: sendResult.signature };
+            } else {
+              result = { success: false, error: sendResult.error || 'SOL transfer failed' };
+            }
             break;
-          case 'sell-bonding-curve':
-            result = await executeBondingCurveSell(connection, wallet, feePayer, operation.params);
+          }
+          case 'sell-bonding-curve': {
+            const { mint, amount } = operation.params;
+            const sellResult = await sellPumpFunToken(
+              connection,
+              wallet,
+              new PublicKey(mint),
+              amount
+            );
+            if (sellResult.success && sellResult.signature) {
+              result = { success: true, signature: sellResult.signature, amount, mint };
+            } else {
+              result = { success: false, error: sellResult.error || 'Sell failed' };
+            }
             break;
-          case 'sell-amm':
-            result = await executeAmmSell(connection, wallet, feePayer, operation.params);
+          }
+          case 'sell-amm': {
+            const { poolKey, amount, slippage = 1 } = operation.params;
+            const sellResult = await sellAmmTokens(
+              connection,
+              wallet,
+              new PublicKey(poolKey),
+              amount,
+              slippage,
+              feePayer
+            );
+            if (sellResult.success && sellResult.signature) {
+              // For AMM operations, poolKey is not a mint, so we use it as identifier
+              result = { success: true, signature: sellResult.signature, amount, mint: poolKey };
+            } else {
+              result = { success: false, error: sellResult.error || 'Sell failed' };
+            }
             break;
-          case 'buy-amm':
-            result = await executeAmmBuy(connection, wallet, operation.params);
+          }
+          case 'buy-amm': {
+            const { poolKey, quoteAmount, slippage = 1, assumeAccountsExist = true } = operation.params;
+            const buyResult = await buyAmmTokens(
+              connection,
+              wallet,
+              new PublicKey(poolKey),
+              Number(quoteAmount),
+              Number(slippage),
+              feePayer || wallet,
+              { assumeAccountsExist }
+            );
+            if (buyResult.success && buyResult.signature) {
+              result = { success: true, signature: buyResult.signature, amount: quoteAmount, mint: poolKey };
+            } else {
+              result = { success: false, error: buyResult.error || 'Buy failed' };
+            }
             break;
-          case 'buy-bonding-curve':
-            result = await executeBondingCurveBuy(connection, wallet, operation.params);
+          }
+          case 'buy-bonding-curve': {
+            const { mint, solAmount, slippage = 1000 } = operation.params;
+            const signature = await buyPumpFunToken(
+              connection,
+              wallet,
+              new PublicKey(mint),
+              Number(solAmount),
+              Number(slippage)
+            );
+            result = { success: true, signature, amount: solAmount, mint };
             break;
+          }
           default:
             throw new Error(`Unknown operation type: ${operation.type}`);
         }
@@ -390,15 +485,105 @@ async function executeOperation(
     let result: OperationResult;
 
     switch (operation.type) {
-      case 'transfer':
-        result = await executeTransfer(connection, wallet, feePayer, operation.params);
+      case 'transfer': {
+        const { recipient, mint, amount, createAccount = true } = operation.params;
+        
+        if (createAccount) {
+          const transferResult = await sendTokenWithAccountCreation(
+            connection,
+            wallet,
+            new PublicKey(recipient),
+            new PublicKey(mint),
+            BigInt(amount),
+            false, // allowOwnerOffCurve
+            feePayer
+          );
+          if (transferResult.success && transferResult.signature) {
+            result = { success: true, signature: transferResult.signature, amount, mint };
+          } else {
+            result = { success: false, error: transferResult.error || 'Transfer failed' };
+          }
+        } else {
+          const transferResult = await sendToken(
+            connection,
+            wallet,
+            new PublicKey(recipient),
+            new PublicKey(mint),
+            BigInt(amount),
+            false, // allowOwnerOffCurve
+            false, // createRecipientAccount
+            feePayer
+          );
+          if (transferResult.success && transferResult.signature) {
+            result = { success: true, signature: transferResult.signature, amount, mint };
+          } else {
+            result = { success: false, error: transferResult.error || 'Transfer failed' };
+          }
+        }
         break;
-      case 'sell-bonding-curve':
-        result = await executeBondingCurveSell(connection, wallet, feePayer, operation.params);
+      }
+      case 'sell-bonding-curve': {
+        const { mint, amount, slippage = 1000 } = operation.params;
+        const sellResult = await sellPumpFunToken(
+          connection,
+          wallet,
+          new PublicKey(mint),
+          amount
+        );
+        if (sellResult.success && sellResult.signature) {
+          result = { success: true, signature: sellResult.signature, amount, mint };
+        } else {
+          result = { success: false, error: sellResult.error || 'Sell failed' };
+        }
         break;
-      case 'sell-amm':
-        result = await executeAmmSell(connection, wallet, feePayer, operation.params);
+      }
+      case 'sell-amm': {
+        const { poolKey, amount, slippage = 1 } = operation.params;
+        const sellResult = await sellAmmTokens(
+          connection,
+          wallet,
+          new PublicKey(poolKey),
+          amount,
+          slippage,
+          feePayer
+        );
+        if (sellResult.success && sellResult.signature) {
+          result = { success: true, signature: sellResult.signature, amount, mint: poolKey };
+        } else {
+          result = { success: false, error: sellResult.error || 'Sell failed' };
+        }
         break;
+      }
+      case 'buy-amm': {
+        const { poolKey, quoteAmount, slippage = 1, assumeAccountsExist = true } = operation.params;
+        const buyResult = await buyAmmTokens(
+          connection,
+          wallet,
+          new PublicKey(poolKey),
+          Number(quoteAmount),
+          Number(slippage),
+          feePayer || wallet,
+          { assumeAccountsExist }
+        );
+        if (buyResult.success && buyResult.signature) {
+          result = { success: true, signature: buyResult.signature, amount: quoteAmount, mint: poolKey };
+        } else {
+          result = { success: false, error: buyResult.error || 'Buy failed' };
+        }
+        break;
+      }
+      case 'buy-bonding-curve': {
+        const { mint, solAmount, slippage = 1000 } = operation.params;
+        const signature = await buyPumpFunToken(
+          connection,
+          wallet,
+          new PublicKey(mint),
+          Number(solAmount),
+          Number(slippage)
+        );
+        result = { success: true, signature, amount: solAmount, mint };
+        break;
+      }
       default:
         throw new Error(`Unknown operation type: ${operation.type}`);
     }
@@ -419,221 +604,6 @@ async function executeOperation(
       type: operation.type,
       success: false,
       error: errorMessage,
-    };
-  }
-}
-
-/**
- * Execute token transfer operation
- */
-async function executeTransfer(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair | undefined,
-  params: TransferParams
-): Promise<OperationResult> {
-  const { recipient, mint, amount, createAccount = true } = params;
-
-  try {
-    if (createAccount) {
-      return await sendTokenWithAccountCreation(
-        connection,
-        wallet,
-        new PublicKey(recipient),
-        new PublicKey(mint),
-        BigInt(amount),
-        false, // allowOwnerOffCurve
-        feePayer
-      );
-    } else {
-      return await sendToken(
-        connection,
-        wallet,
-        new PublicKey(recipient),
-        new PublicKey(mint),
-        BigInt(amount),
-        false, // allowOwnerOffCurve
-        false, // createRecipientAccount
-        feePayer
-      );
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
-/**
- * Execute SOL transfer (lamports -> lamports) with sender paying its own fee
- */
-async function executeSolTransfer(
-  connection: Connection,
-  wallet: Keypair,
-  params: SolTransferParams
-): Promise<OperationResult> {
-  const { recipient, lamports, sender } = params;
-
-  try {
-    const senderKeypair =
-      sender && sender !== wallet.publicKey.toString()
-        ? Keypair.fromSecretKey(Buffer.from(JSON.parse(sender)))
-        : wallet;
-    const signature = await sendLamports(
-      connection,
-      senderKeypair,
-      new PublicKey(recipient),
-      Number(lamports),
-      senderKeypair // sender pays fee
-    );
-
-    return { success: true, signature };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
-/**
- * Execute bonding curve sell operation
- */
-async function executeBondingCurveSell(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair | undefined,
-  params: BondingCurveSellParams
-): Promise<OperationResult> {
-  const { mint, amount, slippage = 1000 } = params;
-
-  try {
-    debugLog(`🔧 Executing bonding curve sell for ${amount} tokens`);
-    debugLog(`🎯 Mint: ${mint}`);
-    debugLog(`📊 Slippage: ${slippage} basis points`);
-
-    const result = await createBondingCurveSellInstruction(
-      connection,
-      wallet,
-      new PublicKey(mint),
-      amount,
-      slippage,
-      feePayer
-    );
-
-    if (result.success && result.transaction) {
-      // Submit the signed transaction
-      const signature = await connection.sendRawTransaction(result.transaction.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-      });
-
-      // Wait for confirmation
-      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${confirmation.value.err}`);
-      }
-
-      return {
-        success: true,
-        signature,
-        amount,
-        mint,
-      };
-    } else {
-      throw new Error(result.error || 'Failed to create signed sell transaction');
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logError(`Bonding curve sell failed: ${errorMessage}`);
-
-    return {
-      success: false,
-      error: errorMessage,
-    };
-  }
-}
-
-/**
- * Execute AMM sell operation
- */
-async function executeAmmSell(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair | undefined,
-  params: AmmSellParams
-): Promise<OperationResult> {
-  const { poolKey, amount, slippage = 1 } = params;
-
-  try {
-    debugLog(`💸 Selling tokens to pool: ${poolKey}`);
-    debugLog(`Token amount: ${amount}`);
-
-    return await sellAmmTokens as sellAmmTokens(connection, wallet, new PublicKey(poolKey), amount, slippage, feePayer);
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
-/**
- * Execute AMM buy with wallet paying its own fee and optional ATA skip
- */
-async function executeAmmBuy(
-  connection: Connection,
-  wallet: Keypair,
-  params: AmmBuyParams
-): Promise<OperationResult> {
-  const { poolKey, quoteAmount, slippage = 1, assumeAccountsExist = true } = params;
-
-  try {
-    return await buyAmmTokens(
-      connection,
-      wallet,
-      new PublicKey(poolKey),
-      Number(quoteAmount),
-      Number(slippage),
-      wallet, // fee payer is the signer wallet
-      { assumeAccountsExist }
-    );
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
-/**
- * Execute bonding curve buy with wallet paying its own fee and optional ATA skip
- */
-async function executeBondingCurveBuy(
-  connection: Connection,
-  wallet: Keypair,
-  params: BondingCurveBuyParams
-): Promise<OperationResult> {
-  const { mint, solAmount, slippage = 1000, assumeAccountsExist = true } = params;
-
-  try {
-    const signature = await    buyBcurve(
-      connection,
-      wallet,
-      new PublicKey(mint),
-      Number(solAmount),
-      Number(slippage),
-      wallet, // signer pays fee
-      { assumeAccountsExist }
-    );
-
-    return { success: true, signature };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
     };
   }
 }

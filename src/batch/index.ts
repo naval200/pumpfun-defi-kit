@@ -1,1 +1,1 @@
-export { executePumpFunBatch, validatePumpFunBatchOperations } from './pumpfun-batch';
+export { executeBatch, validatePumpFunBatchOperations } from './pumpfun-batch';

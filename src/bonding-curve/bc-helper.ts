@@ -407,6 +407,22 @@ export function getEventAuthorityPDA(): PublicKey {
   return eventAuthority;
 }
 
+/**
+ * Get bonding curve PDAs for batch operations
+ * This function provides a clean interface for batch operations to get required PDAs
+ * @param connection - Solana connection
+ * @param mint - Token mint public key
+ * @param user - User public key
+ * @returns Object containing all required PDAs for bonding curve operations
+ */
+export async function getBondingCurvePDAs(
+  connection: Connection,
+  mint: PublicKey,
+  user: PublicKey
+) {
+  return await getAllRequiredPDAsForBuyAsync(connection, PUMP_PROGRAM_ID, mint, user);
+}
+
 // ============================================================================
 // GLOBAL ACCOUNT INITIALIZATION
 // ============================================================================
@@ -417,48 +433,6 @@ export function getEventAuthorityPDA(): PublicKey {
 export function getGlobalPDA(programId: PublicKey): PublicKey {
   const [globalPDA] = PublicKey.findProgramAddressSync([GLOBAL_SEED], programId);
   return globalPDA;
-}
-
-// REMOVED: onboardUserForBondingCurve function - redundant with createAccount.ts
-
-// REMOVED: isUserOnboardedForBondingCurve function - redundant with createAccount.ts
-
-/**
- * Ensure required ATAs (user and bonding curve) for buy/sell flows.
- * When assumeAccountsExist is true, this is a no-op (no RPC).
- * 
- * @deprecated Use createAccount.ts functions instead for comprehensive setup
- */
-export async function ensureBondingCurveAtas(
-  connection: Connection,
-  wallet: Keypair,
-  mint: PublicKey
-): Promise<void> {
-  logWarning('⚠️ ensureBondingCurveAtas is deprecated. Use onboardUserForBondingCurve for comprehensive setup.');
-  
-  // Ensure user ATA
-  const userAtaResult = await getOrCreateAssociatedTokenAccount(
-    connection,
-    wallet,
-    wallet.publicKey,
-    mint
-  );
-  if (!userAtaResult.success) {
-    throw new Error(`Failed to create user ATA: ${userAtaResult.error}`);
-  }
-
-  // Ensure bonding curve ATA (owner off curve)
-  const [bondingCurve] = deriveBondingCurveAddress(mint);
-  const bondingCurveAtaResult = await getOrCreateAssociatedTokenAccount(
-    connection,
-    wallet,
-    bondingCurve,
-    mint,
-    true
-  );
-  if (!bondingCurveAtaResult.success) {
-    throw new Error(`Failed to create bonding curve ATA: ${bondingCurveAtaResult.error}`);
-  }
 }
 
 /**

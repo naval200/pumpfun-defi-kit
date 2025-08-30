@@ -1,6 +1,13 @@
-import { Connection, PublicKey, Keypair, Transaction } from '@solana/web3.js';
+import {
+  Connection,
+  PublicKey,
+  Keypair,
+  Transaction,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import {
   getAssociatedTokenAddress,
+  getAssociatedTokenAddressSync,
   createTransferInstruction,
   getAccount,
   TOKEN_PROGRAM_ID,
@@ -267,6 +274,36 @@ export async function sendTokenToExistingAccount(
     allowOwnerOffCurve,
     false,
     feePayer
+  );
+}
+
+/**
+ * Create a token transfer instruction for batching
+ * This function creates the instruction without executing the transfer
+ * @param sender - Sender's public key
+ * @param recipient - Recipient's public key  
+ * @param mint - Token mint public key
+ * @param amount - Amount to transfer (as bigint)
+ * @param allowOwnerOffCurve - Whether to allow owner off curve (default: false)
+ * @returns TransactionInstruction ready for batching
+ */
+export function createTokenTransferInstruction(
+  sender: PublicKey,
+  recipient: PublicKey,
+  mint: PublicKey,
+  amount: bigint,
+  allowOwnerOffCurve: boolean = false
+): TransactionInstruction {
+  const sourceAta = getAssociatedTokenAddressSync(mint, sender, false);
+  const destAta = getAssociatedTokenAddressSync(mint, recipient, allowOwnerOffCurve);
+  
+  return createTransferInstruction(
+    sourceAta,
+    destAta,
+    sender,
+    amount,
+    [],
+    TOKEN_PROGRAM_ID
   );
 }
 

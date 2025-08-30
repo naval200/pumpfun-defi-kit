@@ -8,3 +8,6 @@ export {
   createBondingCurveBuyInstruction,
   createBondingCurveSellInstruction,
 } from './idl/instructions';
+
+// Utility functions
+export { getBondingCurvePDAs } from './bc-helper';
