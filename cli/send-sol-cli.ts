@@ -151,13 +151,7 @@ async function main() {
 
     // Execute SOL transfer
     console.log('\n🚀 Executing SOL transfer...');
-    const result = await sendSol(
-      connection,
-      fromWallet,
-      toAddress,
-      args.amount,
-      feePayer
-    );
+    const result = await sendSol(connection, fromWallet, toAddress, args.amount, feePayer);
 
     if (result.success) {
       console.log('✅ SOL transfer successful!');

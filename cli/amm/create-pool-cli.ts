@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { createPool } from '../../src/amm/createPool';
+import { createPool } from '../../src/amm';
 import fs from 'fs';
 import path from 'path';
 

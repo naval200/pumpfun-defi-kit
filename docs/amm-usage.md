@@ -80,22 +80,46 @@ if (sellResult.success) {
 
 ## CLI Usage
 
-### Interactive AMM CLI
+### AMM Liquidity CLI
 
-Run the interactive CLI for easy AMM operations:
+The AMM liquidity CLI allows you to add and remove liquidity from trading pools:
 
 ```bash
-npm run amm-cli
+# Add liquidity to a pool
+npm run cli:amm:liquidity -- --action add --input-token ./wallets/token-info.json --wallet ./wallets/creator-wallet.json --amount 1000
+
+# Remove liquidity from a pool
+npm run cli:amm:liquidity -- --action remove --input-token ./wallets/token-info.json --wallet ./wallets/creator-wallet.json --amount 500
+
+# With custom slippage (100 basis points = 1%)
+npm run cli:amm:liquidity -- --action add --input-token ./wallets/token-info.json --wallet ./wallets/creator-wallet.json --amount 1000 --slippage 100
+
+# With specific pool key
+npm run cli:amm:liquidity -- --action add --input-token ./wallets/token-info.json --wallet ./wallets/creator-wallet.json --amount 1000 --pool-key <pool-address>
 ```
 
-This provides a menu-driven interface for all AMM operations.
-
-### AMM Demo
-
-Run the demonstration script:
+### AMM Buy/Sell CLI
 
 ```bash
-npm run amm-demo
+# Buy tokens from AMM pool
+npm run cli:amm:buy -- --amount 0.1 --input-token ./wallets/token-info.json --wallet ./wallets/creator-wallet.json
+
+# Sell tokens to AMM pool
+npm run cli:amm:sell -- --amount 1000 --input-token ./wallets/token-info.json --wallet ./wallets/creator-wallet.json
+```
+
+### AMM Pool Creation CLI
+
+```bash
+# Create a new AMM pool
+npm run cli:amm:create-pool -- --input-token ./wallets/token-info.json --wallet ./wallets/creator-wallet.json --amount 1000000 --sol-amount 0.1
+```
+
+### AMM Info CLI
+
+```bash
+# Get pool information
+npm run cli:amm:info -- --input-token ./wallets/token-info.json
 ```
 
 ## Testing AMM Functionality
@@ -137,9 +161,11 @@ npm run test:amm:runner
 
 #### Wallet Setup
 
+- **Required**: All AMM CLI commands now require the `--wallet` parameter
 - Ensure you have a test wallet in `wallets/creator-wallet.json`
 - Wallet should have at least 0.2 SOL for comprehensive testing
 - Minimum 0.1 SOL for basic functionality
+- **Important**: The `--wallet` parameter specifies the wallet file, not the token info file
 
 #### Token Requirements
 
@@ -316,17 +342,22 @@ history.forEach(tx => {
 
 ### Common Issues
 
-1. **Transaction Failures**
+1. **Wallet Parameter Errors**
+   - **Error**: `"bad secret key size"` or `"Failed to load wallet from token-info.json"`
+   - **Solution**: Always use `--wallet` parameter to specify wallet file, not `--input-token`
+   - **Example**: `--wallet ./wallets/creator-wallet.json` (not `--input-token ./wallets/creator-wallet.json`)
+
+2. **Transaction Failures**
    - Check wallet balance
    - Verify pool exists and is healthy
    - Increase priority fees for network congestion
 
-2. **Pool Not Found**
+3. **Pool Not Found**
    - Verify token mint address
    - Check if pool has been created
    - Ensure pool is on the correct network
 
-3. **Insufficient Liquidity**
+4. **Insufficient Liquidity**
    - Check pool reserves
    - Reduce trade size
    - Wait for more liquidity to be added

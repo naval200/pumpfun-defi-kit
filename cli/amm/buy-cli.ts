@@ -1,8 +1,7 @@
 #!/usr/bin/env tsx
 
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { buyTokens } from '../../src/amm/buy';
-import { findPoolsForToken } from '../../src/amm/amm';
+import { buyTokens, findPoolsForToken } from '../../src/amm';
 import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
 
 /**

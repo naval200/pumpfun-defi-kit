@@ -76,7 +76,24 @@ async function main() {
 
     if (poolInfo) {
       console.log('✅ Pool information retrieved successfully');
-      console.log('📊 Pool Data:', JSON.stringify(poolInfo, null, 2));
+      
+      // Safely serialize pool info without BigInt issues
+      try {
+        const safePoolInfo = JSON.parse(JSON.stringify(poolInfo, (key, value) =>
+          typeof value === 'bigint' ? value.toString() : value
+        ));
+        console.log('📊 Pool Data:', JSON.stringify(safePoolInfo, null, 2));
+        
+        // Extract key pool metrics
+        if (safePoolInfo.poolBaseAmount && safePoolInfo.poolQuoteAmount) {
+          console.log('\n🏊 Pool Liquidity Summary:');
+          console.log(`Base Tokens (TBC): ${Number(safePoolInfo.poolBaseAmount)}`);
+          console.log(`Quote Tokens (SOL): ${Number(safePoolInfo.poolQuoteAmount) / 1e9} SOL`);
+        }
+      } catch (e) {
+        console.log('📊 Pool Data (raw):', poolInfo);
+        console.log('⚠️  Could not parse pool data due to serialization issues');
+      }
     } else {
       console.log('❌ Failed to retrieve pool information');
     }

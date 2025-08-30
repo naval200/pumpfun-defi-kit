@@ -79,7 +79,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
-    "@pump-fun/pump-swap-sdk": "^1.6.1",
+    "@pump-fun/pump-swap-sdk": "^1.7.2",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.95.4",
     "@types/bignumber.js": "^4.0.3",
