@@ -1,0 +1,42 @@
+[
+  {
+    "type": "sell-bonding-curve",
+    "id": "sell-test-1",
+    "description": "Sell 10 tokens via bonding curve",
+    "params": {
+      "mint": "5vBb8V71G3PN3d5VhyjMbCPqXzW2BFdwrcu1YyLs3jh",
+      "amount": 10,
+      "slippage": 1000
+    }
+  },
+  {
+    "type": "buy-bonding-curve",
+    "id": "buy-test-1",
+    "description": "Buy 0.05 SOL worth of tokens",
+    "params": {
+      "mint": "5vBb8V71G3PN3d5VhyjMbCPqXzW2BFdwrcu1YyLs3jh",
+      "solAmount": 0.05,
+      "slippage": 1000
+    }
+  },
+  {
+    "type": "sol-transfer",
+    "id": "sol-transfer-test",
+    "description": "Send 0.01 SOL to a test address",
+    "params": {
+      "recipient": "11111111111111111111111111111111",
+      "lamports": 10000000
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "token-transfer-test",
+    "description": "Send 5 tokens to a test address",
+    "params": {
+      "recipient": "11111111111111111111111111111111",
+      "mint": "5vBb8V71G3PN3d5VhyjMbCPqXzW2BFdwrcu1YyLs3jh",
+      "amount": "5000000",
+      "createAccount": false
+    }
+  }
+]

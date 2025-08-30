@@ -10,6 +10,7 @@ import { TokenConfig, CreateTokenResult } from '../@types';
 import { sendAndConfirmRawTransaction, getExplorerUrl } from '../utils/transaction';
 import { getGlobalPDA, isGlobalAccountInitialized, initializeGlobalAccount } from './bc-helper';
 import { PUMP_PROGRAM_ID } from './idl/constants';
+import { createAssociatedTokenAccount } from '../createAccount';
 
 import { SimpleWallet } from '../utils/wallet';
 import IDL from './idl/pump_program.json';
@@ -223,6 +224,21 @@ export async function createPumpFunToken(
         // Additional wait to ensure all accounts are properly initialized
         await new Promise(resolve => setTimeout(resolve, 2000));
 
+        // Create associated token account for the wallet to hold the tokens
+        log('🏗️ Creating associated token account for wallet...');
+        const createAtaResult = await createAssociatedTokenAccount(
+          connection,
+          wallet, // payer
+          wallet.publicKey, // owner
+          mint.publicKey // mint
+        );
+        
+        if (!createAtaResult.success) {
+          throw new Error(`Failed to create associated token account: ${createAtaResult.error}`);
+        }
+        
+        logSuccess(`✅ Associated token account created: ${createAtaResult.account?.toString()}`);
+        
         // Execute the initial buy using buy (no creator vault needed)
         const buySignature = await buyPumpFunToken(
           connection,
