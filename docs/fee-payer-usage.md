@@ -33,37 +33,37 @@ The following operations now support fee payers:
 # Buy tokens with separate fee payer
 npm run cli:bc-buy \
   --amount 0.1 \
-  --input-token ./wallets/token-info.json \
-  --wallet ./wallets/user-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/user-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 
 # Sell tokens with separate fee payer
 npm run cli:bc-sell \
   --amount 1000 \
-  --input-token ./wallets/token-info.json \
-  --wallet ./wallets/user-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/user-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 
 # Send tokens with separate fee payer
 npm run cli:send-token \
   --recipient 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
   --mint 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU \
   --amount 1000 \
-  --wallet ./wallets/sender-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --wallet ./fixtures/sender-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 
 # AMM operations with fee payer
 npm run cli:amm-buy \
   --amount 0.1 \
-  --input-token ./wallets/token-info.json \
-  --wallet ./wallets/user-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/user-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 
 npm run cli:amm-sell \
   --amount 1000 \
-  --input-token ./wallets/token-info.json \
-  --wallet ./wallets/user-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/user-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 ```
 
 ### Advanced Scenarios
@@ -71,11 +71,11 @@ npm run cli:amm-sell \
 #### Treasury Wallet Setup
 ```bash
 # Create a treasury wallet for fee payments
-solana-keygen new -o ./wallets/treasury-wallet.json
+solana-keygen new -o ./fixtures/treasury-wallet.json
 
 # Fund the treasury wallet with SOL for fees
 solana transfer --from ~/.config/solana/id.json \
-  --to $(solana-keygen pubkey ./wallets/treasury-wallet.json) \
+  --to $(solana-keygen pubkey ./fixtures/treasury-wallet.json) \
   --amount 1 \
   --url devnet
 ```
@@ -85,13 +85,13 @@ solana transfer --from ~/.config/solana/id.json \
 # Multiple users can use the same treasury for fees
 npm run cli:bc-buy \
   --amount 0.05 \
-  --wallet ./wallets/user1-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --wallet ./fixtures/user1-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 
 npm run cli:bc-buy \
   --amount 0.03 \
-  --wallet ./wallets/user2-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --wallet ./fixtures/user2-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 ```
 
 ## Programmatic Usage
@@ -243,12 +243,12 @@ if (error.message.includes('Transaction signature verification failed')) {
 
 1. **Check fee payer balance**:
    ```bash
-   solana balance --url devnet ./wallets/treasury-wallet.json
+   solana balance --url devnet ./fixtures/treasury-wallet.json
    ```
 
 2. **Verify wallet file format**:
    ```bash
-   solana-keygen verify ./wallets/treasury-wallet.json
+   solana-keygen verify ./fixtures/treasury-wallet.json
    ```
 
 3. **Test with small amounts** first to validate setup
