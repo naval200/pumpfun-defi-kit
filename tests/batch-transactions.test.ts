@@ -68,6 +68,23 @@ describe('Batch Transactions', () => {
       expect(bcSellOperation.params).toHaveProperty('amount');
       expect(bcSellOperation.params).toHaveProperty('slippage');
     });
+
+    it('should support SOL transfer operations', () => {
+      const solTransferOperation = {
+        type: 'sol-transfer',
+        id: 'sol-transfer-1',
+        description: 'Test SOL transfer',
+        params: {
+          recipient: '77777777777777777777777777777777',
+          lamports: 1000000000, // 1 SOL
+        },
+      };
+
+      expect(solTransferOperation.type).toBe('sol-transfer');
+      expect(solTransferOperation.params).toHaveProperty('recipient');
+      expect(solTransferOperation.params).toHaveProperty('lamports');
+      expect(typeof solTransferOperation.params.lamports).toBe('number');
+    });
   });
 
   describe('Operation Validation', () => {
@@ -138,6 +155,17 @@ describe('Batch Transactions', () => {
       expect(typeof bcParams.amount).toBe('number');
       expect(typeof bcParams.slippage).toBe('number');
       expect(bcParams.slippage).toBeGreaterThan(0);
+    });
+
+    it('should validate SOL transfer parameters', () => {
+      const solParams = {
+        recipient: '77777777777777777777777777777777',
+        lamports: 1000000000, // 1 SOL
+      };
+
+      expect(solParams.recipient).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+      expect(typeof solParams.lamports).toBe('number');
+      expect(solParams.lamports).toBeGreaterThan(0);
     });
   });
 
