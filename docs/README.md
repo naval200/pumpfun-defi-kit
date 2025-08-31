@@ -6,13 +6,19 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 
 ### Getting Started
 
+- **[Getting Started Guide](./GETTING_STARTED.md)** - Complete setup and first steps
 - **[Main README](../README.md)** - Project overview and quick start guide
 - **[Installation Guide](../README.md#installation)** - How to install and set up
 
 ### API Reference
 
+- **[API Reference](./API_REFERENCE.md)** - Comprehensive API documentation with examples
 - **[API Overview](../README.md#api-reference)** - Core functions and usage examples
 - **[Configuration](../README.md#configuration)** - Environment variables and settings
+
+### Architecture & Design
+
+- **[Architecture Overview](./ARCHITECTURE_OVERVIEW.md)** - System design and component interactions
 
 ## 🏗️ Development & Testing
 
@@ -23,7 +29,6 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 ### Development Tools
 
 - **[Debug Scripts Guide](./debug-scripts-guide.md)** - Debug mode, logging configuration, and testing scripts
-- **[Commit Summary](./COMMIT_SUMMARY.md)** - Detailed documentation of major changes
 
 ### AMM (Automated Market Maker)
 
@@ -34,13 +39,8 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 
 - **[Batch Transactions Usage](./batch-transactions-usage.md)** - CLI and programmatic API for batch operations
 
-### Bonding Curve
-
-- **[Sell Testing Guide](./sell-testing-guide.md)** - Testing selling functionality
-
 ## 🔧 SDK Documentation
 
-- **[PumpSDK Documentation](./pumpsdk-documentation.md)** - PumpSDK integration guide
 - **[PumpSwap Documentation](./pumpswap-documentation.md)** - PumpSwap SDK usage
 
 ### Advanced Features
@@ -59,7 +59,9 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 
 ## 🔍 Quick Navigation
 
-- **New to the project?** Start with the [Main README](../README.md)
+- **New to the project?** Start with the [Getting Started Guide](./GETTING_STARTED.md)
+- **Want to understand the system?** Read the [Architecture Overview](./ARCHITECTURE_OVERVIEW.md)
+- **Need API details?** Check the [API Reference](./API_REFERENCE.md)
 - **Want to test?** Check the [Testing Guide](./TESTING_GUIDE.md)
 - **Building AMM features?** See [AMM Usage Guide](./amm-usage.md)
 - **Ready to contribute?** Read [Contributing Guidelines](./CONTRIBUTING.md)
@@ -69,23 +71,45 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 ```
 docs/
 ├── README.md                           # This index file
-├── TESTING_GUIDE.md                   # Comprehensive testing guide
-├── batch-transactions-usage.md        # Batch operations CLI and API
-├── amm-usage.md                       # AMM functionality and testing guide
-├── pool-creation-guide.md             # Pool management
-├── sell-testing-guide.md              # Selling functionality
-├── pumpsdk-documentation.md           # PumpSDK integration
-├── pumpswap-documentation.md          # PumpSwap SDK usage
-├── PUBLISHING_CHECKLIST.md            # NPM publishing guide
-├── CONTRIBUTING.md                    # Contribution guidelines
-├── SECURITY.md                        # Security policies
-├── CHANGELOG.md                       # Version history
-├── COMMIT_SUMMARY.md                  # Detailed commit documentation
-├── debug-scripts-guide.md             # Debug mode, logging, and testing scripts
-├── fee-payer-usage.md                 # Fee payer usage examples and guide
-├── graduation-utils-usage.md          # Graduation utilities guide
-└── send-token-usage.md                # Token transfer usage guide
+├── GETTING_STARTED.md                  # Complete setup and first steps
+├── API_REFERENCE.md                    # Comprehensive API documentation
+├── ARCHITECTURE_OVERVIEW.md            # System design and architecture
+├── TESTING_GUIDE.md                    # Comprehensive testing guide
+├── batch-transactions-usage.md         # Batch operations CLI and API
+├── amm-usage.md                        # AMM functionality and testing guide
+├── pool-creation-guide.md              # Pool management
+├── pumpswap-documentation.md           # PumpSwap SDK usage
+├── PUBLISHING_CHECKLIST.md             # NPM publishing guide
+├── CONTRIBUTING.md                     # Contribution guidelines
+├── SECURITY.md                         # Security policies
+├── CHANGELOG.md                        # Version history
+├── debug-scripts-guide.md              # Debug mode, logging, and testing scripts
+├── fee-payer-usage.md                  # Fee payer usage examples and guide
+└── send-token-usage.md                 # Token transfer usage guide
 ```
+
+## 📚 Documentation for LLMs and Developers
+
+This documentation is specifically designed to help **LLMs and developers** implement features effectively:
+
+### **For LLMs:**
+- **Complete API Reference** - All function signatures, parameters, and return types
+- **Architecture Overview** - System design patterns and component interactions
+- **Comprehensive Examples** - Real-world usage patterns and code samples
+- **Error Handling** - Complete error handling patterns and recovery strategies
+
+### **For Developers:**
+- **Getting Started Guide** - Step-by-step setup and first examples
+- **Best Practices** - Proven patterns and recommendations
+- **Integration Examples** - Complete application integration patterns
+- **Troubleshooting** - Common issues and solutions
+
+### **Key Benefits:**
+- ✅ **No Information Gaps** - Complete coverage of all functionality
+- ✅ **Real Examples** - Working code samples for all operations
+- ✅ **Error Handling** - Comprehensive error handling patterns
+- ✅ **Architecture Understanding** - Clear system design explanation
+- ✅ **Best Practices** - Proven implementation patterns
 
 ## 📞 Support
 

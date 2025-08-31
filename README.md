@@ -151,8 +151,8 @@ The library now supports optional fee payer wallets, allowing you to separate th
 import { buyToken, sendToken } from './src';
 
 // Treasury wallet pays fees for user operations
-const treasuryWallet = loadWallet('./wallets/treasury.json');
-const userWallet = loadWallet('./wallets/user.json');
+const treasuryWallet = loadWallet('./fixtures/treasury.json');
+const userWallet = loadWallet('./fixtures/user.json');
 
 // Buy tokens with treasury covering fees
 const buyResult = await buyToken({
@@ -181,17 +181,17 @@ const sendResult = await sendToken({
 # Buy tokens with separate fee payer
 npm run cli:bc-buy \
   --amount 0.1 \
-  --input-token ./wallets/token-info.json \
-  --wallet ./wallets/user-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/user-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 
 # Send tokens with separate fee payer
 npm run cli:send-token \
   --recipient <RECIPIENT_ADDRESS> \
   --mint <TOKEN_MINT> \
   --amount 1000 \
-  --wallet ./wallets/sender-wallet.json \
-  --fee-payer ./wallets/treasury-wallet.json
+  --wallet ./fixtures/sender-wallet.json \
+  --fee-payer ./fixtures/treasury-wallet.json
 ```
 
 **Use Cases:**

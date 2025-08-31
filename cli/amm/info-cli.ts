@@ -14,8 +14,8 @@ Options:
 
 Examples:
   npm run cli:amm:info -- --help
-  npm run cli:amm:info -- --input-token ./token-info.json --wallet ./wallets/creator-wallet.json
-  npm run cli:amm:info -- --input-token ./token-info.json --wallet ./wallets/creator-wallet.json --pool-key <pool-address>
+  npm run cli:amm:info -- --input-token ./token-info.json --wallet ./fixtures/creator-wallet.json
+  npm run cli:amm:info -- --input-token ./token-info.json --wallet ./fixtures/creator-wallet.json --pool-key <pool-address>
 `);
 }
 

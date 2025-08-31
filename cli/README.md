@@ -28,8 +28,8 @@ npm run cli:bc-create-token -- \
   --token-name "MyToken" \
   --token-symbol "MTK" \
   --token-description "My awesome token" \
-  --wallet ./wallets/my-wallet.json \
-  --output-token ./wallets/my-token.json
+  --wallet ./fixtures/my-wallet.json \
+  --output-token ./fixtures/my-token.json
 ```
 
 ### 2. Buy Tokens via Bonding Curve
@@ -37,8 +37,8 @@ npm run cli:bc-create-token -- \
 npm run cli:bc-buy -- \
   --amount 0.1 \
   --slippage 1000 \
-  --input-token ./wallets/my-token.json \
-  --wallet ./wallets/my-wallet.json
+  --input-token ./fixtures/my-token.json \
+  --wallet ./fixtures/my-wallet.json
 ```
 
 ### 3. Buy Tokens via AMM
@@ -46,16 +46,16 @@ npm run cli:bc-buy -- \
 npm run cli:amm-buy -- \
   --amount 0.05 \
   --slippage 100 \
-  --input-token ./wallets/my-token.json \
-  --wallet ./wallets/my-wallet.json
+  --input-token ./fixtures/my-token.json \
+  --wallet ./fixtures/my-wallet.json
 ```
 
 ### 4. Create AMM Pool
 ```bash
 npm run cli:amm-create-pool -- \
-  --input-token ./wallets/my-token.json \
-  --wallet ./wallets/my-wallet.json \
-  --output-token ./wallets/my-token-with-pool.json
+  --input-token ./fixtures/my-token.json \
+  --wallet ./fixtures/my-wallet.json \
+  --output-token ./fixtures/my-token-with-pool.json
 ```
 
 ### 5. Send Tokens
@@ -73,9 +73,9 @@ All CLI commands support these common options:
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--wallet` | `-w` | Path to wallet JSON file | `./wallets/creator-wallet.json` |
-| `--input-token` | `-i` | Path to input token JSON file | `./wallets/token-info.json` |
-| `--output-token` | `-o` | Path to save token info | `./wallets/token-info.json` |
+| `--wallet` | `-w` | Path to wallet JSON file | `./fixtures/creator-wallet.json` |
+| `--input-token` | `-i` | Path to input token JSON file | `./fixtures/token-info.json` |
+| `--output-token` | `-o` | Path to save token info | `./fixtures/token-info.json` |
 | `--help` | `-h` | Show help message | - |
 
 ## Command-Specific Options
@@ -119,26 +119,26 @@ All CLI commands support these common options:
 npm run cli:bc-create-token -- \
   --token-name "TestToken" \
   --token-symbol "TST" \
-  --wallet ./wallets/creator-wallet.json \
-  --output-token ./wallets/test-token.json
+  --wallet ./fixtures/creator-wallet.json \
+  --output-token ./fixtures/test-token.json
 
 # 2. Buy tokens via bonding curve
 npm run cli:bc-buy -- \
   --amount 0.1 \
-  --input-token ./wallets/test-token.json \
-  --wallet ./wallets/creator-wallet.json
+  --input-token ./fixtures/test-token.json \
+  --wallet ./fixtures/creator-wallet.json
 
 # 3. Create AMM pool
 npm run cli:amm-create-pool -- \
-  --input-token ./wallets/test-token.json \
-  --wallet ./wallets/creator-wallet.json \
-  --output-token ./wallets/test-token-with-pool.json
+  --input-token ./fixtures/test-token.json \
+  --wallet ./fixtures/creator-wallet.json \
+  --output-token ./fixtures/test-token-with-pool.json
 
 # 4. Buy tokens via AMM
 npm run cli:amm-buy -- \
   --amount 0.05 \
-  --input-token ./wallets/test-token-with-pool.json \
-  --wallet ./wallets/creator-wallet.json
+  --input-token ./fixtures/test-token-with-pool.json \
+  --wallet ./fixtures/creator-wallet.json
 ```
 
 ### Send Tokens Between Addresses
@@ -161,14 +161,14 @@ npm run cli:send-token -- --recipient 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgA
 # Use custom wallet
 npm run cli:bc-buy -- \
   --amount 0.1 \
-  --wallet ./wallets/my-custom-wallet.json \
-  --input-token ./wallets/different-token.json
+  --wallet ./fixtures/my-custom-wallet.json \
+  --input-token ./fixtures/different-token.json
 
 # Save to custom location
 npm run cli:bc-create-token -- \
   --token-name "CustomToken" \
   --token-symbol "CST" \
-  --output-token ./wallets/custom-token.json
+  --output-token ./fixtures/custom-token.json
 ```
 
 ## File Formats

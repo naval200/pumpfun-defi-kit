@@ -17,9 +17,9 @@ Options:
 
 Examples:
   npm run cli:amm:liquidity -- --help
-  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --wallet ./wallets/creator-wallet.json --amount 1000
-  npm run cli:amm:liquidity -- --action remove --input-token ./token-info.json --wallet ./wallets/creator-wallet.json --amount 500 --pool-key <pool-address>
-  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --wallet ./wallets/creator-wallet.json --amount 1000 --slippage 100
+  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --wallet ./fixtures/creator-wallet.json --amount 1000
+  npm run cli:amm:liquidity -- --action remove --input-token ./token-info.json --wallet ./fixtures/creator-wallet.json --amount 500 --pool-key <pool-address>
+  npm run cli:amm:liquidity -- --action add --input-token ./token-info.json --wallet ./fixtures/creator-wallet.json --amount 1000 --slippage 100
 `);
 }
 
