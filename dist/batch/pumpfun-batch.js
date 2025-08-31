@@ -387,6 +387,18 @@ async function executeOperation(connection, wallet, feePayer, operation) {
                 result = { success: true, signature, amount: solAmount, mint };
                 break;
             }
+            case 'sol-transfer': {
+                const { recipient, lamports } = operation.params;
+                const sendResult = await (0, sendSol_1.sendSol)(connection, wallet, new web3_js_1.PublicKey(recipient), Number(lamports) / 1e9, // Convert lamports to SOL
+                feePayer);
+                if (sendResult.success && sendResult.signature) {
+                    result = { success: true, signature: sendResult.signature, amount: lamports };
+                }
+                else {
+                    result = { success: false, error: sendResult.error || 'SOL transfer failed' };
+                }
+                break;
+            }
             default:
                 throw new Error(`Unknown operation type: ${operation.type}`);
         }
