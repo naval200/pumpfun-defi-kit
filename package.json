@@ -35,11 +35,23 @@
   },
   "files": [
     "dist",
-    "docs",
     "examples",
     "package.json",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "cli",
+    "docs/README.md",
+    "docs/GETTING_STARTED.md",
+    "docs/API_REFERENCE.md",
+    "docs/ARCHITECTURE_OVERVIEW.md",
+    "docs/TESTING_GUIDE.md",
+    "docs/amm-usage.md",
+    "docs/pool-creation-guide.md",
+    "docs/batch-transactions-usage.md",
+    "docs/send-token-usage.md",
+    "docs/fee-payer-usage.md",
+    "docs/debug-scripts-guide.md",
+    "docs/pumpswap-documentation.md"
   ],
   "engines": {
     "node": ">=18.0.0"
