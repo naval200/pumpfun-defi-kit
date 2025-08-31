@@ -1,6 +1,6 @@
 {
   "name": "@pump-fun/defikit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM support",
   "keywords": [
     "solana",
@@ -35,12 +35,11 @@
   },
   "files": [
     "dist",
+    "docs",
+    "examples",
+    "package.json",
     "README.md",
-    "LICENSE",
-    "docs/amm-usage.md",
-    "docs/pool-creation-guide.md",
-    "docs/pumpsdk-documentation.md",
-    "docs/pumpswap-documentation.md"
+    "LICENSE"
   ],
   "engines": {
     "node": ">=18.0.0"
