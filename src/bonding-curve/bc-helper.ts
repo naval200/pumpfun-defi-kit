@@ -171,24 +171,30 @@ export async function getBondingCurveAccount(
   }
   // For now, return a placeholder object - you'll need to implement BondingCurveAccount
   return {
-    getBuyPrice: (solAmount: bigint) => solAmount * 1000n, // Placeholder
-    getSellPrice: (tokenAmount: bigint, _feeBasisPoints: bigint) =>
-      (tokenAmount * (10000n - _feeBasisPoints)) / 10000n, // Placeholder
+    getBuyPrice: (amountLamports: number) => Math.floor(amountLamports * 1000), // Placeholder
+    getSellPrice: (tokenAmount: number, _feeBasisPoints: number) =>
+      Math.floor((tokenAmount * (10000 - _feeBasisPoints)) / 10000), // Placeholder
   };
 }
 
 /**
  * Calculate buy amount with slippage
  */
-export function calculateWithSlippageBuy(solAmount: bigint, slippageBasisPoints: bigint): bigint {
-  return (solAmount * (10000n + slippageBasisPoints)) / 10000n;
+export function calculateWithSlippageBuy(
+  amountLamports: number,
+  slippageBasisPoints: number
+): number {
+  return Math.floor((amountLamports * (10000 + slippageBasisPoints)) / 10000);
 }
 
 /**
  * Calculate sell amount with slippage
  */
-export function calculateWithSlippageSell(solAmount: bigint, slippageBasisPoints: bigint): bigint {
-  return (solAmount * (10000n - slippageBasisPoints)) / 10000n;
+export function calculateWithSlippageSell(
+  amountLamports: number,
+  slippageBasisPoints: number
+): number {
+  return Math.floor((amountLamports * (10000 - slippageBasisPoints)) / 10000);
 }
 
 // ============================================================================

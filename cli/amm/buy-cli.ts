@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
 
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { buyTokens, findPoolsForToken } from '../../src/amm';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { buyAmmTokens as buyTokens, findPoolsForToken } from '../../src/amm';
 import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
+import { formatLamportsAsSol, solToLamports } from '../../src/utils/amounts';
 
 /**
  * Buy tokens via AMM with configurable parameters
@@ -52,9 +53,10 @@ export async function buyTokensAMM() {
 
     // Check wallet balance
     const balance = await connection.getBalance(wallet.publicKey);
-    console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+    const requiredAmount = solToLamports(args.amount);
+    console.log(`💰 Wallet balance: ${formatLamportsAsSol(balance)} SOL`);
 
-    if (balance < args.amount * LAMPORTS_PER_SOL) {
+    if (balance < requiredAmount) {
       console.log(`❌ Insufficient balance. Need at least ${args.amount} SOL`);
       return;
     }
@@ -88,7 +90,7 @@ export async function buyTokensAMM() {
       connection,
       wallet,
       poolKey,
-      args.amount,
+      requiredAmount,
       args.slippage || 100,
       feePayer || undefined
     );
@@ -104,11 +106,12 @@ export async function buyTokensAMM() {
     console.error(`❌ Error: ${error}`);
 
     // Provide helpful debugging information
-    if (error.message?.includes('AccountNotFound')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('AccountNotFound')) {
       console.log('💡 The pool account may not exist or be accessible');
-    } else if (error.message?.includes('InvalidAccountData')) {
+    } else if (errorMessage.includes('InvalidAccountData')) {
       console.log('💡 The pool account data may be corrupted or in wrong format');
-    } else if (error.message?.includes('InsufficientFunds')) {
+    } else if (errorMessage.includes('InsufficientFunds')) {
       console.log('💡 Check wallet balance and pool liquidity');
     }
   }

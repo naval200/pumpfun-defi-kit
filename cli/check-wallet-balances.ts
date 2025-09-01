@@ -6,6 +6,7 @@ import { parseArgs } from './cli-args';
 import { debugLog, log, logError } from '../src/utils/debug';
 import fs from 'fs';
 import path from 'path';
+import { formatLamportsAsSol } from '../src/utils/amounts';
 
 /**
  * Check wallet balances for all known tokens
@@ -48,16 +49,13 @@ async function checkWalletBalances() {
     // Connect to devnet
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-    console.log(`👤 Wallet: ${walletKeypair.publicKey.toString()}`);
     debugLog(`👤 Wallet: ${walletKeypair.publicKey.toString()}`);
-    console.log(`🔗 Network: ${connection.rpcEndpoint}\n`);
     debugLog(`🔗 Network: ${connection.rpcEndpoint}\n`);
 
     // Check SOL balance
     console.log('🔍 Getting SOL balance...');
-    const solBalance = await connection.getBalance(walletKeypair.publicKey);
-    console.log(`💰 SOL Balance: ${(solBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL\n`);
-    debugLog(`💰 SOL Balance: ${(solBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL\n`);
+    const balance = await connection.getBalance(walletKeypair.publicKey);
+    debugLog(`💰 SOL Balance: ${formatLamportsAsSol(balance)} SOL\n`);
 
     // Check specific token balance if mint is provided
     if (args.mint) {
@@ -82,7 +80,7 @@ async function checkWalletBalances() {
           console.log(`💰 Balance: ${accountInfo.amount}`);
           debugLog(`   💰 Balance: ${accountInfo.amount}`);
 
-          if (Number(accountInfo.amount) > 0) {
+          if (accountInfo.amount > 0) {
             debugLog(`   🎯 Has tokens!`);
           } else {
             debugLog(`   ⚠️ Account exists but has 0 balance`);
@@ -112,7 +110,7 @@ async function checkWalletBalances() {
                 `   🪙 ${accountInfo.mint.toString()} - Balance: ${accountInfo.amount} (${mintInfo.decimals} decimals)`
               );
 
-              if (Number(accountInfo.amount) > 0) {
+              if (accountInfo.amount > 0) {
                 const actualBalance = Number(accountInfo.amount) / Math.pow(10, mintInfo.decimals);
                 debugLog(`      💰 Actual Balance: ${actualBalance.toFixed(6)}`);
               }

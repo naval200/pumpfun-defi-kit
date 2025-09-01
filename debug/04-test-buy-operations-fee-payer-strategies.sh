@@ -234,7 +234,7 @@ echo "🔄 Testing individual bonding curve buy operation..."
 echo "💸 Using user wallet 7 directly (not in batch)"
 
 # Test individual bonding curve buy
-npm run cli:bc:buy \
+npm run cli:curve:buy \
     -- --wallet "$USER_WALLETS_DIR/user-wallet-7.json" \
     --mint "$TOKEN_MINT" \
     --amount 0.01 \

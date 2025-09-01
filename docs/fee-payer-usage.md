@@ -112,7 +112,7 @@ const signature = await buyPumpFunToken(
   connection,
   userWallet,      // User's wallet (owns tokens)
   mint,
-  solAmount,
+  amountLamports,
   slippage,
   treasuryWallet   // Treasury wallet (pays fees)
 );

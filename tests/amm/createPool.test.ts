@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { createPool } from '../../src/amm/createPool.js';
-import { TestHelpers } from '../utils/test-helpers.js';
+import { createPool } from '../../src/amm/createPool';
+import { TestHelpers } from '../utils/test-helpers';
 
 // Mock the createPool function
-jest.mock('../../src/amm/createPool.js');
+jest.mock('../../src/amm/createPool');
 const mockCreatePool = createPool as jest.MockedFunction<typeof createPool>;
 
 describe('AMM Pool Creation', () => {

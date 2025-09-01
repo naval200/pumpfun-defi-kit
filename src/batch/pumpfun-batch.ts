@@ -5,11 +5,9 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js';
-import {
-  sendToken,
-  sendTokenWithAccountCreation,
-  createTokenTransferInstruction,
-} from '../sendToken';
+import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
+
+import { sendToken, createTokenTransferInstruction } from '../sendToken';
 import { sendSol, createSendSolInstruction } from '../sendSol';
 import { buyPumpFunToken } from '../bonding-curve/buy';
 import { sellPumpFunToken } from '../bonding-curve/sell';
@@ -18,7 +16,6 @@ import {
   createAmmSellInstructionsAssuming,
 } from '../amm/instructions';
 import { getBondingCurvePDAs } from '../bonding-curve/bc-helper';
-import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 import { debugLog, logError } from '../utils/debug';
 import { chunkArray } from './batch-helper';
 import type {
@@ -32,6 +29,7 @@ import {
   createBondingCurveBuyInstruction,
   createBondingCurveSellInstruction,
 } from '../bonding-curve';
+import { minSolLamports } from '../utils/amounts';
 
 /**
  * Execute a batch of PumpFun operations
@@ -94,7 +92,8 @@ export async function batchTransactions(
           const ammSdk = new PumpAmmSdk(connection);
 
           for (const operation of group.ops) {
-            switch (operation.type) {
+            const { type } = operation;
+            switch (type) {
               case 'transfer': {
                 const { recipient, mint, amount } = operation.params;
 
@@ -103,39 +102,38 @@ export async function batchTransactions(
                   sender.publicKey,
                   new PublicKey(recipient),
                   new PublicKey(mint),
-                  BigInt(amount),
+                  amount,
                   false // allowOwnerOffCurve
                 );
                 instructions.push(transferInstruction);
                 break;
               }
               case 'sol-transfer': {
-                const { recipient, lamports } = operation.params;
+                const { recipient, amount } = operation.params;
                 // Use the utility function from sendSol.ts for consistency
                 const solTransferInstruction = createSendSolInstruction(
                   sender,
                   new PublicKey(recipient),
-                  Number(lamports) / 1e9, // Convert lamports to SOL
+                  amount,
                   feePayer?.publicKey
                 );
                 instructions.push(solTransferInstruction);
                 break;
               }
               case 'buy-bonding-curve': {
-                const { mint, solAmount } = operation.params;
+                const { mint, amount } = operation.params;
                 // Get PDAs for bonding curve buy
                 const pdas = await getBondingCurvePDAs(
                   connection,
                   new PublicKey(mint),
                   sender.publicKey
                 );
-                // Convert SOL amount to smallest units (9 decimals)
-                const solAmountInSmallestUnits = solAmount * Math.pow(10, 9);
+                // amountLamports is already in lamports
                 instructions.push(
                   createBondingCurveBuyInstruction(
                     sender.publicKey,
                     new PublicKey(mint),
-                    solAmountInSmallestUnits,
+                    amount,
                     pdas,
                     1000 // maxSlippageBasisPoints
                   )
@@ -150,15 +148,13 @@ export async function batchTransactions(
                   new PublicKey(mint),
                   sender.publicKey
                 );
-                // Convert amount to smallest units (6 decimals)
-                const tokenAmountInSmallestUnits = amount * Math.pow(10, 6);
                 // Calculate min SOL output (very low to avoid slippage issues)
-                const minSolOutput = 0.000001 * 1e9; // 0.000001 SOL in lamports
+                const minSolOutput = minSolLamports();
                 instructions.push(
                   createBondingCurveSellInstruction(
                     sender.publicKey,
                     new PublicKey(mint),
-                    tokenAmountInSmallestUnits,
+                    amount,
                     minSolOutput,
                     pdas
                   )
@@ -166,17 +162,12 @@ export async function batchTransactions(
                 break;
               }
               case 'buy-amm': {
-                const { poolKey, quoteAmount, slippage = 1 } = operation.params;
+                const { poolKey, amount, slippage = 1 } = operation.params;
                 const state = await ammSdk.swapSolanaState(
                   new PublicKey(poolKey),
                   sender.publicKey
                 );
-                const ixs = await createAmmBuyInstructionsAssuming(
-                  ammSdk,
-                  state,
-                  Number(quoteAmount),
-                  Number(slippage)
-                );
+                const ixs = await createAmmBuyInstructionsAssuming(ammSdk, state, amount, slippage);
                 ixs.forEach(ix => instructions.push(ix));
                 break;
               }
@@ -189,14 +180,15 @@ export async function batchTransactions(
                 const ixs = await createAmmSellInstructionsAssuming(
                   ammSdk,
                   state,
-                  Number(amount),
-                  Number(slippage)
+                  amount,
+                  slippage
                 );
                 ixs.forEach(ix => instructions.push(ix));
                 break;
               }
-              default:
-                throw new Error(`Unknown operation type: ${operation.type}`);
+              default: {
+                throw new Error(`Unknown operation type: ${type}`);
+              }
             }
           }
 
@@ -251,49 +243,30 @@ export async function batchTransactions(
         debugLog(`🚀 Executing ${operation.type}: ${operation.description}`);
 
         let result: OperationResult;
+        const { sender, type } = operation;
 
         switch (operation.type) {
           case 'transfer': {
-            const { recipient, mint, amount, createAccount = true } = operation.params;
-
-            if (createAccount) {
-              const transferResult = await sendTokenWithAccountCreation(
-                connection,
-                wallet,
-                new PublicKey(recipient),
-                new PublicKey(mint),
-                BigInt(amount),
-                false, // allowOwnerOffCurve
-                feePayer
-              );
-              if (transferResult.success && transferResult.signature) {
-                result = { success: true, signature: transferResult.signature, amount, mint };
-              } else {
-                result = { success: false, error: transferResult.error || 'Transfer failed' };
-              }
+            const { recipient, mint, amount } = operation.params;
+            const transferResult = await sendToken(
+              connection,
+              wallet,
+              new PublicKey(recipient),
+              new PublicKey(mint),
+              amount,
+              false, // allowOwnerOffCurve
+              false, // createRecipientAccount
+              feePayer
+            );
+            if (transferResult.success && transferResult.signature) {
+              result = { success: true, signature: transferResult.signature, amount, mint };
             } else {
-              const transferResult = await sendToken(
-                connection,
-                wallet,
-                new PublicKey(recipient),
-                new PublicKey(mint),
-                BigInt(amount),
-                false, // allowOwnerOffCurve
-                false, // createRecipientAccount
-                feePayer
-              );
-              if (transferResult.success && transferResult.signature) {
-                result = { success: true, signature: transferResult.signature, amount, mint };
-              } else {
-                result = { success: false, error: transferResult.error || 'Transfer failed' };
-              }
+              result = { success: false, error: transferResult.error || 'Transfer failed' };
             }
             break;
           }
           case 'sol-transfer': {
-            const { recipient, lamports, sender } = operation.params;
-            // Convert lamports to SOL and use sendSol for consistency
-            const amountSol = Number(lamports) / 1e9;
+            const { recipient, amount } = operation.params;
             const senderKeypair =
               sender && sender !== wallet.publicKey.toString()
                 ? Keypair.fromSecretKey(Buffer.from(JSON.parse(sender)))
@@ -303,7 +276,7 @@ export async function batchTransactions(
               connection,
               senderKeypair,
               new PublicKey(recipient),
-              amountSol,
+              amount,
               feePayer
             );
 
@@ -348,20 +321,20 @@ export async function batchTransactions(
             break;
           }
           case 'buy-amm': {
-            const { poolKey, quoteAmount, slippage = 1 } = operation.params;
+            const { poolKey, amount, slippage = 1 } = operation.params;
             const buyResult = await buyAmmTokens(
               connection,
               wallet,
               new PublicKey(poolKey),
-              Number(quoteAmount),
-              Number(slippage),
+              amount,
+              slippage,
               feePayer || wallet
             );
             if (buyResult.success && buyResult.signature) {
               result = {
                 success: true,
                 signature: buyResult.signature,
-                amount: quoteAmount,
+                amount,
                 mint: poolKey,
               };
             } else {
@@ -370,19 +343,19 @@ export async function batchTransactions(
             break;
           }
           case 'buy-bonding-curve': {
-            const { mint, solAmount } = operation.params;
+            const { mint, amount } = operation.params;
             const signature = await buyPumpFunToken(
               connection,
               wallet,
               new PublicKey(mint),
-              Number(solAmount),
+              amount,
               1000
             );
-            result = { success: true, signature, amount: solAmount, mint };
+            result = { success: true, signature, amount, mint };
             break;
           }
           default:
-            throw new Error(`Unknown operation type: ${operation.type}`);
+            throw new Error(`Unknown operation type: ${type}`);
         }
 
         return {
@@ -468,42 +441,25 @@ async function executeOperation(
     debugLog(`🚀 Executing ${operation.type}: ${operation.description}`);
 
     let result: OperationResult;
+    const { type } = operation;
 
-    switch (operation.type) {
+    switch (type) {
       case 'transfer': {
-        const { recipient, mint, amount, createAccount = true } = operation.params;
-
-        if (createAccount) {
-          const transferResult = await sendTokenWithAccountCreation(
-            connection,
-            wallet,
-            new PublicKey(recipient),
-            new PublicKey(mint),
-            BigInt(amount),
-            false, // allowOwnerOffCurve
-            feePayer
-          );
-          if (transferResult.success && transferResult.signature) {
-            result = { success: true, signature: transferResult.signature, amount, mint };
-          } else {
-            result = { success: false, error: transferResult.error || 'Transfer failed' };
-          }
+        const { recipient, mint, amount } = operation.params;
+        const transferResult = await sendToken(
+          connection,
+          wallet,
+          new PublicKey(recipient),
+          new PublicKey(mint),
+          amount,
+          false, // allowOwnerOffCurve
+          false, // createRecipientAccount
+          feePayer
+        );
+        if (transferResult.success && transferResult.signature) {
+          result = { success: true, signature: transferResult.signature, amount, mint };
         } else {
-          const transferResult = await sendToken(
-            connection,
-            wallet,
-            new PublicKey(recipient),
-            new PublicKey(mint),
-            BigInt(amount),
-            false, // allowOwnerOffCurve
-            false, // createRecipientAccount
-            feePayer
-          );
-          if (transferResult.success && transferResult.signature) {
-            result = { success: true, signature: transferResult.signature, amount, mint };
-          } else {
-            result = { success: false, error: transferResult.error || 'Transfer failed' };
-          }
+          result = { success: false, error: transferResult.error || 'Transfer failed' };
         }
         break;
       }
@@ -535,20 +491,20 @@ async function executeOperation(
         break;
       }
       case 'buy-amm': {
-        const { poolKey, quoteAmount, slippage = 1 } = operation.params;
+        const { poolKey, amount, slippage = 1 } = operation.params;
         const buyResult = await buyAmmTokens(
           connection,
           wallet,
           new PublicKey(poolKey),
-          Number(quoteAmount),
-          Number(slippage),
+          amount,
+          slippage,
           feePayer || wallet
         );
         if (buyResult.success && buyResult.signature) {
           result = {
             success: true,
             signature: buyResult.signature,
-            amount: quoteAmount,
+            amount,
             mint: poolKey,
           };
         } else {
@@ -557,35 +513,35 @@ async function executeOperation(
         break;
       }
       case 'buy-bonding-curve': {
-        const { mint, solAmount } = operation.params;
+        const { mint, amount } = operation.params;
         const signature = await buyPumpFunToken(
           connection,
           wallet,
           new PublicKey(mint),
-          Number(solAmount),
+          amount,
           1000
         );
-        result = { success: true, signature, amount: solAmount, mint };
+        result = { success: true, signature, amount, mint };
         break;
       }
       case 'sol-transfer': {
-        const { recipient, lamports } = operation.params;
+        const { recipient, amount } = operation.params;
         const sendResult = await sendSol(
           connection,
           wallet,
           new PublicKey(recipient),
-          Number(lamports) / 1e9, // Convert lamports to SOL
+          amount,
           feePayer
         );
         if (sendResult.success && sendResult.signature) {
-          result = { success: true, signature: sendResult.signature, amount: lamports };
+          result = { success: true, signature: sendResult.signature, amount };
         } else {
           result = { success: false, error: sendResult.error || 'SOL transfer failed' };
         }
         break;
       }
       default:
-        throw new Error(`Unknown operation type: ${operation.type}`);
+        throw new Error(`Unknown operation type: ${type}`);
     }
 
     return {
@@ -658,7 +614,7 @@ export function validatePumpFunBatchOperations(operations: BatchOperation[]): {
         }
         break;
       case 'sol-transfer':
-        if (!op.params.recipient || op.params.lamports === undefined) {
+        if (!op.params.recipient || op.params.amount === undefined) {
           errors.push(`Operation ${index}: Missing required SOL transfer parameters`);
         }
         break;
@@ -677,12 +633,12 @@ export function validatePumpFunBatchOperations(operations: BatchOperation[]): {
         }
         break;
       case 'buy-amm':
-        if (!op.params.poolKey || op.params.quoteAmount === undefined) {
+        if (!op.params.poolKey || op.params.amount === undefined) {
           errors.push(`Operation ${index}: Missing required buy AMM parameters`);
         }
         break;
       case 'buy-bonding-curve':
-        if (!op.params.mint || op.params.solAmount === undefined) {
+        if (!op.params.mint || op.params.amount === undefined) {
           errors.push(`Operation ${index}: Missing required buy bonding curve parameters`);
         }
         break;

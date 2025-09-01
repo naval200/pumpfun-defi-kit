@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { addLiquidity, removeLiquidity } from '../../src/amm/liquidity.js';
-import { findPoolsForToken } from '../../src/amm/amm.js';
-import { TestHelpers } from '../utils/test-helpers.js';
+import { addLiquidity, removeLiquidity } from '../../src/amm/liquidity';
+import { findPoolsForToken } from '../../src/amm/amm';
+import { TestHelpers } from '../utils/test-helpers';
 
 // Mock the AMM liquidity functions
-jest.mock('../../src/amm/liquidity.js');
-jest.mock('../../src/amm/amm.js');
+jest.mock('../../src/amm/liquidity');
+jest.mock('../../src/amm/amm');
 
 const mockAddLiquidity = addLiquidity as jest.MockedFunction<typeof addLiquidity>;
 const mockRemoveLiquidity = removeLiquidity as jest.MockedFunction<typeof removeLiquidity>;

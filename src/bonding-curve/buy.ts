@@ -1,6 +1,7 @@
 import { getAllRequiredPDAsForBuyAsync } from './bc-helper';
 import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
 import { debugLog, logError, log, logSuccess, logSignature } from '../utils/debug';
+import { formatLamportsAsSol } from '../utils/amounts';
 import { PUMP_PROGRAM_ID } from './idl/constants';
 import { createBondingCurveBuyInstruction } from './idl/instructions';
 
@@ -11,11 +12,12 @@ export async function buyPumpFunToken(
   connection: Connection,
   wallet: Keypair,
   mint: PublicKey,
-  solAmount: number,
+  amountLamports: number,
   maxSlippageBasisPoints: number = 1000
 ): Promise<string> {
   try {
-    log('🛒 Executing buy of', solAmount, 'SOL worth of tokens...');
+    log(`🛒 Executing buy of ${formatLamportsAsSol(amountLamports)} SOL worth of tokens...`);
+
     // Get all required PDAs (including correct creator vault)
     const pdas = await getAllRequiredPDAsForBuyAsync(
       connection,
@@ -28,7 +30,7 @@ export async function buyPumpFunToken(
     const buyInstruction = createBondingCurveBuyInstruction(
       wallet.publicKey,
       mint,
-      solAmount * 1e9, // Convert to lamports
+      amountLamports, // Already in lamports
       pdas,
       maxSlippageBasisPoints
     );
@@ -60,7 +62,7 @@ export async function buyPumpFunToken(
     );
 
     logSuccess('Buy transaction confirmed successfully!');
-    log(`💰 Purchased tokens for ${solAmount} SOL`);
+    log(`💰 Purchased tokens for ${formatLamportsAsSol(amountLamports)} SOL`);
     logSignature(signature, 'Buy');
 
     return signature;

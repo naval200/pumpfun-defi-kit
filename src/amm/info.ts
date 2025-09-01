@@ -13,7 +13,6 @@ export async function getPoolInfo(
   try {
     const pumpAmmSdk = new PumpAmmSdk(connection);
     const swapSolanaState = await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey);
-
     return swapSolanaState;
   } catch (error) {
     logError('Error getting pool info:', error);

@@ -4,6 +4,7 @@ import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { loadImageFromPath } from '../utils/image-loader';
 import { uploadMetadata } from '../utils/metadata';
 import { log, logSuccess, logSignature, logError } from '../utils/debug';
+import { formatLamportsAsSol } from '../utils/amounts';
 // getBondingCurveState moved to helper.ts
 import { buyPumpFunToken } from './buy';
 import { TokenConfig, CreateTokenResult } from '../@types';
@@ -202,13 +203,13 @@ export async function createPumpFunToken(
     logSuccess('Token created successfully!');
 
     // Store buy amount for later use after creator vault is extracted
-    const buyAmountSol = tokenConfig.initialBuyAmount || 0.01; // Default 0.01 SOL
+    const amountLamports = tokenConfig.initialBuyAmount || 1000000; // Default 0.001 SOL in lamports (smaller for testing)
 
     logSignature(signature, 'Token creation');
 
     // Now we can perform the initial buy (creator vault is no longer needed)
     if (tokenConfig.initialBuyAmount && tokenConfig.initialBuyAmount > 0) {
-      log(`💰 Performing initial buy: ${buyAmountSol} SOL`);
+      log(`💰 Performing initial buy: ${formatLamportsAsSol(amountLamports)} SOL`);
 
       try {
         // FIX: Wait for proper confirmation with commitment level
@@ -244,12 +245,12 @@ export async function createPumpFunToken(
           connection,
           wallet,
           mint.publicKey,
-          buyAmountSol,
+          amountLamports,
           1000 // slippageBasisPoints
         );
 
         logSuccess('Initial buy completed successfully!');
-        log(`   Buy Amount: ${buyAmountSol} SOL`);
+        log(`   💰 Buy Amount: ${formatLamportsAsSol(amountLamports)} SOL`);
         logSignature(buySignature, 'Initial buy');
       } catch (buyError) {
         const errorMessage = buyError instanceof Error ? buyError.message : String(buyError);

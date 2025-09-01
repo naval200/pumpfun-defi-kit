@@ -39,26 +39,26 @@ export async function sellAmmTokens(
         );
 
     const { poolBaseAmount, poolQuoteAmount } = swapSolanaState;
-    const baseReserve = Number(poolBaseAmount);
-    const quoteReserve = Number(poolQuoteAmount);
+    const baseReserve = new BN(poolBaseAmount);
+    const quoteReserve = new BN(poolQuoteAmount);
 
-    debugLog(`Pool reserves - Base: ${baseReserve}, Quote: ${quoteReserve}`);
+    debugLog(`Pool reserves - Base: ${baseReserve.toString()}, Quote: ${quoteReserve.toString()}`);
 
     // Calculate expected quote amount using simple AMM formula
     // This is a simplified calculation - in practice, you'd use the SDK's methods
-    const k = baseReserve * quoteReserve;
-    const newBaseReserve = baseReserve + baseAmount;
-    const newQuoteReserve = k / newBaseReserve;
-    const quoteOut = quoteReserve - newQuoteReserve;
+    const k = baseReserve.mul(quoteReserve);
+    const newBaseReserve = baseReserve.add(new BN(baseAmount));
+    const newQuoteReserve = k.div(newBaseReserve);
+    const quoteOut = quoteReserve.sub(newQuoteReserve);
 
-    debugLog(`Expected quote amount: ${quoteOut}`);
+    debugLog(`Expected quote amount: ${quoteOut.toString()}`);
 
     // Execute sell transaction with retry logic
     debugLog('📝 Executing sell transaction...');
     const instructions = await createAmmSellInstructionsAssuming(
       pumpAmmSdk,
       swapSolanaState,
-      new BN(baseAmount),
+      baseAmount,
       slippage
     );
 
@@ -82,7 +82,7 @@ export async function sellAmmTokens(
     return {
       success: true,
       signature,
-      quoteAmount: Number(quoteOut),
+      quoteAmount: Number(quoteOut.toString()),
     };
   } catch (error: unknown) {
     logError('Error selling tokens:', error);
@@ -131,8 +131,11 @@ export async function createSignedAmmSellTransaction(
 
     // Create sell instructions
     debugLog('📝 Creating sell instructions...');
-    const baseAmountBN = new BN(baseAmount);
-    const instructions = await pumpAmmSdk.sellBaseInput(swapSolanaState, baseAmountBN, slippage);
+    const instructions = await pumpAmmSdk.sellBaseInput(
+      swapSolanaState,
+      new BN(baseAmount),
+      slippage
+    );
 
     // Create transaction
     const transaction = new Transaction();

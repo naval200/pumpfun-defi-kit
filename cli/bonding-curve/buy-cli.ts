@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
 
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { buyPumpFunToken } from '../../src/bonding-curve/buy';
 import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
+import { solToLamports, formatLamportsAsSol } from '../../src/utils/amounts';
 
 /**
  * Buy PumpFun tokens via bonding curve with configurable parameters
@@ -28,9 +29,13 @@ export async function buyToken() {
     return;
   }
 
+  // Convert SOL to lamports
+  const amountSol = args.amount;
+  const amountLamports = solToLamports(amountSol);
+
   console.log('🛒 Buying PumpFun Tokens via Bonding Curve');
   console.log('============================================');
-  console.log(`Amount: ${args.amount} SOL`);
+  console.log(`Amount: ${formatLamportsAsSol(amountLamports)} SOL`);
   console.log(
     `Slippage: ${args.slippage || 1000} basis points (${(args.slippage || 1000) / 100}%)`
   );
@@ -53,22 +58,23 @@ export async function buyToken() {
 
     // Check wallet balance
     const balance = await connection.getBalance(wallet.publicKey);
-    console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-
-    if (balance < args.amount * LAMPORTS_PER_SOL) {
-      console.log(`❌ Insufficient balance. Need at least ${args.amount} SOL`);
-      return;
+    if (balance < amountLamports) {
+      console.log(
+        `❌ Insufficient balance. Need at least ${formatLamportsAsSol(amountLamports)} SOL`
+      );
+      process.exit(1);
     }
 
     // Execute buy
-    console.log(`\n🔄 Executing buy of ${args.amount} SOL worth of tokens...`);
+    console.log(
+      `\n🔄 Executing buy of ${formatLamportsAsSol(amountLamports)} SOL worth of tokens...`
+    );
     const result = await buyPumpFunToken(
       connection,
       wallet,
       new PublicKey(tokenInfo.mint),
-      args.amount,
-      args.slippage || 1000,
-      feePayer || undefined
+      amountLamports,
+      args.slippage || 1000
     );
 
     if (result) {

@@ -35,7 +35,7 @@ export async function sendToken(
   sender: Keypair,
   recipient: PublicKey,
   mint: PublicKey,
-  amount: bigint,
+  amount: number,
   allowOwnerOffCurve: boolean = false,
   createRecipientAccount: boolean = true,
   feePayer?: Keypair
@@ -185,7 +185,7 @@ export async function sendTokenAssumingExistingAccounts(
   sender: Keypair,
   recipient: PublicKey,
   mint: PublicKey,
-  amount: bigint,
+  amount: number,
   allowOwnerOffCurve: boolean = false,
   feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
@@ -236,7 +236,7 @@ export async function sendTokenWithAccountCreation(
   sender: Keypair,
   recipient: PublicKey,
   mint: PublicKey,
-  amount: bigint,
+  amount: number,
   allowOwnerOffCurve: boolean = false,
   feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
@@ -261,7 +261,7 @@ export async function sendTokenToExistingAccount(
   sender: Keypair,
   recipient: PublicKey,
   mint: PublicKey,
-  amount: bigint,
+  amount: number,
   allowOwnerOffCurve: boolean = false,
   feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
@@ -283,7 +283,7 @@ export async function sendTokenToExistingAccount(
  * @param sender - Sender's public key
  * @param recipient - Recipient's public key  
  * @param mint - Token mint public key
- * @param amount - Amount to transfer (as bigint)
+ * @param amount - Amount to transfer (as number)
  * @param allowOwnerOffCurve - Whether to allow owner off curve (default: false)
  * @returns TransactionInstruction ready for batching
  */
@@ -291,7 +291,7 @@ export function createTokenTransferInstruction(
   sender: PublicKey,
   recipient: PublicKey,
   mint: PublicKey,
-  amount: bigint,
+  amount: number,
   allowOwnerOffCurve: boolean = false
 ): TransactionInstruction {
   const sourceAta = getAssociatedTokenAddressSync(mint, sender, false);

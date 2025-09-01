@@ -1,8 +1,10 @@
 import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
+
 import { getAllRequiredPDAsForBuyAsync } from './bc-helper';
 import { createBondingCurveSellInstruction } from './idl/instructions';
 import { PUMP_PROGRAM_ID } from './idl/constants';
 import { debugLog, logError, log, logSuccess, logSignature } from '../utils/debug';
+import { minSolLamports, formatLamportsAsSol } from '../utils/amounts';
 /**
  * Sell PumpFun tokens with simple approach
  */
@@ -23,11 +25,6 @@ export async function sellPumpFunToken(
 
     log('🔄 Executing sell of', tokenAmount, 'tokens...');
 
-    // Calculate minSolOutput based on bonding curve price
-    // For now, use a very low minimum to avoid slippage issues
-    // TODO: Calculate this properly based on bonding curve reserves
-    const minSolOutput = 0.000001; // Very low minimum to avoid slippage rejection
-
     // Get all required PDAs (including correct creator vault)
     const pdas = await getAllRequiredPDAsForBuyAsync(
       connection,
@@ -36,15 +33,12 @@ export async function sellPumpFunToken(
       wallet.publicKey
     );
 
-    // Create sell instruction using simple approach
-    // Convert token amount to smallest units (6 decimals based on buy instruction)
-    const tokenAmountInSmallestUnits = tokenAmount * Math.pow(10, 6);
-
+    const minSolOutput = minSolLamports();
     const sellInstruction = createBondingCurveSellInstruction(
       wallet.publicKey,
       mint,
-      tokenAmountInSmallestUnits, // Token amount in smallest units (6 decimals)
-      minSolOutput * 1e9, // Convert SOL to lamports
+      tokenAmount,
+      minSolOutput,
       pdas
     );
 
@@ -75,7 +69,7 @@ export async function sellPumpFunToken(
     );
 
     logSuccess('Sell transaction confirmed successfully!');
-    log(`💰 Sold ${tokenAmount} tokens for ${minSolOutput} SOL`);
+    log(`💰 Sold ${tokenAmount} tokens for at least ${formatLamportsAsSol(minSolOutput)} SOL`);
     logSignature(signature, 'Sell');
 
     return {

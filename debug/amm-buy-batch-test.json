@@ -6,9 +6,8 @@
     "sender": "/Users/navalsaini/hf/pumpfun-defikit/debug/user-wallets/user-wallet-7.json",
     "params": {
       "poolKey": "6ZiMcWFTv4xAP8pLk6wK7qCLCVroWZGRuYMd52qvz8VW",
-      "quoteAmount": 0.01,
-      "slippage": 100,
-      "assumeAccountsExist": true
+      "amount": 10000000,
+      "slippage": 100
     }
   }
 ]

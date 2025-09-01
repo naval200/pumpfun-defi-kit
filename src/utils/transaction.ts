@@ -390,7 +390,7 @@ export async function sendLamports(
   connection: Connection,
   sender: Keypair,
   recipient: PublicKey,
-  lamports: number,
+  lamports: bigint,
   feePayer?: Keypair
 ): Promise<string> {
   const transferIx = SystemProgram.transfer({

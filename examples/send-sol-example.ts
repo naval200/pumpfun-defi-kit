@@ -8,6 +8,7 @@ import {
   validateSendSolParams,
   getEstimatedSendSolFee,
 } from '../src/sendSol';
+import { formatLamportsAsSol } from '../src/utils/amounts';
 
 /**
  * Example demonstrating SOL transfer functionality
@@ -41,8 +42,8 @@ async function main() {
     const senderBalance = await connection.getBalance(senderWallet.publicKey);
     const recipientBalance = await connection.getBalance(recipientWallet.publicKey);
 
-    console.log(`💰 Sender balance: ${(senderBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-    console.log(`💰 Recipient balance: ${(recipientBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+    console.log(`💰 Sender balance: ${formatLamportsAsSol(senderBalance)} SOL`);
+    console.log(`💰 Recipient balance: ${formatLamportsAsSol(recipientBalance)} SOL`);
 
     // Validate transfer parameters
     const transferAmount = 0.1; // 0.1 SOL
@@ -115,14 +116,14 @@ async function main() {
       const newSenderBalance = await connection.getBalance(senderWallet.publicKey);
       const newRecipientBalance = await connection.getBalance(recipientWallet.publicKey);
 
-      console.log(`👛 Sender: ${(newSenderBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-      console.log(`🎯 Recipient: ${(newRecipientBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+      console.log(`👛 Sender: ${formatLamportsAsSol(newSenderBalance)} SOL`);
+      console.log(`🎯 Recipient: ${formatLamportsAsSol(newRecipientBalance)} SOL`);
 
       // Calculate actual amount transferred (accounting for fees)
       const actualTransferAmount =
         (senderBalance - newSenderBalance - estimatedFee) / LAMPORTS_PER_SOL;
       console.log(`📊 Actual amount transferred: ${actualTransferAmount.toFixed(6)} SOL`);
-      console.log(`💸 Fee paid: ${(estimatedFee / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
+      console.log(`💸 Fee paid: ${formatLamportsAsSol(estimatedFee)} SOL`);
     } else {
       console.log(`❌ SOL transfer failed: ${result.error}`);
     }

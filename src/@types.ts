@@ -11,7 +11,7 @@ export interface TokenConfig {
   websiteUrl?: string;
   twitterUrl?: string;
   telegramUrl?: string;
-  initialBuyAmount?: number; // SOL amount to buy immediately after creation
+  initialBuyAmount?: number;
 }
 
 /**
@@ -76,13 +76,51 @@ export interface OperationResult extends TransactionResult {
 /**
  * Batch Transactions types
  */
-export interface BatchOperation {
-  type: 'transfer' | 'sell-bonding-curve' | 'sell-amm' | 'buy-bonding-curve' | 'buy-amm' | 'sol-transfer';
+
+export type BatchOperationBase<T, P> = {
+  type: T;
   id: string;
   description: string;
-  params: any;
-  sender?: string; // optional per-op sender for transfers
+  params: P;
+  sender?: string;
 }
+
+export type BatchOperationTransfer = BatchOperationBase<'transfer', {
+  recipient: string;
+  mint: string;
+  amount: number;
+}>;
+
+export type BatchOperationSolTransfer = BatchOperationBase<'sol-transfer', {
+  recipient: string;
+  amount: number;
+}>;
+
+export type BatchOperationBuyAmm = BatchOperationBase<'buy-amm', {
+  poolKey: string;
+  amount: number;
+  slippage: number;
+}>;
+
+export type BatchOperationSellAmm = BatchOperationBase<'sell-amm', {
+  poolKey: string;
+  amount: number;
+  slippage: number;
+}>;
+
+export type BatchOperationBuyBondingCurve = BatchOperationBase<'buy-bonding-curve', {
+  mint: string;
+  amount: number;
+  slippage: number;
+}>;
+
+export type BatchOperationSellBondingCurve = BatchOperationBase<'sell-bonding-curve', {
+  mint: string;
+  amount: number;
+  slippage: number;
+}>;
+
+export type BatchOperation = BatchOperationTransfer | BatchOperationSolTransfer | BatchOperationBuyAmm | BatchOperationSellAmm | BatchOperationBuyBondingCurve | BatchOperationSellBondingCurve;
 
 export interface BatchResult {
   operationId: string;

@@ -4,9 +4,11 @@ import {
   poolPda,
   canonicalPumpPoolPda,
 } from '@pump-fun/pump-swap-sdk';
-import { Connection, PublicKey, LAMPORTS_PER_SOL, TransactionInstruction } from '@solana/web3.js';
+import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import BN from 'bn.js';
+
 import { debugLog, log, logError, logWarning } from '../utils/debug';
+import { formatLamportsAsSol } from '../utils/amounts';
 
 /**
  * Get pool creation data with BigNumber parameters
@@ -22,18 +24,11 @@ export async function getPoolCreationData(
 ): Promise<{
   createPoolSolanaState: unknown; // Using unknown for SDK compatibility
   createPoolInstructions: TransactionInstruction[];
-  initialPoolPrice: Promise<BN>;
+  initialPoolPrice: number;
 }> {
-  // Convert to BN for SDK compatibility
-  const baseInBN = new BN(baseIn);
-  const quoteInLamports = Math.floor(quoteIn * LAMPORTS_PER_SOL);
-  const quoteInBN = new BN(quoteInLamports);
-
-  debugLog(`🔧 Converting pool creation parameters to BN:`);
-  debugLog(`   Base amount: ${baseIn} -> ${baseInBN.toString()}`);
-  debugLog(
-    `   Quote amount: ${quoteIn} SOL -> ${quoteInLamports} lamports -> ${quoteInBN.toString()}`
-  );
+  debugLog(`🔧 Converting pool creation parameters to bigint:`);
+  debugLog(`   Base amount: ${baseIn.toString()}`);
+  debugLog(`   Quote amount: ${formatLamportsAsSol(quoteIn)} SOL`);
 
   // Get pool creation state
   const createPoolSolanaState = await pumpAmmSdk.createPoolSolanaState(
@@ -43,6 +38,9 @@ export async function getPoolCreationData(
     quoteMint
   );
 
+  const baseInBN = new BN(baseIn);
+  const quoteInBN = new BN(quoteIn);
+
   // Get pool creation instructions with BigNumber parameters
   const createPoolInstructions = await pumpAmmSdk.createPoolInstructions(
     createPoolSolanaState,
@@ -51,7 +49,11 @@ export async function getPoolCreationData(
   );
 
   // Get initial pool price for UI
-  const initialPoolPrice = pumpAmmSdk.createAutocompleteInitialPoolPrice(baseInBN, quoteInBN);
+  const initialPoolPriceBN = await pumpAmmSdk.createAutocompleteInitialPoolPrice(
+    baseInBN,
+    quoteInBN
+  );
+  const initialPoolPrice = Number(initialPoolPriceBN.toString());
 
   return {
     createPoolSolanaState,

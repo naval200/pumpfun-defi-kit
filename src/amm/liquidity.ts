@@ -1,8 +1,9 @@
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
+import BN from 'bn.js';
+
 import { sendTransaction } from '../utils/transaction';
 import { retryWithBackoff } from '../utils/retry';
-import BN from 'bn.js';
-import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 import { log, logSignature, logError } from '../utils/debug';
 
 /**
@@ -36,12 +37,9 @@ export async function addLiquidity(
     log('🧮 Calculating liquidity amounts...');
     const { quote, lpToken } = await retryWithBackoff(
       async () => {
-        // Convert to BN for SDK compatibility
-        const baseAmountBN = new BN(baseAmount);
-
         return await pumpAmmSdk.depositAutocompleteQuoteAndLpTokenFromBase(
           liquiditySolanaState,
-          baseAmountBN,
+          new BN(baseAmount),
           slippage
         );
       },
@@ -76,7 +74,7 @@ export async function addLiquidity(
     return {
       success: true,
       signature,
-      lpTokenAmount: Number(lpToken),
+      lpTokenAmount: Number(lpToken.toString()),
     };
   } catch (error: unknown) {
     logError('❌ Error adding liquidity:', error);
@@ -133,7 +131,6 @@ export async function removeLiquidity(
     log('🧮 Calculating withdrawal amounts...');
     const { base, quote } = await retryWithBackoff(
       async () => {
-        // Convert to BN for SDK compatibility
         const lpTokenAmountBN = new BN(lpTokenAmount);
 
         return pumpAmmSdk.withdrawAutoCompleteBaseAndQuoteFromLpToken(
@@ -152,7 +149,6 @@ export async function removeLiquidity(
     log('📝 Getting withdrawal instructions...');
     const withdrawInstructions = await retryWithBackoff(
       async () => {
-        // Convert to BN for SDK compatibility
         const lpTokenAmountBN = new BN(lpTokenAmount);
 
         return await pumpAmmSdk.withdrawInstructions(
@@ -180,8 +176,8 @@ export async function removeLiquidity(
     return {
       success: true,
       signature,
-      baseAmount: Number(base),
-      quoteAmount: Number(quote),
+      baseAmount: Number(base.toString()),
+      quoteAmount: Number(quote.toString()),
     };
   } catch (error: unknown) {
     logError('❌ Error removing liquidity:', error);

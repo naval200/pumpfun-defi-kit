@@ -1,26 +1,26 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { createPumpFunToken } from '../../src/bonding-curve/createToken.js';
-import { buyPumpFunToken } from '../../src/bonding-curve/buy.js';
-import { sellPumpFunToken } from '../../src/bonding-curve/sell.js';
-import { createPool } from '../../src/amm/createPool.js';
-import { buyTokens } from '../../src/amm/buy.js';
-import { addLiquidity, removeLiquidity } from '../../src/amm/liquidity.js';
-import { TestHelpers } from '../utils/test-helpers.js';
+import { createPumpFunToken } from '../../src/bonding-curve/createToken';
+import { buyPumpFunToken } from '../../src/bonding-curve/buy';
+import { sellPumpFunToken } from '../../src/bonding-curve/sell';
+import { createPool } from '../../src/amm/createPool';
+import { buyAmmTokens } from '../../src/amm/buy';
+import { addLiquidity, removeLiquidity } from '../../src/amm/liquidity';
+import { TestHelpers } from '../utils/test-helpers';
 
 // Mock all the functions
-jest.mock('../../src/bonding-curve/createToken.js');
-jest.mock('../../src/bonding-curve/buy.js');
-jest.mock('../../src/bonding-curve/sell.js');
-jest.mock('../../src/amm/createPool.js');
-jest.mock('../../src/amm/buy.js');
-jest.mock('../../src/amm/liquidity.js');
+jest.mock('../../src/bonding-curve/createToken');
+jest.mock('../../src/bonding-curve/buy');
+jest.mock('../../src/bonding-curve/sell');
+jest.mock('../../src/amm/createPool');
+jest.mock('../../src/amm/buy');
+jest.mock('../../src/amm/liquidity');
 
 const mockCreatePumpFunToken = createPumpFunToken as jest.MockedFunction<typeof createPumpFunToken>;
 const mockBuyPumpFunToken = buyPumpFunToken as jest.MockedFunction<typeof buyPumpFunToken>;
 const mockSellPumpFunToken = sellPumpFunToken as jest.MockedFunction<typeof sellPumpFunToken>;
 const mockCreatePool = createPool as jest.MockedFunction<typeof createPool>;
-const mockBuyTokens = buyTokens as jest.MockedFunction<typeof buyTokens>;
+const mockBuyTokens = buyAmmTokens as jest.MockedFunction<typeof buyAmmTokens>;
 const mockAddLiquidity = addLiquidity as jest.MockedFunction<typeof addLiquidity>;
 const mockRemoveLiquidity = removeLiquidity as jest.MockedFunction<typeof removeLiquidity>;
 
@@ -96,7 +96,7 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
       const sellResult = await sellPumpFunToken(
         connection,
         wallet,
-        mockTokenMint.toString(),
+        mockTokenMint,
         500 // Sell 500 tokens
       );
 
@@ -134,7 +134,7 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
       
       mockBuyTokens.mockResolvedValue(mockAMMBuyResult);
 
-      const ammBuyResult = await buyTokens(
+      const ammBuyResult = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -306,7 +306,7 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
       const [createResult, buyResult, sellResult] = await Promise.all([
         createPumpFunToken(connection, wallet, TestHelpers.createMockTokenConfig(), false),
         buyPumpFunToken(connection, wallet, mockTokenMint, 0.01, 1000),
-        sellPumpFunToken(connection, wallet, mockTokenMint.toString(), 100)
+        sellPumpFunToken(connection, wallet, mockTokenMint, 100)
       ]);
 
       // Verify all operations completed successfully
@@ -347,7 +347,7 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
 
       // Execute AMM operations concurrently
       const [buyResult, addLiquidityResult, removeLiquidityResult] = await Promise.all([
-        buyTokens(connection, wallet, mockPoolKey, 0.01, 1),
+        buyAmmTokens(connection, wallet, mockPoolKey, 0.01, 1),
         addLiquidity(connection, wallet, mockPoolKey, 0.01, 1),
         removeLiquidity(connection, wallet, mockPoolKey, 500, 1)
       ]);
@@ -420,7 +420,7 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
       
       mockBuyTokens.mockResolvedValue(mockAMMBuyResult);
 
-      const ammBuyResult = await buyTokens(
+      const ammBuyResult = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey, // Same pool key
@@ -452,8 +452,8 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
       });
 
       // Execute high-volume operations
-      const buyResults = [];
-      const sellResults = [];
+      const buyResults: string[] = [];
+      const sellResults: Array<{success: boolean; signature?: string; error?: string}> = [];
 
       for (let i = 0; i < highVolumeOperations.length; i++) {
         const op = highVolumeOperations[i];
@@ -470,7 +470,7 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
         const sellResult = await sellPumpFunToken(
           connection,
           wallet,
-          mockTokenMint.toString(),
+          mockTokenMint,
           op.sellAmount
         );
         sellResults.push(sellResult);
@@ -580,7 +580,7 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
       });
 
       // Execute rapid operations
-      const results = [];
+      const results: Array<{type: string; success: boolean; result?: any; error?: string}> = [];
       for (let i = 0; i < rapidOperations.length; i++) {
         const op = rapidOperations[i];
         
@@ -600,7 +600,7 @@ describe('PumpFun Complete Token Lifecycle Integration', () => {
         const sellResult = await sellPumpFunToken(
           connection,
           wallet,
-          mockTokenMint.toString(),
+          mockTokenMint,
           op.sellAmount
         );
         results.push({ type: 'sell', success: sellResult.success, result: sellResult });

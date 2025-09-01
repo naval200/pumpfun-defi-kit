@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { buyTokens } from '../../src/amm/buy.js';
-import { findPoolsForToken } from '../../src/amm/amm.js';
-import { TestHelpers } from '../utils/test-helpers.js';
+import { buyAmmTokens } from '../../src/amm/buy';
+import { findPoolsForToken } from '../../src/amm/amm';
+import { TestHelpers } from '../utils/test-helpers';
 
 // Mock the AMM functions
-jest.mock('../../src/amm/buy.js');
-jest.mock('../../src/amm/amm.js');
+jest.mock('../../src/amm/buy');
+jest.mock('../../src/amm/amm');
 
-const mockBuyTokens = buyTokens as jest.MockedFunction<typeof buyTokens>;
+const mockBuyTokens = buyAmmTokens as jest.MockedFunction<typeof buyAmmTokens>;
 const mockFindPoolsForToken = findPoolsForToken as jest.MockedFunction<typeof findPoolsForToken>;
 
 describe('AMM Buy Operations', () => {
@@ -49,7 +49,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockResult);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -83,7 +83,7 @@ describe('AMM Buy Operations', () => {
         
         mockBuyTokens.mockResolvedValue(mockResult);
 
-        const result = await buyTokens(
+        const result = await buyAmmTokens(
           connection,
           wallet,
           mockPoolKey,
@@ -110,7 +110,7 @@ describe('AMM Buy Operations', () => {
         
         mockBuyTokens.mockResolvedValue(mockResult);
 
-        const result = await buyTokens(
+        const result = await buyAmmTokens(
           connection,
           wallet,
           mockPoolKey,
@@ -142,7 +142,7 @@ describe('AMM Buy Operations', () => {
 
       // Use the first available pool
       const selectedPool = availablePools[0];
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         selectedPool,
@@ -173,7 +173,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockError);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -195,7 +195,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockError);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         invalidPoolKey,
@@ -217,7 +217,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockError);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         fakePoolKey,
@@ -239,7 +239,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockError);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -261,7 +261,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockError);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -283,7 +283,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockError);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -311,7 +311,7 @@ describe('AMM Buy Operations', () => {
         
         mockBuyTokens.mockResolvedValue(mockResult);
 
-        const result = await buyTokens(
+        const result = await buyAmmTokens(
           connection,
           wallet,
           mockPoolKey,
@@ -338,7 +338,7 @@ describe('AMM Buy Operations', () => {
         
         mockBuyTokens.mockResolvedValue(mockResult);
 
-        const result = await buyTokens(
+        const result = await buyAmmTokens(
           connection,
           wallet,
           mockPoolKey,
@@ -359,7 +359,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockError);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -379,7 +379,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockError);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -404,7 +404,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockResult);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -429,7 +429,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockResult);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -454,7 +454,7 @@ describe('AMM Buy Operations', () => {
       
       mockBuyTokens.mockResolvedValue(mockResult);
 
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         mockPoolKey,
@@ -532,9 +532,9 @@ describe('AMM Buy Operations', () => {
         .mockResolvedValueOnce(mockResults[1])
         .mockResolvedValueOnce(mockResults[2]);
 
-      const results = [];
+      const results: any[] = [];
       for (let i = 0; i < buyAmounts.length; i++) {
-        const result = await buyTokens(
+        const result = await buyAmmTokens(
           connection,
           wallet,
           mockPoolKey,
@@ -568,9 +568,9 @@ describe('AMM Buy Operations', () => {
         .mockResolvedValueOnce(mockResults[1])
         .mockResolvedValueOnce(mockResults[2]);
 
-      const results = [];
+      const results: any[] = [];
       for (let i = 0; i < pools.length; i++) {
-        const result = await buyTokens(
+        const result = await buyAmmTokens(
           connection,
           wallet,
           pools[i],
@@ -601,9 +601,9 @@ describe('AMM Buy Operations', () => {
         .mockResolvedValueOnce(mockResults[1])
         .mockResolvedValueOnce(mockResults[2]);
 
-      const results = [];
+      const results: any[] = [];
       for (let i = 0; i < dynamicSlippages.length; i++) {
-        const result = await buyTokens(
+        const result = await buyAmmTokens(
           connection,
           wallet,
           mockPoolKey,
@@ -639,7 +639,7 @@ describe('AMM Buy Operations', () => {
       
       // Use first pool
       const selectedPool = pools[0];
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         selectedPool,
@@ -667,7 +667,7 @@ describe('AMM Buy Operations', () => {
       // Simulate retry logic
       let result;
       try {
-        result = await buyTokens(
+        result = await buyAmmTokens(
           connection,
           wallet,
           mockPoolKey,
@@ -676,7 +676,7 @@ describe('AMM Buy Operations', () => {
         );
         if (!result.success) {
           // Retry with increased slippage
-          result = await buyTokens(
+          result = await buyAmmTokens(
             connection,
             wallet,
             mockPoolKey,
@@ -715,7 +715,7 @@ describe('AMM Buy Operations', () => {
       const maxAttempts = 4;
       
       while (attempts < maxAttempts) {
-        result = await buyTokens(connection, wallet, mockPoolKey, 0.01, 1);
+        result = await buyAmmTokens(connection, wallet, mockPoolKey, 0.01, 1);
         if (result.success) break;
         attempts++;
         if (attempts >= maxAttempts) break;
@@ -751,7 +751,7 @@ describe('AMM Buy Operations', () => {
       expect(pools).toHaveLength(1);
       
       // Use the found pool
-      const result = await buyTokens(
+      const result = await buyAmmTokens(
         connection,
         wallet,
         pools[0],

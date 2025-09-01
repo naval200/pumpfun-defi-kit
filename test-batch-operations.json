@@ -12,20 +12,20 @@
   {
     "type": "buy-bonding-curve",
     "id": "buy-test-1",
-    "description": "Buy 0.05 SOL worth of tokens",
+    "description": "Buy 0.001 SOL worth of tokens (1,000,000 lamports)",
     "params": {
       "mint": "5vBb8V71G3PN3d5VhyjMbCPqXzW2BFdwrcu1YyLs3jh",
-      "solAmount": 0.05,
+      "amountLamports": 1000000,
       "slippage": 1000
     }
   },
   {
     "type": "sol-transfer",
     "id": "sol-transfer-test",
-    "description": "Send 0.01 SOL to a test address",
+    "description": "Send 0.001 SOL to a test address (1,000,000 lamports)",
     "params": {
       "recipient": "11111111111111111111111111111111",
-      "lamports": 10000000
+      "lamports": 1000000
     }
   },
   {

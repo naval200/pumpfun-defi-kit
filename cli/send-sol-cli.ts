@@ -1,8 +1,10 @@
 #!/usr/bin/env tsx
 
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { sendSol, createSendSolInstruction, validateSendSolParams } from '../src/sendSol';
-import { parseArgs, loadWallet, printUsage } from './cli-args';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { sendSol, validateSendSolParams } from '../src/sendSol';
+import { loadWallet, printUsage } from './cli-args';
+import { formatLamportsAsSol, solToLamports } from '../src/utils/amounts';
+ 
 
 function showHelp() {
   console.log(`
@@ -12,14 +14,18 @@ Options:
   --help                    Show this help message
   --from-wallet <path>     Path to source wallet JSON file (required)
   --to-address <address>   Destination wallet public key (required)
-  --amount <number>         Amount of SOL to send (required)
+  --amount <number>        Amount of SOL to send (required)
   --fee-payer <path>       Path to fee payer wallet JSON file (optional)
   --dry-run                Show what would be executed without sending
 
 Examples:
   npm run cli:send-sol -- --help
+  npm run cli:send-sol -- --from-wallet ./wallet.json --to-address <address> --amount 0.001
+  npm run cli:send-sol -- --from-wallet ./wallet.json --to-address <address> --amount 0.01
   npm run cli:send-sol -- --from-wallet ./wallet.json --to-address <address> --amount 0.1
   npm run cli:send-sol -- --from-wallet ./wallet.json --to-address <address> --amount 0.5 --fee-payer ./fee-payer.json
+
+Note: Amount is specified in SOL (e.g., 0.001 SOL = 1,000,000 lamports)
 `);
 }
 
@@ -42,7 +48,7 @@ function parseArgs() {
         args.toAddress = argv[++i];
         break;
       case '--amount':
-        args.amount = parseFloat(argv[++i]);
+        args.amount = argv[++i];
         break;
       case '--fee-payer':
         args.feePayer = argv[++i];
@@ -68,21 +74,25 @@ async function main() {
   }
 
   // Validate required arguments
-  if (!args.fromWallet || !args.toAddress || !args.amount) {
+  if (!args.fromWallet || !args.toAddress || args.amount === undefined) {
     console.error('❌ Error: --from-wallet, --to-address, and --amount are required');
     printUsage('cli:send-sol');
     return;
   }
 
-  if (args.amount <= 0) {
-    console.error('❌ Error: Amount must be greater than 0');
+  const amountSol = parseFloat(args.amount);
+  if (amountSol <= 0) {
+    console.error('❌ Error: Amount must be greater than 0 SOL');
     return;
   }
+
+  // Convert SOL to lamports
+  const amountLamports = solToLamports(amountSol);
 
   try {
     console.log('💸 SOL Transfer CLI');
     console.log('===================');
-    console.log(`Amount: ${args.amount} SOL`);
+    console.log(`Amount: ${formatLamportsAsSol(amountLamports)} SOL`);
     console.log(`From Wallet: ${args.fromWallet}`);
     console.log(`To Address: ${args.toAddress}`);
     if (args.feePayer) {
@@ -117,7 +127,7 @@ async function main() {
     }
 
     // Validate parameters
-    const validation = validateSendSolParams(fromWallet, toAddress, args.amount);
+    const validation = validateSendSolParams(fromWallet, toAddress, amountLamports);
     if (!validation.isValid) {
       console.error('❌ Validation failed:');
       validation.errors.forEach(error => console.error(`  - ${error}`));
@@ -126,21 +136,15 @@ async function main() {
 
     // Check source wallet balance
     const balance = await connection.getBalance(fromWallet.publicKey);
-    const amountLamports = Math.floor(args.amount * LAMPORTS_PER_SOL);
-
-    console.log(`💰 Source wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-    console.log(`📊 Transfer amount: ${args.amount} SOL (${amountLamports} lamports)`);
-
     if (balance < amountLamports) {
-      console.error(
-        `❌ Insufficient balance. Available: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL, Required: ${args.amount} SOL`
-      );
-      return;
+      console.log(`❌ Insufficient balance. Need at least ${formatLamportsAsSol(amountLamports)} SOL`);
+      console.log(`💰 Available: ${formatLamportsAsSol(balance)} SOL`);
+      process.exit(1);
     }
 
     if (args.dryRun) {
       console.log('\n🔍 DRY RUN - Would execute the following:');
-      console.log(`  • Send ${args.amount} SOL from ${fromWallet.publicKey.toString()}`);
+      console.log(`  • Send ${formatLamportsAsSol(amountLamports)} SOL from ${fromWallet.publicKey.toString()}`);
       console.log(`  • To: ${toAddress.toString()}`);
       console.log(
         `  • Fee payer: ${feePayer ? feePayer.publicKey.toString() : fromWallet.publicKey.toString()}`
@@ -151,7 +155,7 @@ async function main() {
 
     // Execute SOL transfer
     console.log('\n🚀 Executing SOL transfer...');
-    const result = await sendSol(connection, fromWallet, toAddress, args.amount, feePayer);
+    const result = await sendSol(connection, fromWallet, toAddress, amountLamports, feePayer);
 
     if (result.success) {
       console.log('✅ SOL transfer successful!');

@@ -5,11 +5,11 @@ import {
   SystemProgram,
   Transaction,
   TransactionInstruction,
-  LAMPORTS_PER_SOL,
   sendAndConfirmTransaction,
   SendTransactionError,
 } from '@solana/web3.js';
 import { debugLog, logError } from './utils/debug';
+import { formatLamportsAsSol } from './utils/amounts';
 import { SendSolOptions, SendSolResult } from './@types';
 
 /**
@@ -17,7 +17,7 @@ import { SendSolOptions, SendSolResult } from './@types';
  * @param connection - Solana connection
  * @param fromWallet - Source wallet keypair
  * @param toAddress - Destination wallet public key
- * @param amountSol - Amount to send in SOL (will be converted to lamports)
+ * @param amountLamports - Amount to send in lamports
  * @param feePayer - Optional fee payer keypair (if different from sender)
  * @param options - Additional options
  * @returns SendSolResult with success status and signature or error
@@ -26,20 +26,17 @@ export async function sendSol(
   connection: Connection,
   fromWallet: Keypair,
   toAddress: PublicKey,
-  amountSol: number,
+  amountLamports: number,
   feePayer?: Keypair,
   options: SendSolOptions = {}
 ): Promise<SendSolResult> {
   try {
-    debugLog(`💸 Sending ${amountSol} SOL from ${fromWallet.publicKey.toString()} to ${toAddress.toString()}`);
-
-    // Convert SOL to lamports
-    const amountLamports = Math.floor(amountSol * LAMPORTS_PER_SOL);
+    debugLog(`💸 Sending ${formatLamportsAsSol(amountLamports)} SOL from ${fromWallet.publicKey.toString()} to ${toAddress.toString()}`);
     
-    if (amountLamports <= 0) {
+    if (amountLamports < 0) {
       return {
         success: false,
-        error: 'Amount must be greater than 0',
+        error: 'Amount must be greater than 0 lamports',
       };
     }
 
@@ -48,7 +45,7 @@ export async function sendSol(
     if (balance < amountLamports) {
       return {
         success: false,
-        error: `Insufficient balance. Available: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL, Required: ${amountSol} SOL`,
+        error: `Insufficient balance. Available: ${balance.toLocaleString()} lamports, Required: ${amountLamports.toLocaleString()} lamports`,
       };
     }
 
@@ -85,7 +82,7 @@ export async function sendSol(
       }
     );
 
-    debugLog(`✅ SOL transfer successful! Signature: ${signature}`);
+    debugLog(`✅ SOL transfer successful: ${signature}`);
     
     return {
       success: true,
@@ -121,24 +118,21 @@ export async function sendSol(
  * Create a signed SOL transfer instruction for batching
  * @param fromWallet - Source wallet keypair
  * @param toAddress - Destination wallet public key
- * @param amountSol - Amount to send in SOL (will be converted to lamports)
+ * @param amountLamports - Amount to send in lamports
  * @param feePayer - Optional fee payer public key
  * @returns TransactionInstruction ready for batching
  */
 export function createSendSolInstruction(
   fromWallet: Keypair,
   toAddress: PublicKey,
-  amountSol: number,
+  amountLamports: number,
   feePayer?: PublicKey
 ): TransactionInstruction {
-  // Convert SOL to lamports
-  const amountLamports = Math.floor(amountSol * LAMPORTS_PER_SOL);
-  
-  if (amountLamports <= 0) {
-    throw new Error('Amount must be greater than 0');
+  if (amountLamports < 0) {
+    throw new Error('Amount must be greater than 0 lamports');
   }
 
-  debugLog(`🔧 Creating SOL transfer instruction: ${amountSol} SOL (${amountLamports} lamports)`);
+  debugLog(`🔧 Creating SOL transfer instruction: ${formatLamportsAsSol(amountLamports)} SOL`);
 
   // Create transfer instruction
   const transferInstruction = SystemProgram.transfer({
@@ -155,7 +149,7 @@ export function createSendSolInstruction(
  * @param connection - Solana connection
  * @param fromWallet - Source wallet keypair
  * @param toAddress - Destination wallet public key
- * @param amountSol - Amount to send in SOL (will be converted to lamports)
+ * @param amountLamports - Amount to send in lamports
  * @param feePayer - Optional fee payer public key
  * @returns Signed Transaction ready for batching
  */
@@ -163,17 +157,14 @@ export async function createSignedSendSolTransaction(
   connection: Connection,
   fromWallet: Keypair,
   toAddress: PublicKey,
-  amountSol: number,
+  amountLamports: number,
   feePayer?: PublicKey
 ): Promise<Transaction> {
-  // Convert SOL to lamports
-  const amountLamports = Math.floor(amountSol * LAMPORTS_PER_SOL);
-  
-  if (amountLamports <= 0) {
-    throw new Error('Amount must be greater than 0');
+  if (amountLamports < 0) {
+    throw new Error('Amount must be greater than 0 lamports');
   }
 
-  debugLog(`🔧 Creating signed SOL transfer transaction: ${amountSol} SOL (${amountLamports} lamports)`);
+  debugLog(`🔧 Creating signed SOL transfer transaction: ${formatLamportsAsSol(amountLamports)} SOL`);
 
   // Create transfer instruction
   const transferInstruction = SystemProgram.transfer({
@@ -208,19 +199,19 @@ export async function createSignedSendSolTransaction(
  * Validate SOL transfer parameters
  * @param fromWallet - Source wallet
  * @param toAddress - Destination address
- * @param amountSol - Amount to send
+ * @param amountLamports - Amount to send in lamports
  * @returns Validation result with success status and any errors
  */
 export function validateSendSolParams(
   fromWallet: Keypair,
   toAddress: PublicKey,
-  amountSol: number
+  amountLamports: number
 ): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   // Validate amount
-  if (amountSol <= 0) {
-    errors.push('Amount must be greater than 0');
+  if (amountLamports < 0) {
+    errors.push('Amount must be greater than 0 lamports');
   }
 
   // Validate addresses
@@ -248,19 +239,16 @@ export function validateSendSolParams(
  * @param connection - Solana connection
  * @param fromWallet - Source wallet
  * @param toAddress - Destination address
- * @param amountSol - Amount to send
+ * @param amountLamports - Amount to send in lamports
  * @returns Estimated fee in lamports
  */
 export async function getEstimatedSendSolFee(
   connection: Connection,
   fromWallet: Keypair,
   toAddress: PublicKey,
-  amountSol: number
+  amountLamports: number
 ): Promise<number> {
   try {
-    // Convert SOL to lamports
-    const amountLamports = Math.floor(amountSol * LAMPORTS_PER_SOL);
-    
     // Create transfer instruction
     const transferInstruction = SystemProgram.transfer({
       fromPubkey: fromWallet.publicKey,

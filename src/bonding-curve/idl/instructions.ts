@@ -1,5 +1,5 @@
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
-import BN from 'bn.js';
+import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import {
   PUMP_PROGRAM_ID,
   FEE_RECIPIENT,
@@ -11,11 +11,6 @@ import {
   FEE_CONFIG_SEED,
   FEE_CONFIG_PDA_SECOND_SEED,
 } from './constants';
-import { getAssociatedTokenAddressSync } from '@solana/spl-token';
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
 
 /**
  * Derive fee config PDA dynamically from IDL seeds
@@ -29,18 +24,8 @@ export function deriveFeeConfigPDA(): PublicKey {
     ],
     FEE_PROGRAM_ID  // IDL shows fee_config is derived from fee_program
   );
-  
-  console.log(`🔧 Fee Config PDA Debug:`);
-  console.log(`   Derived from: ${FEE_PROGRAM_ID.toString()}`);
-  console.log(`   Account: ${pda.toString()}`);
-  console.log(`   Seeds: [${FEE_CONFIG_SEED.toString()}, ${Buffer.from(FEE_CONFIG_PDA_SECOND_SEED).toString('hex')}]`);
-  
   return pda;
 }
-
-// ============================================================================
-// SIMPLE INSTRUCTION CREATION
-// ============================================================================
 
 /**
  * Create Pump program BUY instruction with pre-resolved PDAs
@@ -48,7 +33,7 @@ export function deriveFeeConfigPDA(): PublicKey {
 export function createBondingCurveBuyInstruction(
   buyer: PublicKey,
   mint: PublicKey,
-  solAmountLamports: number | BN,
+  amountLamports: number,
   pdas: {
     globalPDA: PublicKey;
     bondingCurvePDA: PublicKey;
@@ -59,22 +44,21 @@ export function createBondingCurveBuyInstruction(
   },
   maxSlippageBasisPoints: number = 1000
 ): TransactionInstruction {
-  const solAmount = BN.isBN(solAmountLamports) ? solAmountLamports : new BN(solAmountLamports);
   const associatedBondingCurve = getAssociatedTokenAddressSync(mint, pdas.bondingCurvePDA, true);
   const associatedUser = getAssociatedTokenAddressSync(mint, buyer, false);
   const feeConfigPDA = deriveFeeConfigPDA();
 
-  const expectedTokenAmount = new BN(100000000);
-  const maxSolCost = solAmount.mul(new BN(10000 + maxSlippageBasisPoints)).div(new BN(10000));
+  const expectedTokenAmount = BigInt(100000000);
+  const maxSolCost = BigInt(Math.floor(amountLamports * (10000 + maxSlippageBasisPoints) / 10000));
   const trackVolume = true;
 
   const data = Buffer.alloc(8 + 8 + 8 + 1);
   let offset = 0;
   data.set(BUY_INSTRUCTION_DISCRIMINATOR, offset);
   offset += 8;
-  expectedTokenAmount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+  data.writeBigUInt64LE(expectedTokenAmount, offset);
   offset += 8;
-  maxSolCost.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+  data.writeBigUInt64LE(maxSolCost, offset);
   offset += 8;
   data.writeUInt8(trackVolume ? 1 : 0, offset);
 
@@ -108,8 +92,8 @@ export function createBondingCurveBuyInstruction(
 export function createBondingCurveSellInstruction(
   seller: PublicKey,
   mint: PublicKey,
-  tokenAmount: number | BN,
-  minSolOutputLamports: number | BN,
+  tokenAmount: number,
+  minSol: number,
   pdas: {
     globalPDA: PublicKey;
     bondingCurvePDA: PublicKey;
@@ -119,8 +103,6 @@ export function createBondingCurveSellInstruction(
     userVolumeAccumulatorPDA: PublicKey;
   }
 ): TransactionInstruction {
-  const amount = BN.isBN(tokenAmount) ? tokenAmount : new BN(tokenAmount);
-  const minSol = BN.isBN(minSolOutputLamports) ? minSolOutputLamports : new BN(minSolOutputLamports);
   const associatedBondingCurve = getAssociatedTokenAddressSync(mint, pdas.bondingCurvePDA, true);
   const associatedUser = getAssociatedTokenAddressSync(mint, seller, false);
   const feeConfigPDA = deriveFeeConfigPDA();
@@ -129,14 +111,9 @@ export function createBondingCurveSellInstruction(
   let offset = 0;
   data.set(SELL_INSTRUCTION_DISCRIMINATOR, offset);
   offset += 8;
-  amount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+  data.writeBigUInt64LE(BigInt(tokenAmount), offset);
   offset += 8;
-  minSol.toArrayLike(Buffer, 'le', 8).copy(data, offset);
-  
-  console.log(`🔧 SELL Instruction Debug:`);
-  console.log(`   Amount: ${amount.toString()} (${amount.toArrayLike(Buffer, 'le', 8).toString('hex')})`);
-  console.log(`   MinSol: ${minSol.toString()} (${minSol.toArrayLike(Buffer, 'le', 8).toString('hex')})`);
-  console.log(`   Data: ${data.toString('hex')}`);
+  data.writeBigUInt64LE(BigInt(minSol), offset);
 
   return new TransactionInstruction({
     keys: [

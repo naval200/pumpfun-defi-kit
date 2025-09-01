@@ -17,6 +17,7 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 🎯 **Graduation Support**: Check token graduation status and requirements
 - 🔧 **CLI Tools**: Comprehensive command-line interface for all operations
 - 💸 **Fee Payer Support**: Optional separate fee payer wallets for treasury operations and batch transactions
+- 🔢 **User-Friendly Amounts**: CLI accepts SOL amounts, automatically converted to lamports internally for precision
 
 ## Project Structure
 
@@ -98,6 +99,7 @@ const tokenData = {
   name: 'My Token',
   symbol: 'MTK',
   description: 'A sample token',
+  initialBuyAmount: 100000000, // 0.1 SOL in lamports (internally converted)
   image: 'https://example.com/image.png',
 };
 
@@ -120,7 +122,7 @@ const buyResult = await buyToken({
   connection,
   wallet,
   tokenMint: result.tokenMint,
-  amount: 1000000, // 1 SOL in lamports
+  amount: 1000000, // Amount in lamports (internally used)
   network: 'devnet',
 });
 
@@ -177,9 +179,13 @@ const sendResult = await sendToken({
 
 **CLI Usage:**
 
+**⚠️ Important**: All CLI commands now accept amounts in SOL for better user experience. The amounts are automatically converted to lamports internally.
+
+**Conversion**: Amounts are specified in SOL (e.g., 0.1 SOL instead of 100,000,000 lamports)
+
 ```bash
-# Buy tokens with separate fee payer
-npm run cli:bc-buy \
+# Buy tokens with separate fee payer (0.1 SOL)
+npm run cli:curve:buy \
   --amount 0.1 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/user-wallet.json \
@@ -216,12 +222,12 @@ const pool = await createPool({
   network: 'devnet',
 });
 
-// Buy from the pool
+// Buy from the pool (amount in lamports internally)
 const ammBuyResult = await buyFromPool({
   connection,
   wallet,
   poolAddress: pool.poolAddress,
-  amount: 500000,
+  amountLamports: 500000000,
   network: 'devnet',
 });
 ```
@@ -281,7 +287,7 @@ npm test -- tests/sendToken.test.ts
 
 # Run CLI tests
 tsx cli/check-wallet-balances.ts
-tsx cli/bonding-curve/buy-cli.ts --amount 0.01 --input-token wallets/token-info-2.json --wallet wallets/creator-wallet.json
+npm run cli:curve:buy -- --amount 0.01 --input-token wallets/token-info-2.json --wallet wallets/creator-wallet.json
 ```
 
 ## API Reference
@@ -310,7 +316,7 @@ Buys tokens using bonding curve pricing.
 - `connection`: Solana connection instance
 - `wallet`: Wallet keypair or adapter
 - `tokenMint`: Token mint address
-- `amount`: Amount in lamports to spend
+- `amount`: Amount in lamports (internal API)
 - `network`: Network to trade on
 
 **Returns:** Promise with purchase result
@@ -370,7 +376,7 @@ SOLANA_RPC_URL=https://api.devnet.solana.com
 # Network selection
 SOLANA_NETWORK=devnet
 
-# Default priority fee (in lamports)
+# Default priority fee (in lamports - internal)
 DEFAULT_PRIORITY_FEE=1000
 
 # Environment file

@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { Connection, PublicKey } from '@solana/web3.js';
-import { sellTokens } from '../../src/amm/sell';
+import { sellAmmTokens } from '../../src/amm/sell';
 import { findPoolsForToken } from '../../src/amm/amm';
 import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
 
@@ -76,7 +76,7 @@ export async function sellTokensAMM() {
 
     // Execute sell
     console.log(`\n🔄 Executing AMM sell of ${args.amount} tokens...`);
-    const sellResult = await sellTokens(
+    const sellResult = await sellAmmTokens(
       connection,
       wallet,
       poolKey,

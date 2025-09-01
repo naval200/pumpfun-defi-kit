@@ -1,9 +1,11 @@
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
+import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
+
 import { getPoolCreationData } from './amm';
 import { sendTransaction } from '../utils/transaction';
 import { retryWithBackoff } from '../utils/retry';
-import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 import { log, logSignature, logError } from '../utils/debug';
+import { formatLamportsAsSol } from '../utils/amounts';
 
 /**
  * Create a new pool for a token with retry logic and better error handling
@@ -21,8 +23,8 @@ export async function createPool(
     log('🏊 Creating AMM liquidity pool...');
     log(`Base mint: ${baseMint.toString()}`);
     log(`Quote mint: ${quoteMint.toString()}`);
-    log(`Base amount: ${baseIn}`);
-    log(`Quote amount: ${quoteIn}`);
+    log(`Base amount: ${baseIn.toString()}`);
+    log(`Quote amount: ${formatLamportsAsSol(quoteIn)} SOL`);
 
     // Initialize SDK directly
     const pumpAmmSdk = new PumpAmmSdk(connection);
@@ -46,7 +48,7 @@ export async function createPool(
         2000
       ); // 3 retries, 2 second base delay
 
-    log(`Initial pool price: ${initialPoolPrice}`);
+    log(`Initial pool price: ${initialPoolPrice.toString()}`);
 
     // Send transaction with retry logic
     log('📝 Sending pool creation transaction...');

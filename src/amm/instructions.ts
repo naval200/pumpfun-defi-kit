@@ -1,27 +1,23 @@
 import { TransactionInstruction } from '@solana/web3.js';
-import BN from 'bn.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
+import BN from 'bn.js';
 
 import { AmmSwapState } from '../@types';
 
 export async function createAmmBuyInstructionsAssuming(
   pumpAmmSdk: PumpAmmSdk,
   swapSolanaState: AmmSwapState,
-  quoteAmountLamports: number | BN,
+  quoteAmount: number,
   slippage: number = 1
 ): Promise<TransactionInstruction[]> {
-  const quoteAmount = BN.isBN(quoteAmountLamports)
-    ? (quoteAmountLamports as BN)
-    : new BN(quoteAmountLamports);
-  return await pumpAmmSdk.buyQuoteInput(swapSolanaState, quoteAmount, slippage);
+  return await pumpAmmSdk.buyQuoteInput(swapSolanaState, new BN(quoteAmount), slippage);
 }
 
 export async function createAmmSellInstructionsAssuming(
   pumpAmmSdk: PumpAmmSdk,
   swapSolanaState: AmmSwapState,
-  baseAmount: number | BN,
+  baseAmount: number,
   slippage: number = 1
 ): Promise<TransactionInstruction[]> {
-  const base = BN.isBN(baseAmount) ? (baseAmount as BN) : new BN(baseAmount);
-  return await pumpAmmSdk.sellBaseInput(swapSolanaState, base, slippage);
+  return await pumpAmmSdk.sellBaseInput(swapSolanaState, new BN(baseAmount), slippage);
 }

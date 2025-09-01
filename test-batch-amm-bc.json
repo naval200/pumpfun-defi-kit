@@ -3,10 +3,10 @@
     {
       "type": "buy-amm",
       "id": "buy-amm-1",
-      "description": "Buy tokens via AMM pool 1",
+      "description": "Buy tokens via AMM pool 1 (0.001 SOL = 1,000,000 lamports)",
       "params": {
         "poolKey": "11111111111111111111111111111111",
-        "quoteAmount": 0.1,
+        "amountLamports": 1000000,
         "slippage": 1
       }
     },
@@ -23,10 +23,10 @@
     {
       "type": "buy-bonding-curve",
       "id": "buy-bc-1",
-      "description": "Buy tokens via bonding curve",
+      "description": "Buy tokens via bonding curve (0.001 SOL = 1,000,000 lamports)",
       "params": {
         "mint": "33333333333333333333333333333333",
-        "solAmount": 0.01,
+        "amountLamports": 1000000,
         "slippage": 1000
       }
     },

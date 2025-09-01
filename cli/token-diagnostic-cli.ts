@@ -4,6 +4,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { debugLog, logSuccess, logError, logWarning } from '../src/utils/debug';
+import { formatLamportsAsSol } from '../src/utils/amounts';
 import { createConnection } from '../src/utils/connection';
 import { 
   deriveBondingCurveAddress,
@@ -95,7 +96,7 @@ async function checkBondingCurveAccount(connection: Connection, mint: PublicKey)
     if (accountInfo) {
       debugLog(`  ✅ Exists: ${accountInfo.data.length} bytes`);
       debugLog(`  👤 Owner: ${accountInfo.owner.toString()}`);
-      debugLog(`  💰 Rent: ${accountInfo.lamports} lamports`);
+      debugLog(`  💰 Rent: ${formatLamportsAsSol(accountInfo.lamports)} SOL`);
       
       // Try to parse bonding curve data (basic check)
       if (accountInfo.data.length > 0) {
@@ -120,7 +121,7 @@ async function checkTokenMetadata(connection: Connection, mint: PublicKey) {
     if (accountInfo) {
       debugLog(`  ✅ Exists: ${accountInfo.data.length} bytes`);
       debugLog(`  👤 Owner: ${accountInfo.owner.toString()}`);
-      debugLog(`  💰 Rent: ${accountInfo.lamports} lamports`);
+      debugLog(`  💰 Rent: ${formatLamportsAsSol(accountInfo.lamports)} SOL`);
       
       // Check if it's a token mint
       if (accountInfo.owner.toString() === 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA') {

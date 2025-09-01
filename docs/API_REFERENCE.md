@@ -76,8 +76,8 @@ function buyPumpFunToken(
   connection: Connection,
   wallet: Keypair,
   mint: PublicKey,
-  solAmount: number,
-  maxSlippageBasisPoints: number = 1000
+  amountLamports: bigint,
+  maxSlippageBasisPoints?: number
 ): Promise<string>
 ```
 
@@ -85,7 +85,7 @@ function buyPumpFunToken(
 - `connection`: Solana connection instance
 - `wallet`: Keypair for the buyer
 - `mint`: Token mint address
-- `solAmount`: Amount of SOL to spend
+- `amountLamports`: Amount of SOL to spend
 - `maxSlippageBasisPoints`: Maximum slippage tolerance (default: 1000 = 10%)
 
 **Returns:** Transaction signature string
@@ -99,12 +99,7 @@ const connection = new Connection('https://api.devnet.solana.com');
 const wallet = Keypair.generate();
 const mint = new PublicKey('YourTokenMintAddress');
 
-try {
-  const signature = await buyPumpFunToken(connection, wallet, mint, 0.1);
-  console.log(`Buy transaction successful: ${signature}`);
-} catch (error) {
-  console.error('Buy failed:', error);
-}
+const signature = await buyPumpFunToken(connection, wallet, mint, 100_000_000n);
 ```
 
 ### sellPumpFunToken
@@ -115,7 +110,7 @@ function sellPumpFunToken(
   connection: Connection,
   wallet: Keypair,
   mint: PublicKey,
-  tokenAmount: number
+  tokenAmount: bigint
 ): Promise<{ success: boolean; signature?: string; error?: string }>
 ```
 
@@ -149,10 +144,10 @@ function buyAmmTokens(
   connection: Connection,
   wallet: Keypair,
   poolKey: PublicKey,
-  quoteAmount: number,
-  slippage: number = 1,
+  quoteAmountLamports: bigint,
+  slippage?: number,
   feePayer?: Keypair
-): Promise<{ success: boolean; signature?: string; baseAmount?: number; error?: string }>
+): Promise<{ success: boolean; signature?: string; baseAmount?: bigint; error?: string }>
 ```
 
 **Parameters:**
@@ -169,9 +164,9 @@ function buyAmmTokens(
 ```typescript
 import { buyAmmTokens } from './src/amm';
 
-const result = await buyAmmTokens(connection, wallet, poolKey, 0.1, 2);
+const result = await buyAmmTokens(connection, wallet, poolKey, 100_000_000n, 200);
 if (result.success) {
-  console.log(`Bought ${result.baseAmount} tokens`);
+  console.log(`Bought ${result.baseAmount?.toString()} tokens`);
 } else {
   console.error(`Buy failed: ${result.error}`);
 }
@@ -185,10 +180,10 @@ function sellAmmTokens(
   connection: Connection,
   wallet: Keypair,
   poolKey: PublicKey,
-  baseAmount: number,
-  slippage: number = 1,
+  baseAmount: bigint,
+  slippage?: number,
   feePayer?: Keypair
-): Promise<{ success: boolean; signature?: string; quoteAmount?: number; error?: string }>
+): Promise<{ success: boolean; signature?: string; quoteAmount?: bigint; error?: string }>
 ```
 
 **Parameters:**
@@ -205,9 +200,9 @@ function sellAmmTokens(
 ```typescript
 import { sellAmmTokens } from './src/amm';
 
-const result = await sellAmmTokens(connection, wallet, poolKey, 1000, 1);
+const result = await sellAmmTokens(connection, wallet, poolKey, 1_000_000n, 100);
 if (result.success) {
-  console.log(`Received ${result.quoteAmount} SOL`);
+  console.log(`Received ${formatLamportsAsSol(result.quoteAmount || 0)} SOL`);
 } else {
   console.error(`Sell failed: ${result.error}`);
 }
@@ -478,7 +473,7 @@ import {
 
 async function completeTokenLifecycle() {
   // 1. Buy tokens on bonding curve
-  const buySignature = await buyPumpFunToken(connection, wallet, mint, 0.1);
+  const buySignature = await buyPumpFunToken(connection, wallet, mint, 100_000_000n);
   
   // 2. Transfer tokens to another wallet
   const transferResult = await sendToken(
@@ -489,7 +484,7 @@ async function completeTokenLifecycle() {
   const sellResult = await sellPumpFunToken(connection, wallet, mint, 500);
   
   // 4. Buy tokens from AMM (if pool exists)
-  const ammBuyResult = await buyAmmTokens(connection, wallet, poolKey, 0.05);
+  const ammBuyResult = await buyAmmTokens(connection, wallet, poolKey, 50_000_000n);
   
   console.log('Token lifecycle completed successfully');
 }

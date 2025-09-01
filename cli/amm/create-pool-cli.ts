@@ -1,7 +1,8 @@
-import { Connection, PublicKey, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import { createPool } from '../../src/amm';
 import fs from 'fs';
 import path from 'path';
+import { formatLamportsAsSol } from '../../src/utils/amounts';
 
 interface CliArgs {
   help?: boolean;
@@ -102,10 +103,11 @@ async function main() {
 
     // Check wallet balance
     const balance = await connection.getBalance(wallet.publicKey);
-    console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+    const requiredAmount = Math.floor(0.1 * 1_000_000_000);
+    console.log(`💰 Wallet balance: ${(balance / 1_000_000_000).toFixed(4)} SOL`);
 
-    if (balance < 0.1 * LAMPORTS_PER_SOL) {
-      console.log('⚠️ Wallet balance is low. Need at least 0.1 SOL for testing.');
+    if (balance < requiredAmount) {
+      console.log('⚠️ Wallet balance is low. Need at least 0.001 SOL for testing.');
       return;
     }
 
@@ -142,13 +144,13 @@ async function main() {
     ); // SOL (wrapped SOL)
 
     // Pool amounts (use provided values or defaults)
-    const baseIn = args.baseAmount || 1000000; // 1M tokens (assuming 6 decimals)
-    const quoteIn = args.quoteAmount || 0.1; // 0.1 SOL
+    const baseIn = args.baseAmount ?? 1_000_000; // tokens (assuming 6 decimals)
+    const quoteIn = Math.floor((args.quoteAmount ?? 0.1) * 1_000_000_000); // lamports
     const poolIndex = args.poolIndex || 0;
 
     console.log('\n📊 Pool Creation Parameters:');
-    console.log(`Base Token: ${baseIn} tokens`);
-    console.log(`Quote Token (SOL): ${quoteIn} SOL`);
+    console.log(`Base Token: ${baseIn.toString()} tokens`);
+    console.log(`Quote Token: ${formatLamportsAsSol(quoteIn)} SOL`);
     console.log(`Pool Index: ${poolIndex}`);
 
     // Create the pool
@@ -177,7 +179,7 @@ async function main() {
           poolTransaction: result.signature,
           poolConfig: {
             baseAmount: baseIn,
-            quoteAmount: quoteIn,
+            quoteAmountLamports: quoteIn.toString(),
             poolIndex: poolIndex,
           },
         };

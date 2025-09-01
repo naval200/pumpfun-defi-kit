@@ -1,9 +1,10 @@
 #!/usr/bin/env tsx
 
-import { Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { createPumpFunToken } from '../../src/bonding-curve/createToken';
 import { deriveBondingCurveAddress } from '../../src/bonding-curve/bc-helper';
 import { parseArgs, loadWallet, saveTokenInfo, printUsage } from '../cli-args';
+import { formatLamportsAsSol, solToLamports } from '../../src/utils/amounts';
 
 /**
  * Create a new PumpFun token with configurable parameters
@@ -17,7 +18,7 @@ export async function createToken() {
       '  --token-symbol <symbol>    Token symbol (required)',
       '  --token-description <desc> Token description',
       '  --image-path <path>        Path to token image',
-      '  --initial-buy <amount>     Initial buy amount in SOL',
+      '  --initial-buy <amount>     Initial buy amount in SOL (default: 0.001)',
       '  --wallet <path>            Path to wallet JSON file',
       '  --output-token <path>      Path to save token info',
     ]);
@@ -31,13 +32,17 @@ export async function createToken() {
     return;
   }
 
+  // Set default initial buy amount if not provided
+  const initialBuySol = args.initialBuyAmount || 0.001; // Default 0.001 SOL
+  const initialBuyLamports = solToLamports(initialBuySol);
+
   console.log('🚀 Creating PumpFun Token');
   console.log('==========================');
   console.log(`Token Name: ${args.tokenName}`);
   console.log(`Token Symbol: ${args.tokenSymbol}`);
   console.log(`Description: ${args.tokenDescription || 'No description'}`);
   console.log(`Image Path: ${args.imagePath || 'No image'}`);
-  console.log(`Initial Buy: ${args.initialBuyAmount || 0} SOL`);
+  console.log(`💰 Initial Buy: ${formatLamportsAsSol(initialBuyLamports)} SOL`);
 
   try {
     // Setup connection and wallet
@@ -48,11 +53,12 @@ export async function createToken() {
 
     // Check wallet balance
     const balance = await connection.getBalance(wallet.publicKey);
-    console.log(`💰 Wallet balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-
-    if (balance < 0.1 * LAMPORTS_PER_SOL) {
-      console.log('⚠️ Wallet balance is low. Need at least 0.1 SOL for testing.');
-      return;
+    if (balance < 1000000) {
+      // 0.001 SOL in lamports (smaller for testing)
+      console.log(
+        `⚠️ Wallet balance is low. Need at least ${formatLamportsAsSol(1000000)} SOL for testing.`
+      );
+      process.exit(1);
     }
 
     // Create token configuration
@@ -61,7 +67,7 @@ export async function createToken() {
       symbol: args.tokenSymbol,
       description: args.tokenDescription || `Test token ${args.tokenName}`,
       imagePath: args.imagePath || 'random.png',
-      initialBuyAmount: args.initialBuyAmount || 0,
+      initialBuyAmount: initialBuyLamports,
     };
 
     console.log('\n🎯 Creating token...');
