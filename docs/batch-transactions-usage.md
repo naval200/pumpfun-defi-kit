@@ -1,166 +1,119 @@
 # Batch Transactions Usage Guide
 
-This guide explains how to use the batch transactions feature for executing multiple operations efficiently.
+This guide explains how to use the PumpFun batch transaction system for executing multiple operations efficiently.
 
 ## Overview
 
-The batch transactions system allows you to combine multiple operations (token transfers, buys, sells, SOL transfers) into optimized batches that can be executed with reduced transaction fees and improved performance.
+The batch transaction system allows you to combine multiple PumpFun operations into single transactions, reducing gas costs and improving efficiency. The system supports two approaches:
 
-## Key Features
+1. **Separated approach (Recommended)**: Use `createBatchInstructions()` and `executeBatchInstructions()` for maximum control and flexibility
+2. **Combined approach**: Use `batchTransactions()` for a simple one-step process
 
-- **Multi-Sender Batching**: Combine operations from different senders into single transactions
-- **Dynamic Batch Sizing**: Automatically determine optimal batch sizes based on Solana transaction limits
-- **Mixed Operation Types**: Support for bonding curve, AMM, and SOL transfer operations
-- **Fee Payer Support**: Optional common fee payer for all operations in a batch
-- **Atomic Execution**: All operations in a batch succeed or fail together
+## Separated Approach (Recommended)
 
-## CLI Usage
+This approach gives you maximum control and is recommended for most use cases:
 
-### Basic Command
-
-```bash
-npm run cli:batch-transactions -- --operations <operations-file> [options]
-```
-
-### Required Arguments
-
-- `--operations <file>`: Path to JSON file containing batch operations
-
-### Optional Arguments
-
-- `--fee-payer <wallet-file>`: Path to wallet file to use as fee payer for all operations
-- `--wallet <wallet-file>`: Fallback wallet if operations don't specify individual senders
-- `--max-parallel <number>`: Maximum number of operations per batch (default: 3)
-- `--retry-failed`: Retry failed operations individually
-- `--disable-fallback-retry`: Disable fallback retry (operations executed individually)
-- `--delay-between <ms>`: Delay between transaction batches in milliseconds
-- `--dynamic-batching`: Enable dynamic batch size determination
-- `--dry-run`: Show what would be executed without running
-- `-h, --help`: Show help message
-
-### Operations JSON Format
-
-Each operation in the JSON file must include:
-
-```json
-{
-  "id": "unique-operation-id",
-  "type": "operation-type",
-  "sender": "/path/to/sender-wallet.json",
-  "params": { ... }
-}
-```
-
-**Important**: The `sender` field in CLI usage should be a **file path** to a wallet JSON file. The CLI will automatically convert this to a Keypair object.
-
-### Operation Types
-
-#### Token Transfer (`sol-transfer`)
-```json
-{
-  "id": "transfer-1",
-  "type": "sol-transfer",
-  "sender": "/path/to/sender-wallet.json",
-  "params": {
-    "to": "recipient-public-key",
-    "amount": 0.01
-  }
-}
-```
-
-#### Bonding Curve Buy (`buy-bonding-curve`)
-```json
-{
-  "id": "buy-1",
-  "type": "buy-bonding-curve",
-  "sender": "/path/to/buyer-wallet.json",
-  "params": {
-    "amount": 0.01
-  }
-}
-```
-
-#### AMM Buy (`buy-amm`)
-```json
-{
-  "id": "buy-amm-1",
-  "type": "buy-amm",
-  "sender": "/path/to/buyer-wallet.json",
-  "params": {
-    "amount": 0.01
-  }
-}
-```
-
-#### AMM Sell (`sell-amm`)
-```json
-{
-  "id": "sell-1",
-  "type": "sell-amm",
-  "sender": "/path/to/seller-wallet.json",
-  "params": {
-    "amount": 100
-  }
-}
-```
-
-### Example CLI Usage
-
-```bash
-# Basic batch execution
-npm run cli:batch-transactions -- --operations batch-ops.json
-
-# With fee payer
-npm run cli:batch-transactions -- --operations batch-ops.json --fee-payer treasury-wallet.json
-
-# With dynamic batching
-npm run cli:batch-transactions -- --operations batch-ops.json --dynamic-batching --max-parallel 10
-
-# Dry run to see what would be executed
-npm run cli:batch-transactions -- --operations batch-ops.json --dry-run
-```
-
-## Programmatic Usage
-
-### Import
+### Step 1: Create Instructions
 
 ```typescript
-import { batchTransactions, BatchOperation } from '@pump-fun/defikit';
-```
+import { createBatchInstructions } from '@your-package/batch';
+import type { BatchOperation } from '@your-package/@types';
 
-### Basic Usage
-
-```typescript
 const operations: BatchOperation[] = [
   {
     id: 'transfer-1',
-    type: 'sol-transfer',
-    sender: senderKeypair, // Must be a Keypair object
+    type: 'transfer',
+    description: 'Transfer tokens to user 1',
+    sender: senderKeypair,
     params: {
-      to: recipientPublicKey,
-      amount: 0.01
-    }
+      recipient: 'RecipientPublicKey1',
+      mint: 'TokenMintPublicKey',
+      amount: 1000,
+    },
   },
   {
-    id: 'buy-1',
-    type: 'buy-bonding-curve',
-    sender: buyerKeypair, // Must be a Keypair object
+    id: 'buy-amm-1',
+    type: 'buy-amm',
+    description: 'Buy tokens via AMM',
+    sender: buyerKeypair,
     params: {
-      amount: 0.01
-    }
-  }
+      poolKey: 'PoolPublicKey',
+      amount: 500,
+      slippage: 1,
+    },
+  },
 ];
 
-const results = await batchTransactions(connection, operations, feePayer, {
-  maxParallel: 3,
-  dynamicBatching: true,
-  retryFailed: true
+// Create batch instructions
+const batchInstructions = await createBatchInstructions(
+  connection,
+  operations,
+  feePayer,
+  { 
+    maxParallel: 3, 
+    dynamicBatching: true 
+  }
+);
+
+console.log(`Created ${batchInstructions.length} batch instructions`);
+batchInstructions.forEach((batch, index) => {
+  console.log(`Batch ${index + 1}: ${batch.operationCount} operations`);
+  console.log(`Fee payer: ${batch.feePayer.toString()}`);
+  console.log(`Signers: ${batch.signers.length}`);
+  console.log(`Blockhash: ${batch.blockhash}`);
 });
 ```
 
-### API Reference
+### Step 2: Execute Instructions
 
-#### `batchTransactions(connection, operations, feePayer?, options?)`
+```typescript
+import { executeBatchInstructions } from '@your-package/batch';
+
+const results = await executeBatchInstructions(
+  connection,
+  batchInstructions,
+  operations,
+  { 
+    delayBetween: 1000, 
+    retryFailed: true 
+  }
+);
+
+console.log(`Executed ${results.length} operations`);
+results.forEach(result => {
+  if (result.success) {
+    console.log(`✅ ${result.operationId}: ${result.signature}`);
+  } else {
+    console.log(`❌ ${result.operationId}: ${result.error}`);
+  }
+});
+```
+
+## Combined Approach (Simple)
+
+Use this when you want to execute batch operations in one step:
+
+```typescript
+import { batchTransactions } from '@your-package/batch';
+
+const results = await batchTransactions(
+  connection,
+  operations,
+  feePayer,
+  {
+    maxParallel: 3,
+    delayBetween: 1000,
+    retryFailed: true,
+    dynamicBatching: true,
+  }
+);
+```
+
+## API Reference
+
+### `createBatchInstructions(connection, operations, feePayer?, options?)`
+
+Creates batch instructions and prepares transactions for execution.
 
 **Parameters:**
 - `connection`: Solana Connection object
@@ -168,113 +121,223 @@ const results = await batchTransactions(connection, operations, feePayer, {
 - `feePayer?`: Optional Keypair to use as fee payer for all operations
 - `options?`: BatchExecutionOptions
 
+**Returns:** Promise<BatchInstructionResult[]>
+
+**Example:**
+```typescript
+const batchInstructions = await createBatchInstructions(
+  connection,
+  operations,
+  feePayer,
+  {
+    maxParallel: 3,        // Max operations per batch
+    dynamicBatching: true, // Enable dynamic batch sizing
+  }
+);
+```
+
+### `executeBatchInstructions(connection, batchInstructions, operations, options?)`
+
+Executes prepared batch instructions.
+
+**Parameters:**
+- `connection`: Solana Connection object
+- `batchInstructions`: Array of BatchInstructionResult from createBatchInstructions
+- `operations`: Original operations array (for mapping results)
+- `options?`: Execution options
+
 **Returns:** Promise<BatchResult[]>
 
-#### BatchOperation Interface
-
+**Example:**
 ```typescript
-interface BatchOperation {
-  id: string;
-  type: 'sol-transfer' | 'buy-bonding-curve' | 'buy-amm' | 'sell-amm';
-  sender: Keypair; // Must be a Keypair object (not a string)
-  params: {
-    // Operation-specific parameters
-  };
-}
-```
-
-**Important**: In programmatic usage, `sender` must be a `Keypair` object directly. Do not pass file paths or JSON strings.
-
-#### BatchExecutionOptions Interface
-
-```typescript
-interface BatchExecutionOptions {
-  maxParallel?: number;           // Max operations per batch
-  delayBetween?: number;          // Delay between batches (ms)
-  retryFailed?: boolean;          // Retry failed operations
-  disableFallbackRetry?: boolean; // Disable fallback retry
-  dynamicBatching?: boolean;      // Enable dynamic batch sizing
-  maxTransferInstructionsPerTx?: number; // Max transfer instructions per tx
-}
-```
-
-## Examples
-
-### Complete Example
-
-```typescript
-import { Connection, Keypair } from '@solana/web3.js';
-import { batchTransactions } from '@pump-fun/defikit';
-
-const connection = new Connection('https://api.devnet.solana.com');
-
-// Create or load keypairs
-const sender1 = Keypair.generate();
-const sender2 = Keypair.generate();
-const feePayer = Keypair.generate();
-
-const operations = [
+const results = await executeBatchInstructions(
+  connection,
+  batchInstructions,
+  operations,
   {
-    id: 'transfer-1',
-    type: 'sol-transfer',
-    sender: sender1,
-    params: {
-      to: sender2.publicKey,
-      amount: 0.01
-    }
-  },
-  {
-    id: 'buy-1',
-    type: 'buy-bonding-curve',
-    sender: sender2,
-    params: {
-      amount: 0.02
-    }
+    delayBetween: 1000,  // Delay between batches (ms)
+    retryFailed: true,   // Retry failed operations
   }
-];
+);
+```
 
-try {
-  const results = await batchTransactions(connection, operations, feePayer, {
-    maxParallel: 3,
-    dynamicBatching: true,
-    retryFailed: true
-  });
-  
-  console.log(`Executed ${results.length} operations successfully`);
-} catch (error) {
-  console.error('Batch execution failed:', error);
+### `BatchInstructionResult` Interface
+
+```typescript
+interface BatchInstructionResult {
+  transaction: Transaction;           // Prepared transaction
+  blockhash: string;                 // Recent blockhash
+  lastValidBlockHeight: number;      // Last valid block height
+  signers: Keypair[];                // Required signers
+  feePayer: PublicKey;               // Fee payer public key
+  operationCount: number;            // Operations in this batch
+  instructionCount: number;          // Instructions in transaction
+  uniqueSendersCount: number;        // Unique senders in batch
 }
 ```
 
-## Best Practices
+## Use Cases for Separated Approach
 
-1. **Use Dynamic Batching**: Enable `dynamicBatching: true` for optimal performance
-2. **Provide Fee Payer**: Use a common fee payer when possible to reduce costs
-3. **Group Related Operations**: Put related operations (buy + transfer) in the same batch
-4. **Handle Errors**: Always wrap batch execution in try-catch blocks
-5. **Monitor Limits**: Be aware of Solana transaction size and account limits
-
-## Error Handling
-
-The batch system provides detailed error information:
+### 1. Create Instructions Once, Execute Multiple Times
 
 ```typescript
-const results = await batchTransactions(connection, operations);
+// Create instructions once
+const batchInstructions = await createBatchInstructions(connection, operations, feePayer);
 
-// Check individual operation results
-results.forEach(result => {
-  if (result.success) {
-    console.log(`✅ ${result.operationId}: ${result.signature}`);
-  } else {
-    console.error(`❌ ${result.operationId}: ${result.error}`);
-  }
+// Execute with different retry strategies
+const results1 = await executeBatchInstructions(connection, batchInstructions, operations, { retryFailed: false });
+const results2 = await executeBatchInstructions(connection, batchInstructions, operations, { retryFailed: true });
+```
+
+### 2. Inspect Transaction Details Before Execution
+
+```typescript
+const batchInstructions = await createBatchInstructions(connection, operations, feePayer);
+
+batchInstructions.forEach((batch, index) => {
+  console.log(`Batch ${index + 1} details:`);
+  console.log(`  Transaction size: ${batch.transaction.serialize().length} bytes`);
+  console.log(`  Fee payer: ${batch.feePayer.toString()}`);
+  console.log(`  Required signers: ${batch.signers.map(s => s.publicKey.toString()).join(', ')}`);
+  console.log(`  Blockhash: ${batch.blockhash}`);
+  console.log(`  Last valid block height: ${batch.lastValidBlockHeight}`);
 });
 ```
 
-## Transaction Limits
+### 3. Custom Execution Logic
 
-- **Size Limit**: 1232 bytes per transaction
-- **Account Limit**: 64 accounts per transaction
-- **Compute Units**: 200K-1.4M per transaction
+```typescript
+const batchInstructions = await createBatchInstructions(connection, operations, feePayer);
 
-Dynamic batching automatically optimizes batch sizes to stay within these limits.
+for (let i = 0; i < batchInstructions.length; i++) {
+  const batch = batchInstructions[i];
+  
+  // Custom logic: only execute if transaction size is reasonable
+  if (batch.transaction.serialize().length < 1000000) { // 1MB limit
+    console.log(`Executing batch ${i + 1}`);
+    const result = await executeBatchInstructions(
+      connection, 
+      [batch], 
+      operations.slice(i * batch.operationCount, (i + 1) * batch.operationCount)
+    );
+  } else {
+    console.log(`Skipping batch ${i + 1} (too large)`);
+  }
+}
+```
+
+### 4. Parallel Execution
+
+```typescript
+const batchInstructions = await createBatchInstructions(connection, operations, feePayer);
+
+// Execute batches in parallel (be careful with rate limits)
+const executionPromises = batchInstructions.map((batch, index) => 
+  executeBatchInstructions(
+    connection, 
+    [batch], 
+    operations.slice(index * batch.operationCount, (index + 1) * batch.operationCount)
+  )
+);
+
+const results = await Promise.all(executionPromises);
+```
+
+## Supported Operation Types
+
+- `transfer`: Transfer tokens between accounts
+- `sol-transfer`: Transfer SOL between accounts
+- `buy-bonding-curve`: Buy tokens via bonding curve
+- `sell-bonding-curve`: Sell tokens via bonding curve
+- `buy-amm`: Buy tokens via AMM
+- `sell-amm`: Sell tokens via AMM
+
+## Configuration Options
+
+### Batch Creation Options
+
+- `maxParallel`: Maximum operations per batch (default: 3)
+- `dynamicBatching`: Enable dynamic batch size optimization (default: false)
+
+### Execution Options
+
+- `delayBetween`: Delay between batches in milliseconds (default: 1000)
+- `retryFailed`: Whether to retry failed operations individually (default: false)
+- `disableFallbackRetry`: Disable fallback retry mechanism (default: false)
+
+### Dynamic Batching
+
+When `dynamicBatching` is enabled, the system automatically determines the optimal batch size based on:
+- Network congestion
+- Transaction size limits
+- Fee optimization
+- Account limits
+
+## Error Handling
+
+The batch system provides comprehensive error handling:
+
+1. **Batch-level errors**: If a batch fails, all operations in that batch are marked as failed
+2. **Individual retry**: Failed operations can be retried individually using the fallback mechanism
+3. **Detailed error reporting**: Each operation result includes success status and error details
+
+## Best Practices
+
+1. **Use separated approach**: Prefer `createBatchInstructions` + `executeBatchInstructions` for better control
+2. **Validate operations**: Use `validatePumpFunBatchOperations()` before execution
+3. **Check account existence**: Ensure all required accounts exist before batching
+4. **Monitor transaction size**: Large batches may hit transaction size limits
+5. **Use appropriate fee payers**: Consider using a dedicated fee payer for better control
+6. **Handle retries**: Enable retry for important operations
+7. **Monitor network conditions**: Use dynamic batching during high congestion
+
+## Example: Complete Workflow
+
+```typescript
+import { 
+  createBatchInstructions, 
+  executeBatchInstructions,
+  validatePumpFunBatchOperations 
+} from '@your-package/batch';
+
+async function executeBatchWorkflow() {
+  // 1. Validate operations
+  const validation = validatePumpFunBatchOperations(operations);
+  if (!validation.valid) {
+    console.error('Invalid operations:', validation.errors);
+    return;
+  }
+
+  // 2. Create instructions
+  const batchInstructions = await createBatchInstructions(
+    connection,
+    operations,
+    feePayer,
+    { maxParallel: 3, dynamicBatching: true }
+  );
+
+  // 3. Inspect and validate instructions
+  batchInstructions.forEach((batch, index) => {
+    if (batch.transaction.serialize().length > 1000000) {
+      console.warn(`Batch ${index + 1} is very large: ${batch.transaction.serialize().length} bytes`);
+    }
+  });
+
+  // 4. Execute with retry
+  const results = await executeBatchInstructions(
+    connection,
+    batchInstructions,
+    operations,
+    { retryFailed: true, delayBetween: 1000 }
+  );
+
+  // 5. Process results
+  const successful = results.filter(r => r.success);
+  const failed = results.filter(r => !r.success);
+
+  console.log(`✅ ${successful.length} operations succeeded`);
+  console.log(`❌ ${failed.length} operations failed`);
+
+  return results;
+}
+```

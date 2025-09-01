@@ -1,22 +1,9 @@
-import {
-  Connection,
-  PublicKey,
-  Keypair,
-  Transaction,
-  TransactionInstruction,
-} from '@solana/web3.js';
+import { Connection, Keypair, Transaction } from '@solana/web3.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 
-import { sendToken } from '../sendToken';
-import { sendSol } from '../sendSol';
-import { buyPumpFunToken, sellPumpFunToken } from '../bonding-curve';
-import { buyAmmTokens, sellAmmTokens } from '../amm';
 import { debugLog, logError } from '../utils/debug';
-import {
-  chunkArray,
-  determineOptimalBatchSize,
-  buildInstructionsForOperation,
-} from './batch-helper';
+import { createBatchInstructions, BatchInstructionResult } from './instructions';
+import { buildInstructionsForOperation } from './batch-helper';
 import type {
   BatchOperation,
   BatchResult,
@@ -40,18 +27,11 @@ export async function batchTransactions(
   feePayer?: Keypair,
   options: Partial<BatchExecutionOptions & { dynamicBatching?: boolean }> = {}
 ): Promise<BatchResult[]> {
-  const {
-    maxParallel = 3,
-    delayBetween = 1000,
-    retryFailed = false,
-    disableFallbackRetry = false,
-    dynamicBatching = false,
-  } = options;
-  const results: BatchResult[] = [];
+  const { delayBetween = 1000, retryFailed = false, disableFallbackRetry = false } = options;
 
   debugLog(`🚀 Executing ${operations.length} PumpFun operations with true multi-sender batching`);
   debugLog(
-    `📊 Batch options: maxParallel=${maxParallel}, delayBetween=${delayBetween}ms, retryFailed=${retryFailed}, disableFallbackRetry=${disableFallbackRetry}, dynamicBatching=${dynamicBatching}`
+    `📊 Batch options: delayBetween=${delayBetween}ms, retryFailed=${retryFailed}, disableFallbackRetry=${disableFallbackRetry}`
   );
   if (feePayer) {
     debugLog(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
@@ -59,110 +39,61 @@ export async function batchTransactions(
     debugLog('💸 No fee payer provided: each signer will pay their own fees');
   }
 
-  // Determine optimal batch size if dynamic batching is enabled
-  let actualMaxParallel = maxParallel;
-  if (dynamicBatching && operations.length > 0) {
-    const { maxOpsPerBatch, reasoning } = await determineOptimalBatchSize(
-      connection,
-      operations,
-      feePayer
+  // Create instructions for all batches
+  const batchInstructions = await createBatchInstructions(
+    connection,
+    operations,
+    feePayer,
+    options
+  );
+
+  // Execute all batches
+  const results = await executeBatchInstructions(connection, batchInstructions, operations, {
+    delayBetween,
+    retryFailed,
+    disableFallbackRetry,
+  });
+
+  return results;
+}
+
+/**
+ * Execute prepared batch instructions
+ *
+ * This function handles the execution part of batch transactions:
+ * - Signs transactions with all required signers
+ * - Submits transactions to the network
+ * - Handles retries for failed operations
+ * - Returns results for all operations
+ */
+export async function executeBatchInstructions(
+  connection: Connection,
+  batchInstructions: BatchInstructionResult[],
+  operations: BatchOperation[],
+  options: {
+    delayBetween?: number;
+    retryFailed?: boolean;
+    disableFallbackRetry?: boolean;
+  } = {}
+): Promise<BatchResult[]> {
+  const { delayBetween = 1000, retryFailed = false, disableFallbackRetry = false } = options;
+
+  const results: BatchResult[] = [];
+
+  for (let batchIndex = 0; batchIndex < batchInstructions.length; batchIndex++) {
+    const batchInstruction = batchInstructions[batchIndex];
+    debugLog(
+      `🔄 Executing Batch ${batchIndex + 1}/${batchInstructions.length} (${batchInstruction.operationCount} operations)`
     );
-    actualMaxParallel = Math.min(maxOpsPerBatch, maxParallel);
-    debugLog(`🧠 Dynamic batching: ${reasoning}`);
-    debugLog(`📏 Using batch size: ${actualMaxParallel} operations per batch`);
-  }
-
-  // Execute operations in batches
-  const batches = chunkArray(operations, actualMaxParallel);
-
-  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-    const batch = batches[batchIndex];
-    debugLog(`🔄 Executing Batch ${batchIndex + 1}/${batches.length} (${batch.length} operations)`);
 
     try {
-      const ammSdk = new PumpAmmSdk(connection);
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+      const { transaction, blockhash, lastValidBlockHeight, signers } = batchInstruction;
 
-      // Collect all unique senders and build all instructions
-      const uniqueSenders = new Map<string, Keypair>();
-      const allInstructions: TransactionInstruction[] = [];
-
-      // Process all operations in the batch
-      for (const op of batch) {
-        let senderKeypair: Keypair;
-
-        if (op.sender) {
-          if (typeof op.sender === 'object' && 'publicKey' in op.sender) {
-            senderKeypair = op.sender;
-          } else {
-            throw new Error('BatchOperation.sender must be a Keypair when provided');
-          }
-        } else {
-          throw new Error(`Operation ${op.id} is missing sender Keypair`);
-        }
-
-        const senderPubkeyStr = senderKeypair.publicKey.toString();
-
-        // Track unique senders
-        if (!uniqueSenders.has(senderPubkeyStr)) {
-          uniqueSenders.set(senderPubkeyStr, senderKeypair);
-        }
-
-        // Build instructions for this operation
-        const instructions = await buildInstructionsForOperation(
-          connection,
-          ammSdk,
-          op,
-          senderKeypair,
-          feePayer
-        );
-        allInstructions.push(...instructions);
-      }
-
-      // Create single transaction with all operations
-      const tx = new Transaction();
-      allInstructions.forEach(ix => tx.add(ix));
-      tx.recentBlockhash = blockhash;
-
-      // Set fee payer
-      if (feePayer) {
-        tx.feePayer = feePayer.publicKey;
-      } else {
-        // If no fee payer, use the first sender as fee payer
-        const firstSender = uniqueSenders.values().next().value;
-        if (!firstSender) {
-          throw new Error('No senders found in batch operations');
-        }
-        tx.feePayer = firstSender.publicKey;
-      }
-
-      // ALL unique senders must sign the combined transaction
-      debugLog(`🔐 All ${uniqueSenders.size} unique senders will sign the combined transaction`);
-      debugLog(`📋 Instructions in transaction: ${allInstructions.length}`);
-      allInstructions.forEach((ix, index) => {
-        debugLog(`  📝 Instruction ${index + 1}: Program ${ix.programId.toString()}`);
-        debugLog(`    Keys: ${ix.keys.length} accounts`);
-        ix.keys.forEach((key, keyIndex) => {
-          debugLog(
-            `      ${keyIndex}: ${key.pubkey.toString()} (${key.isSigner ? 'SIGNER' : 'READONLY'})`
-          );
-        });
-      });
-
-      const signersInOrder: Keypair[] = [];
-      uniqueSenders.forEach((sender, pubkey) => {
-        debugLog(`  • Will sign with: ${pubkey}`);
-        signersInOrder.push(sender);
-      });
-      if (feePayer) {
-        debugLog(`💸 Will sign with fee payer: ${feePayer.publicKey.toString()}`);
-        signersInOrder.push(feePayer);
-      }
       // Sign ONCE with all signers to avoid overwriting previous signatures
-      tx.sign(...signersInOrder);
+      transaction.sign(...signers);
 
-      debugLog(`🔍 Transaction signatures after signing: ${tx.signatures.length}`);
-      tx.signatures.forEach((sig, index) => {
+      debugLog(`🔍 Transaction signatures after signing: ${transaction.signatures.length}`);
+      transaction.signatures.forEach((sig, index) => {
         const present = sig.signature && sig.signature.length > 0;
         debugLog(
           `  Signature ${index + 1}: ${sig.publicKey.toString()} - ${present ? 'present' : 'MISSING'}`
@@ -171,12 +102,12 @@ export async function batchTransactions(
 
       // Submit the combined transaction
       debugLog(
-        `🚀 Submitting transaction with ${tx.signatures.length} signatures and ${allInstructions.length} instructions`
+        `🚀 Submitting transaction with ${transaction.signatures.length} signatures and ${batchInstruction.instructionCount} instructions`
       );
-      debugLog(`💰 Fee payer: ${tx.feePayer?.toString() || 'Not set'}`);
-      debugLog(`📦 Transaction size: ${tx.serialize().length} bytes`);
+      debugLog(`💰 Fee payer: ${transaction.feePayer?.toString() || 'Not set'}`);
+      debugLog(`📦 Transaction size: ${transaction.serialize().length} bytes`);
 
-      const signature = await connection.sendRawTransaction(tx.serialize(), {
+      const signature = await connection.sendRawTransaction(transaction.serialize(), {
         skipPreflight: false,
         preflightCommitment: 'confirmed',
       });
@@ -194,8 +125,13 @@ export async function batchTransactions(
         throw new Error(`Combined multi-sender transaction failed: ${confirmation.value.err}`);
       }
 
-      // Push results for all operations sharing the same signature
-      batch.forEach(op => {
+      // Push results for all operations in this batch
+      // We need to map the batch index back to the original operations
+      const startIndex = batchIndex * batchInstruction.operationCount;
+      const endIndex = startIndex + batchInstruction.operationCount;
+      const batchOperations = operations.slice(startIndex, endIndex);
+
+      batchOperations.forEach(op => {
         results.push({ operationId: op.id, type: op.type, success: true, signature });
       });
 
@@ -204,7 +140,12 @@ export async function batchTransactions(
       const errorMessage = error instanceof Error ? error.message : String(error);
       debugLog(`❌ Multi-sender batch failed: ${errorMessage}`);
 
-      batch.forEach(op => {
+      // Push failure results for all operations in this batch
+      const startIndex = batchIndex * batchInstruction.operationCount;
+      const endIndex = startIndex + batchInstruction.operationCount;
+      const batchOperations = operations.slice(startIndex, endIndex);
+
+      batchOperations.forEach(op => {
         results.push({
           operationId: op.id,
           type: op.type,
@@ -215,7 +156,7 @@ export async function batchTransactions(
     }
 
     // Delay between batches if configured
-    if (batchIndex < batches.length - 1 && delayBetween > 0) {
+    if (batchIndex < batchInstructions.length - 1 && delayBetween > 0) {
       debugLog(`⏳ Waiting ${delayBetween}ms before next batch...`);
       await new Promise(resolve => setTimeout(resolve, delayBetween));
     }
@@ -243,7 +184,7 @@ export async function batchTransactions(
 
         for (const operation of failedOperations) {
           debugLog(`🔄 Retrying operation: ${operation.id}`);
-          const retryResult = await executeOperation(connection, feePayer, operation);
+          const retryResult = await executeOperation(connection, undefined, operation);
 
           // Update the existing result
           const existingIndex = results.findIndex(r => r.operationId === operation.id);
@@ -271,113 +212,54 @@ async function executeOperation(
   try {
     debugLog(`🚀 Executing ${operation.type}: ${operation.description}`);
 
-    let result: OperationResult;
-    const { type } = operation;
-
     if (!operation.sender) {
       throw new Error(`Operation ${operation.id} is missing sender Keypair`);
     }
     const wallet = operation.sender as Keypair;
 
-    switch (type) {
-      case 'transfer': {
-        const { recipient, mint, amount } = operation.params;
-        const transferResult = await sendToken(
-          connection,
-          wallet,
-          new PublicKey(recipient),
-          new PublicKey(mint),
-          amount,
-          false, // allowOwnerOffCurve
-          false, // createRecipientAccount
-          feePayer
-        );
-        if (transferResult.success && transferResult.signature) {
-          result = { success: true, signature: transferResult.signature, amount, mint };
-        } else {
-          result = { success: false, error: transferResult.error || 'Transfer failed' };
-        }
-        break;
-      }
-      case 'sell-bonding-curve': {
-        const { mint, amount } = operation.params;
-        const sellResult = await sellPumpFunToken(connection, wallet, new PublicKey(mint), amount);
-        if (sellResult.success && sellResult.signature) {
-          result = { success: true, signature: sellResult.signature, amount, mint };
-        } else {
-          result = { success: false, error: sellResult.error || 'Sell failed' };
-        }
-        break;
-      }
-      case 'sell-amm': {
-        const { poolKey, amount, slippage = 1 } = operation.params;
-        const sellResult = await sellAmmTokens(
-          connection,
-          wallet,
-          new PublicKey(poolKey),
-          amount,
-          slippage,
-          feePayer
-        );
-        if (sellResult.success && sellResult.signature) {
-          result = { success: true, signature: sellResult.signature, amount, mint: poolKey };
-        } else {
-          result = { success: false, error: sellResult.error || 'Sell failed' };
-        }
-        break;
-      }
-      case 'buy-amm': {
-        const { poolKey, amount, slippage = 1 } = operation.params;
-        const buyResult = await buyAmmTokens(
-          connection,
-          wallet,
-          new PublicKey(poolKey),
-          amount,
-          slippage,
-          feePayer || wallet
-        );
-        if (buyResult.success && buyResult.signature) {
-          result = {
-            success: true,
-            signature: buyResult.signature,
-            amount,
-            mint: poolKey,
-          };
-        } else {
-          result = { success: false, error: buyResult.error || 'Buy failed' };
-        }
-        break;
-      }
-      case 'buy-bonding-curve': {
-        const { mint, amount } = operation.params;
-        const signature = await buyPumpFunToken(
-          connection,
-          wallet,
-          new PublicKey(mint),
-          amount,
-          1000
-        );
-        result = { success: true, signature, amount, mint };
-        break;
-      }
-      case 'sol-transfer': {
-        const { recipient, amount } = operation.params;
-        const sendResult = await sendSol(
-          connection,
-          wallet,
-          new PublicKey(recipient),
-          amount,
-          feePayer
-        );
-        if (sendResult.success && sendResult.signature) {
-          result = { success: true, signature: sendResult.signature, amount };
-        } else {
-          result = { success: false, error: sendResult.error || 'SOL transfer failed' };
-        }
-        break;
-      }
-      default:
-        throw new Error(`Unknown operation type: ${type}`);
+    // Build instructions using the helper function
+    const instructions = await buildInstructionsForOperation(
+      connection,
+      new PumpAmmSdk(connection),
+      operation,
+      wallet,
+      feePayer
+    );
+
+    // Create and send transaction
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+    const transaction = new Transaction();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = feePayer?.publicKey || wallet.publicKey;
+
+    instructions.forEach(ix => transaction.add(ix));
+
+    const signers = [wallet];
+    if (feePayer) {
+      signers.push(feePayer);
+    }
+
+    transaction.sign(...signers);
+
+    const signature = await connection.sendRawTransaction(transaction.serialize(), {
+      skipPreflight: false,
+      preflightCommitment: 'confirmed',
+    });
+
+    const confirmation = await connection.confirmTransaction(
+      {
+        signature,
+        blockhash,
+        lastValidBlockHeight,
+      },
+      'confirmed'
+    );
+
+    let result: OperationResult;
+    if (confirmation.value.err) {
+      result = { success: false, error: `Transaction failed: ${confirmation.value.err}` };
+    } else {
+      result = { success: true, signature };
     }
 
     return {
