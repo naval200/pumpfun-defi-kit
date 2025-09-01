@@ -1,4 +1,5 @@
 import { Connection, Keypair } from '@solana/web3.js';
+import { BatchInstructionResult } from './instructions';
 import type { BatchOperation, BatchResult, BatchExecutionOptions } from '../@types';
 /**
  * Execute a batch of PumpFun operations with true multi-sender batching
@@ -13,6 +14,20 @@ import type { BatchOperation, BatchResult, BatchExecutionOptions } from '../@typ
 export declare function batchTransactions(connection: Connection, operations: BatchOperation[], feePayer?: Keypair, options?: Partial<BatchExecutionOptions & {
     dynamicBatching?: boolean;
 }>): Promise<BatchResult[]>;
+/**
+ * Execute prepared batch instructions
+ *
+ * This function handles the execution part of batch transactions:
+ * - Signs transactions with all required signers
+ * - Submits transactions to the network
+ * - Handles retries for failed operations
+ * - Returns results for all operations
+ */
+export declare function executeBatchInstructions(connection: Connection, batchInstructions: BatchInstructionResult[], operations: BatchOperation[], options?: {
+    delayBetween?: number;
+    retryFailed?: boolean;
+    disableFallbackRetry?: boolean;
+}): Promise<BatchResult[]>;
 /**
  * Validate PumpFun batch operations structure
  */
