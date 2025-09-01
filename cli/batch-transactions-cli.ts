@@ -32,7 +32,15 @@ async function main() {
         '  --delay-between <ms>    Delay between batches in milliseconds (default: 1000)'
       );
       console.log('  --retry-failed          Retry failed operations automatically');
+      console.log('  --disable-fallback-retry Disable fallback retry (operations executed individually)');
+      console.log('  --wallet <wallet>       Optional fallback wallet for ops missing "sender"');
       console.log('  --dry-run               Show what would be executed without submitting');
+      console.log('');
+      console.log('Notes:');
+      console.log('  • Each operation should include a "sender" that identifies a wallet.');
+      console.log('  • In CLI mode, set "sender" in the operations JSON to a wallet JSON path, e.g.:');
+      console.log('      { "type": "transfer", ..., "sender": "./wallets/user1.json" }');
+      console.log('  • If an operation omits "sender", the CLI will use --wallet as a fallback.');
       return;
     }
 
@@ -94,34 +102,35 @@ async function main() {
     const feePayer = Keypair.fromSecretKey(Uint8Array.from(feePayerData));
     console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
 
-    // Load default wallet (for operations that need a sender)
-    let defaultWallet: Keypair;
-    
-    if (args.wallet) {
-      // Use the provided wallet parameter
-      const walletPath = path.resolve(args.wallet);
-      if (!fs.existsSync(walletPath)) {
-        console.error(`❌ Error: Wallet file not found: ${walletPath}`);
+    // Resolve sender field on each operation into a Keypair (library requires Keypair)
+    operations = operations.map((op, index) => {
+      const copy: any = { ...op };
+      if (copy.sender) {
+        if (typeof copy.sender === 'string') {
+          // Treat as wallet path
+          const walletPath = path.resolve(copy.sender);
+          if (!fs.existsSync(walletPath)) {
+            console.error(`❌ Error: Operation ${copy.id || index} sender wallet not found: ${walletPath}`);
+            process.exit(1);
+          }
+          const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
+          copy.sender = Keypair.fromSecretKey(Uint8Array.from(walletData));
+        }
+      } else if (args.wallet) {
+        // Fallback: use provided --wallet for ops missing sender
+        const fallbackPath = path.resolve(args.wallet);
+        if (!fs.existsSync(fallbackPath)) {
+          console.error(`❌ Error: Fallback wallet file not found: ${fallbackPath}`);
+          process.exit(1);
+        }
+        const walletData = JSON.parse(fs.readFileSync(fallbackPath, 'utf8'));
+        copy.sender = Keypair.fromSecretKey(Uint8Array.from(walletData));
+      } else {
+        console.error(`❌ Error: Operation ${copy.id || index} missing sender and no --wallet provided`);
         process.exit(1);
       }
-      const walletData = JSON.parse(fs.readFileSync(walletPath, 'utf8'));
-      defaultWallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
-      console.log(`👛 Using provided wallet: ${defaultWallet.publicKey.toString()}`);
-    } else {
-      // Fallback to default wallet
-      const defaultWalletPath = path.resolve('fixtures/creator-wallet.json');
-      if (fs.existsSync(defaultWalletPath)) {
-        const walletData = JSON.parse(fs.readFileSync(defaultWalletPath, 'utf8'));
-        defaultWallet = Keypair.fromSecretKey(Uint8Array.from(walletData));
-        console.log(`👛 Using default wallet: ${defaultWallet.publicKey.toString()}`);
-      } else {
-        // Create a dummy wallet if none exists (for testing)
-        defaultWallet = Keypair.generate();
-        console.log(
-          `⚠️  No default wallet found, using generated wallet: ${defaultWallet.publicKey.toString()}`
-        );
-      }
-    }
+      return copy;
+    });
 
     // Validate operations
     const validation = validateBatchOperations(operations);
@@ -135,6 +144,8 @@ async function main() {
     const maxParallel = args.maxParallel || 3;
     const delayBetween = args.delayBetween || 1000;
     const retryFailed = args.retryFailed || false;
+    const disableFallbackRetry = args.disableFallbackRetry || false;
+    const dynamicBatching = args.dynamicBatching || false;
     const dryRun = args.dryRun || false;
 
     if (dryRun) {
@@ -148,6 +159,8 @@ async function main() {
       console.log(`  • Max parallel: ${maxParallel}`);
       console.log(`  • Delay between batches: ${delayBetween}ms`);
       console.log(`  • Retry failed: ${retryFailed}`);
+      console.log(`  • Disable fallback retry: ${disableFallbackRetry}`);
+      console.log(`  • Dynamic batching: ${dynamicBatching}`);
       console.log(`  • Fee payer: ${feePayer.publicKey.toString()}`);
       return;
     }
@@ -158,10 +171,12 @@ async function main() {
 
     // Execute batch transactions using the actual module
     console.log('\n🚀 Executing batch transactions...');
-    const results = await batchTransactions(connection, defaultWallet, operations, feePayer, {
+    const results = await batchTransactions(connection, operations, feePayer, {
       maxParallel,
       delayBetween,
       retryFailed,
+      disableFallbackRetry,
+      dynamicBatching,
     });
 
     // Display results

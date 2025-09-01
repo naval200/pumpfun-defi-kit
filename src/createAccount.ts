@@ -111,6 +111,7 @@ export async function getOrCreateAssociatedTokenAccount(
     // Check if ATA exists
     try {
       await getAccount(connection, userTokenAccount);
+      // ATA already exists - return success
       return { success: true, account: userTokenAccount };
     } catch (error) {
       // ATA doesn't exist, create it

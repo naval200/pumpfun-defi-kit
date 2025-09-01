@@ -164,7 +164,7 @@ cat > "$REPORT_FILE" << EOF
 - **Batched Instructions**: 10 mixed operations in single transaction ✅
 - **Comprehensive Batch**: 16 mixed operations ✅
 - **Fee Payer**: Treasury wallet used for all operations ✅
-- **Parallel Execution**: max-parallel=5 (send/sell), max-parallel=1 (batched), max-parallel=3 (comprehensive) ✅
+- **Parallel Execution**: max-parallel=3 (send/sell), max-parallel=1 (batched), max-parallel=3 (comprehensive) ✅
 - **Retry Logic**: Automatic retry for failed operations ✅
 
 ## What Was Tested

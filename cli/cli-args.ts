@@ -25,7 +25,9 @@ export interface CliArgs {
   operations?: string;
   maxParallel?: number;
   retryFailed?: boolean;
+  disableFallbackRetry?: boolean;
   delayBetween?: number;
+  dynamicBatching?: boolean;
   dryRun?: boolean;
   help?: boolean;
   action?: string;
@@ -115,8 +117,14 @@ export function parseArgs(): CliArgs {
       case '--retry-failed':
         args.retryFailed = true;
         break;
+      case '--disable-fallback-retry':
+        args.disableFallbackRetry = true;
+        break;
       case '--delay-between':
         args.delayBetween = parseInt(argv[++i]);
+        break;
+      case '--dynamic-batching':
+        args.dynamicBatching = true;
         break;
       case '--dry-run':
         args.dryRun = true;
@@ -198,7 +206,9 @@ export function printUsage(scriptName: string, options: string[] = []): void {
   console.log('  --operations <path>           Path to JSON file containing batch operations');
   console.log('  --max-parallel <number>       Maximum parallel transactions for batch operations');
   console.log('  --retry-failed                Retry failed transactions in batch mode');
+  console.log('  --disable-fallback-retry      Disable fallback retry (operations executed individually)');
   console.log('  --delay-between <ms>          Delay between transaction batches in milliseconds');
+  console.log('  --dynamic-batching            Enable dynamic batch size determination');
   console.log('  --dry-run                     Show what would be executed without running');
   console.log('  -h, --help                    Show this help message');
 

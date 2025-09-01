@@ -109,8 +109,8 @@ async function main() {
     const owner = new PublicKey(args.owner);
 
     debugLog(`🔑 Payer Wallet: ${wallet.publicKey.toString()}`);
-    debugLog(`🪙 Token Mint: ${mint.toString()}`);
-    debugLog(`👤 ATA Owner: ${owner.toString()}`);
+    debugLog(`�� Token Mint: ${mint.toString()}`);
+    debugLog(`�� ATA Owner: ${owner.toString()}`);
 
     // Get connection
     const connection = createConnection();
@@ -123,11 +123,11 @@ async function main() {
       
       if (exists) {
         logSuccess('✅ Associated Token Account already exists!');
+        process.exit(0);  // ✅ ATA exists - success
       } else {
         logError('❌ Associated Token Account does not exist');
+        process.exit(1);  // ❌ ATA doesn't exist - failure
       }
-      
-      return;
     }
 
     // Create or get ATA
@@ -167,8 +167,15 @@ async function main() {
       );
       
       if (result.success) {
-        logSuccess('✅ ATA is ready!');
-        console.log(`📋 ATA Address: ${result.account.toString()}`);
+        // Check if ATA already existed
+        const exists = await checkAssociatedTokenAccountExists(connection, owner, mint);
+        if (exists) {
+          logSuccess('✅ Associated Token Account already exists!');
+          console.log(`📋 ATA Address: ${result.account.toString()}`);
+        } else {
+          logSuccess('✅ ATA created successfully!');
+          console.log(`📋 ATA Address: ${result.account.toString()}`);
+        }
       } else {
         logError(`❌ Failed to get/create ATA: ${result.error}`);
         process.exit(1);

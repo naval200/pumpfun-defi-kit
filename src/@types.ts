@@ -80,9 +80,9 @@ export interface OperationResult extends TransactionResult {
 export type BatchOperationBase<T, P> = {
   type: T;
   id: string;
-  description: string;
+  description?: string;
   params: P;
-  sender?: string;
+  sender?: Keypair;
 }
 
 export type BatchOperationTransfer = BatchOperationBase<'transfer', {
@@ -134,8 +134,20 @@ export interface BatchExecutionOptions {
   maxParallel?: number;
   delayBetween?: number;
   retryFailed?: boolean;
+  disableFallbackRetry?: boolean;
   maxTransferInstructionsPerTx?: number;
   combinePerBatch?: boolean;
+}
+
+/**
+ * Multi-sender batch for true batching across different senders
+ * All operations are combined into a single transaction signed by all senders
+ */
+export interface MultiSenderBatch {
+  id: string;
+  operations: BatchOperation[];
+  signers: Keypair[]; // All wallets that need to sign
+  feePayer?: Keypair; // Optional fee payer
 }
 
 /**

@@ -87,11 +87,11 @@ for i in $(seq 1 $FUNDED_COUNT); do
     
     echo "  Creating token account for wallet $i/$FUNDED_COUNT: $WALLET_ADDRESS"
     
-    # Use the create-ata CLI to create the token account
-    if npm run cli:create-ata \
+    # Use the create-ata CLI to create the token account (run from project root)
+    if (cd "$DEBUG_DIR/.." && npm run cli:create-ata \
         -- --wallet "$CREATOR_WALLET" \
         --mint "$TOKEN_MINT" \
-        --owner "$WALLET_ADDRESS" > /dev/null 2>&1; then
+        --owner "$WALLET_ADDRESS" > /dev/null 2>&1); then
         echo "    ✅ Token account created/activated successfully"
         ACCOUNT_CREATION_SUCCESS=$((ACCOUNT_CREATION_SUCCESS + 1))
     else
@@ -112,12 +112,12 @@ for i in $(seq 1 $FUNDED_COUNT); do
     
     echo "  Verifying token account for wallet $i/$FUNDED_COUNT: $WALLET_ADDRESS"
     
-    # Use the create-ata CLI to check if the token account exists
-    if npm run cli:create-ata \
+    # Use the create-ata CLI to check if the token account exists (run from project root)
+    if (cd "$DEBUG_DIR/.." && npm run cli:create-ata \
         -- --wallet "$CREATOR_WALLET" \
         --mint "$TOKEN_MINT" \
         --owner "$WALLET_ADDRESS" \
-        --check-only > /dev/null 2>&1; then
+        --check-only > /dev/null 2>&1); then
         echo "    ✅ Token account verified"
         VERIFICATION_SUCCESS=$((VERIFICATION_SUCCESS + 1))
     else
@@ -152,12 +152,12 @@ for i in $(seq 1 $FUNDED_COUNT); do
     
     echo "  Transferring to wallet $i/$FUNDED_COUNT: $WALLET_ADDRESS"
     
-    # Use the send-token CLI to transfer tokens (no need for --create-account since we already created them)
-    if npm run cli:send-token \
+    # Use the send-token CLI to transfer tokens (run from project root)
+    if (cd "$DEBUG_DIR/.." && npm run cli:send-token \
         -- --wallet "$CREATOR_WALLET" \
         --recipient "$WALLET_ADDRESS" \
         --mint "$TOKEN_MINT" \
-        --amount "$TOKENS_PER_WALLET" > /dev/null 2>&1; then
+        --amount "$TOKENS_PER_WALLET" > /dev/null 2>&1); then
         echo "    ✅ Transfer successful"
         SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
     else
