@@ -3,7 +3,7 @@ import type { AmmSwapState } from '../@types';
 /**
  * Buy tokens using SOL with retry logic and better error handling
  */
-export declare function buyAmmTokens(connection: Connection, wallet: Keypair, poolKey: PublicKey, quoteAmount: number, slippage?: number, feePayer?: Keypair, options?: {
+export declare function buyAmmTokens(connection: Connection, wallet: Keypair, poolKey: PublicKey, amountLamports: number, slippage?: number, feePayer?: Keypair, options?: {
     swapSolanaState?: AmmSwapState;
 }): Promise<{
     success: boolean;
@@ -15,7 +15,7 @@ export declare function buyAmmTokens(connection: Connection, wallet: Keypair, po
  * Create signed AMM buy transaction without submitting it
  * Returns the signed transaction for batch processing
  */
-export declare function createSignedAmmBuyTransaction(connection: Connection, wallet: Keypair, poolKey: PublicKey, quoteAmount: number, slippage?: number, feePayer?: Keypair, blockhash?: string, options?: {
+export declare function createSignedAmmBuyTransaction(connection: Connection, wallet: Keypair, poolKey: PublicKey, quoteAmountLamports: number, slippage?: number, feePayer?: Keypair, blockhash?: string, options?: {
     swapSolanaState?: AmmSwapState;
 }): Promise<{
     success: boolean;

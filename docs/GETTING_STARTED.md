@@ -283,13 +283,13 @@ npm run cli:send-token -- \
 
 ```bash
 # Buy tokens
-npm run cli:bc:buy -- \
+npm run cli:curve:buy -- \
   --amount 0.1 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/wallet.json
 
 # Sell tokens
-npm run cli:bc:sell -- \
+npm run cli:curve:sell -- \
   --amount 1000 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/wallet.json
@@ -362,7 +362,7 @@ chmod +x *.sh
 export DEBUG_PUMPFUN_DEFI_SDK=true
 
 # Or run with debug flag
-DEBUG_PUMPFUN_DEFI_SDK=true npm run cli:bc:buy -- --amount 0.1
+DEBUG_PUMPFUN_DEFI_SDK=true npm run cli:curve:buy -- --amount 0.1
 ```
 
 ## Common Patterns and Best Practices

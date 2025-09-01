@@ -8,212 +8,315 @@
  * Buy operations cannot be batched together as they have different dependencies
  */
 
-import { validatePumpFunBatchOperations as validateBatchOperations } from '../src/batch';
-import * as fs from 'fs';
-import * as path from 'path';
-import type { BatchOperation } from '../src/@types';
+import { Connection, Keypair } from '@solana/web3.js';
+import { batchTransactions, BatchOperation } from '../src';
 
-/**
- * Example batch operations for demonstration
- * Only consuming operations are supported in combined mode
- */
-const exampleOperations: BatchOperation[] = [
-  {
-    type: 'transfer',
-    id: 'transfer-example-1',
-    description: 'Send 100 tokens to user A',
-    params: {
-      recipient: '11111111111111111111111111111111',
-      mint: '22222222222222222222222222222222',
-      amount: '100000000',
-      createAccount: true,
-    },
-  },
-  {
-    type: 'transfer',
-    id: 'transfer-example-2',
-    description: 'Send 50 tokens to user B',
-    params: {
-      recipient: '33333333333333333333333333333333',
-      mint: '22222222222222222222222222222222',
-      amount: '50000000',
-      createAccount: false,
-    },
-  },
-  {
-    type: 'sell-amm',
-    id: 'sell-amm-example',
-    description: 'Sell tokens to AMM pool',
-    params: {
-      poolKey: '44444444444444444444444444444444',
-      amount: 1000,
-      slippage: 1,
-    },
-  },
-  {
-    type: 'sell-bonding-curve',
-    id: 'sell-bonding-curve-example',
-    description: 'Sell tokens via bonding curve',
-    params: {
-      mint: '22222222222222222222222222222222',
-      amount: 500,
-      slippage: 1000,
-    },
-  },
-];
+// Example: Batch Transactions with Multiple Senders
+async function batchTransactionsExample() {
+  const connection = new Connection('https://api.devnet.solana.com');
 
-/**
- * Create example operations file
- */
-function createExampleOperationsFile(): void {
-  const outputPath = path.join(__dirname, 'batch-operations-example.json');
+  // Create or load keypairs for different senders
+  const sender1 = Keypair.generate();
+  const sender2 = Keypair.generate();
+  const sender3 = Keypair.generate();
+  const feePayer = Keypair.generate();
+
+  // Define operations with different senders
+  const operations: BatchOperation[] = [
+    {
+      id: 'transfer-1',
+      type: 'sol-transfer',
+      description: 'Transfer SOL from sender1 to sender2',
+      sender: sender1, // Must be a Keypair object
+      params: {
+        recipient: sender2.publicKey.toString(),
+        amount: 0.01,
+      },
+    },
+    {
+      id: 'buy-bonding-curve-1',
+      type: 'buy-bonding-curve',
+      description: 'Buy tokens via bonding curve',
+      sender: sender2, // Must be a Keypair object
+      params: {
+        mint: '22222222222222222222222222222222', // Example mint address
+        amount: 0.02,
+        slippage: 1000,
+      },
+    },
+    {
+      id: 'buy-amm-1',
+      type: 'buy-amm',
+      description: 'Buy tokens via AMM',
+      sender: sender3, // Must be a Keypair object
+      params: {
+        poolKey: '44444444444444444444444444444444', // Example pool key
+        amount: 0.015,
+        slippage: 1,
+      },
+    },
+    {
+      id: 'transfer-2',
+      type: 'sol-transfer',
+      description: 'Transfer SOL from sender1 to sender3',
+      sender: sender1, // Must be a Keypair object
+      params: {
+        recipient: sender3.publicKey.toString(),
+        amount: 0.005,
+      },
+    },
+  ];
 
   try {
-    fs.writeFileSync(outputPath, JSON.stringify(exampleOperations, null, 2));
-    console.log(`✅ Example operations file created: ${outputPath}`);
+    console.log('🚀 Executing batch transactions...');
+
+    const results = await batchTransactions(connection, operations, feePayer, {
+      maxParallel: 3,
+      dynamicBatching: true, // Enable dynamic batch sizing
+      retryFailed: true,
+      disableFallbackRetry: false, // Allow fallback retry in production
+      delayBetween: 1000,
+    });
+
+    console.log(`✅ Executed ${results.length} operations`);
+
+    // Process results
+    results.forEach(result => {
+      if (result.success) {
+        console.log(`✅ ${result.operationId}: ${result.signature}`);
+      } else {
+        console.error(`❌ ${result.operationId}: ${result.error}`);
+      }
+    });
   } catch (error) {
-    console.error(`❌ Failed to create operations file: ${error}`);
+    console.error('❌ Batch execution failed:', error);
   }
 }
 
-/**
- * Validate operations structure using the built-in validator
- */
-function validateOperations(operations: BatchOperation[]): boolean {
-  console.log('🔍 Validating operations structure...');
+// Example: Batch Transactions without Fee Payer (each operation pays its own fees)
+async function batchTransactionsWithoutFeePayer() {
+  const connection = new Connection('https://api.devnet.solana.com');
 
-  const validation = validateBatchOperations(operations);
+  const sender1 = Keypair.generate();
+  const sender2 = Keypair.generate();
 
-  if (!validation.valid) {
-    console.error('❌ Validation errors found:');
-    validation.errors.forEach(error => console.error(`  - ${error}`));
-    return false;
-  }
-
-  console.log('✅ All operations are valid');
-  return true;
-}
-
-/**
- * Display operations summary
- */
-function displayOperationsSummary(operations: BatchOperation[]): void {
-  console.log('\n📋 Operations Summary:');
-  console.log('=======================');
-
-  const typeCounts: { [key: string]: number } = {};
-  operations.forEach(op => {
-    typeCounts[op.type] = (typeCounts[op.type] || 0) + 1;
-  });
-
-  Object.entries(typeCounts).forEach(([type, count]) => {
-    console.log(`${type}: ${count} operations`);
-  });
-
-  console.log(`\nTotal: ${operations.length} operations`);
-
-  // Show first few operations as examples
-  console.log('\n📝 Sample Operations:');
-  operations.slice(0, 3).forEach((op, index) => {
-    console.log(`  ${index + 1}. [${op.type.toUpperCase()}] ${op.description}`);
-    console.log(`     ID: ${op.id}`);
-  });
-
-  if (operations.length > 3) {
-    console.log(`  ... and ${operations.length - 3} more operations`);
-  }
-}
-
-/**
- * Generate programmatic API examples
- */
-function generateApiExamples(): void {
-  console.log('\n🚀 Programmatic API Usage Examples:');
-  console.log('===================================');
-
-  console.log('\n1. Basic batch execution:');
-  console.log('const results = await batchTransactions(');
-  console.log('  connection,');
-  console.log('  wallet,');
-  console.log('  operations,');
-  console.log('  feePayer,');
-  console.log('  { maxParallel: 3 }');
-  console.log(');');
-
-  console.log('\n2. With custom options:');
-  console.log('const results = await batchTransactions(');
-  console.log('  connection,');
-  console.log('  wallet,');
-  console.log('  operations,');
-  console.log('  feePayer,');
-  console.log('  {');
-  console.log('    maxParallel: 5,');
-  console.log('    delayBetween: 2000,');
-  console.log('    retryFailed: true,');
-  console.log('    maxTransferInstructionsPerTx: 15');
-  console.log('  }');
-  console.log(');');
-
-  console.log('\n3. Validate operations before execution:');
-  console.log('const validation = validateBatchOperations(operations);');
-  console.log('if (validation.valid) {');
-  console.log('  const results = await batchTransactions(...);');
-  console.log('}');
-}
-
-/**
- * Display current limitations
- */
-function displayLimitations(): void {
-  console.log('\n⚠️  Current Limitations:');
-  console.log('========================');
-  console.log('• Only consuming operations can be batched together');
-  console.log('• Supported types: transfer, sell-amm, sell-bonding-curve');
-  console.log('• All operations must use the same fee payer');
-  console.log('• Operations are automatically chunked if they exceed transaction limits');
-  console.log('• Each sender must sign their respective operations');
-}
-
-/**
- * Main function
- */
-async function main(): Promise<void> {
-  console.log('🚀 Batch Transactions Example');
-  console.log('============================');
+  const operations: BatchOperation[] = [
+    {
+      id: 'transfer-1',
+      type: 'sol-transfer',
+      description: 'Transfer SOL from sender1 to sender2',
+      sender: sender1, // Must be a Keypair object
+      params: {
+        recipient: sender2.publicKey.toString(),
+        amount: 0.01,
+      },
+    },
+    {
+      id: 'buy-bonding-curve-1',
+      type: 'buy-bonding-curve',
+      description: 'Buy tokens via bonding curve',
+      sender: sender2, // Must be a Keypair object
+      params: {
+        mint: '22222222222222222222222222222222', // Example mint address
+        amount: 0.02,
+        slippage: 1000,
+      },
+    },
+  ];
 
   try {
-    // Create example operations file
-    createExampleOperationsFile();
+    console.log('🚀 Executing batch transactions without fee payer...');
 
-    // Validate operations
-    if (!validateOperations(exampleOperations)) {
-      console.error('❌ Operations validation failed');
-      return;
+    // No feePayer parameter - each operation pays its own fees
+    const results = await batchTransactions(connection, operations, undefined, {
+      maxParallel: 2,
+      dynamicBatching: true,
+      retryFailed: true,
+    });
+
+    console.log(`✅ Executed ${results.length} operations`);
+
+    results.forEach(result => {
+      if (result.success) {
+        console.log(`✅ ${result.operationId}: ${result.signature}`);
+      } else {
+        console.error(`❌ ${result.operationId}: ${result.error}`);
+      }
+    });
+  } catch (error) {
+    console.error('❌ Batch execution failed:', error);
+  }
+}
+
+// Example: Mixed Operation Types in Single Batch
+async function mixedOperationsBatch() {
+  const connection = new Connection('https://api.devnet.solana.com');
+
+  const sender1 = Keypair.generate();
+  const sender2 = Keypair.generate();
+  const feePayer = Keypair.generate();
+
+  const operations: BatchOperation[] = [
+    // SOL transfer
+    {
+      id: 'sol-transfer-1',
+      type: 'sol-transfer',
+      sender: sender1,
+      params: {
+        recipient: sender2.publicKey.toString(),
+        amount: 0.01,
+      },
+    },
+    // Bonding curve buy
+    {
+      id: 'buy-bonding-curve-1',
+      type: 'buy-bonding-curve',
+      sender: sender2,
+      params: {
+        mint: '22222222222222222222222222222222', // Example mint address
+        amount: 0.02,
+        slippage: 1000,
+      },
+    },
+    // AMM buy
+    {
+      id: 'buy-amm-1',
+      type: 'buy-amm',
+      sender: sender1,
+      params: {
+        poolKey: '44444444444444444444444444444444', // Example pool key
+        amount: 0.015,
+        slippage: 1,
+      },
+    },
+    // AMM sell
+    {
+      id: 'sell-amm-1',
+      type: 'sell-amm',
+      sender: sender2,
+      params: {
+        poolKey: '44444444444444444444444444444444', // Example pool key
+        amount: 100,
+        slippage: 1,
+      },
+    },
+  ];
+
+  try {
+    console.log('🚀 Executing mixed operations batch...');
+
+    const results = await batchTransactions(connection, operations, feePayer, {
+      maxParallel: 4,
+      dynamicBatching: true,
+      retryFailed: true,
+    });
+
+    console.log(`✅ Executed ${results.length} mixed operations`);
+
+    results.forEach(result => {
+      if (result.success) {
+        console.log(`✅ ${result.operationId} (${result.type}): ${result.signature}`);
+      } else {
+        console.error(`❌ ${result.operationId} (${result.type}): ${result.error}`);
+      }
+    });
+  } catch (error) {
+    console.error('❌ Mixed operations batch failed:', error);
+  }
+}
+
+// Example: Error Handling and Retry Logic
+async function batchTransactionsWithErrorHandling() {
+  const connection = new Connection('https://api.devnet.solana.com');
+
+  const sender1 = Keypair.generate();
+  const sender2 = Keypair.generate();
+  const feePayer = Keypair.generate();
+
+  const operations: BatchOperation[] = [
+    {
+      id: 'transfer-1',
+      type: 'sol-transfer',
+      sender: sender1,
+      params: {
+        recipient: sender2.publicKey.toString(),
+        amount: 0.01,
+      },
+    },
+    {
+      id: 'buy-1',
+      type: 'buy-bonding-curve',
+      sender: sender2,
+      params: {
+        mint: '22222222222222222222222222222222', // Example mint address
+        amount: 0.02,
+        slippage: 1000,
+      },
+    },
+  ];
+
+  try {
+    console.log('🚀 Executing batch with error handling...');
+
+    const results = await batchTransactions(connection, operations, feePayer, {
+      maxParallel: 2,
+      dynamicBatching: true,
+      retryFailed: true,
+      disableFallbackRetry: false, // Allow fallback for failed operations
+      delayBetween: 2000, // Longer delay for retry scenarios
+    });
+
+    // Analyze results
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+
+    console.log(`📊 Results Summary:`);
+    console.log(`  ✅ Successful: ${successful.length}`);
+    console.log(`  ❌ Failed: ${failed.length}`);
+    console.log(`  📈 Success Rate: ${((successful.length / results.length) * 100).toFixed(1)}%`);
+
+    if (failed.length > 0) {
+      console.log('\n❌ Failed Operations:');
+      failed.forEach(result => {
+        console.log(`  • ${result.operationId}: ${result.error}`);
+      });
     }
 
-    // Display summary
-    displayOperationsSummary(exampleOperations);
-
-    // Display limitations
-    displayLimitations();
-
-    // Generate API examples
-    generateApiExamples();
-
-    console.log('\n✅ Example setup complete!');
-    console.log('\n💡 Next steps:');
-    console.log('  1. Create a fee payer wallet with sufficient SOL');
-    console.log('  2. Update the operations file with real addresses and amounts');
-    console.log('  3. Use the programmatic API shown above');
-    console.log('  4. Monitor the execution progress and results');
+    if (successful.length > 0) {
+      console.log('\n✅ Successful Operations:');
+      successful.forEach(result => {
+        console.log(`  • ${result.operationId}: ${result.signature}`);
+      });
+    }
   } catch (error) {
-    console.error(`❌ Error in example setup: ${error}`);
+    console.error('❌ Batch execution failed:', error);
   }
 }
 
-// Run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(console.error);
-}
+// Export examples for use in other files
+export {
+  batchTransactionsExample,
+  batchTransactionsWithoutFeePayer,
+  mixedOperationsBatch,
+  batchTransactionsWithErrorHandling,
+};
 
-export { exampleOperations, validateOperations, displayOperationsSummary };
+// Run examples if this file is executed directly
+if (require.main === module) {
+  (async () => {
+    console.log('🧪 Running Batch Transactions Examples...\n');
+
+    await batchTransactionsExample();
+    console.log('\n' + '='.repeat(50) + '\n');
+
+    await batchTransactionsWithoutFeePayer();
+    console.log('\n' + '='.repeat(50) + '\n');
+
+    await mixedOperationsBatch();
+    console.log('\n' + '='.repeat(50) + '\n');
+
+    await batchTransactionsWithErrorHandling();
+
+    console.log('\n✅ All examples completed!');
+  })().catch(console.error);
+}

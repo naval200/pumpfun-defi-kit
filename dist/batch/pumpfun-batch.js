@@ -3,287 +3,153 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.batchTransactions = batchTransactions;
 exports.validatePumpFunBatchOperations = validatePumpFunBatchOperations;
 const web3_js_1 = require("@solana/web3.js");
+const pump_swap_sdk_1 = require("@pump-fun/pump-swap-sdk");
 const sendToken_1 = require("../sendToken");
 const sendSol_1 = require("../sendSol");
-const buy_1 = require("../bonding-curve/buy");
-const sell_1 = require("../bonding-curve/sell");
-const instructions_1 = require("../amm/instructions");
-const bc_helper_1 = require("../bonding-curve/bc-helper");
-const pump_swap_sdk_1 = require("@pump-fun/pump-swap-sdk");
+const bonding_curve_1 = require("../bonding-curve");
+const amm_1 = require("../amm");
 const debug_1 = require("../utils/debug");
 const batch_helper_1 = require("./batch-helper");
-const amm_1 = require("../amm");
-const bonding_curve_1 = require("../bonding-curve");
 /**
- * Execute a batch of PumpFun operations
+ * Execute a batch of PumpFun operations with true multi-sender batching
  *
- * This function processes operations in parallel batches with configurable delays.
- * Supports both individual operation execution and combined transaction execution.
- * - combinePerBatch: Combines compatible operations into single transactions per sender
+ * This function processes operations by combining them into single transactions
+ * that require signatures from all senders involved in the operations.
+ * - All operations are combined into one transaction per batch
+ * - All unique senders must sign the combined transaction
+ * - Fee payer signs last (if provided)
  * - Accounts are always assumed to exist (users must check beforehand)
  */
-async function batchTransactions(connection, wallet, operations, feePayer, options = {}) {
-    const { maxParallel = 3, delayBetween = 1000, retryFailed = false, combinePerBatch = false, } = options;
+async function batchTransactions(connection, operations, feePayer, options = {}) {
+    const { maxParallel = 3, delayBetween = 1000, retryFailed = false, disableFallbackRetry = false, dynamicBatching = false, } = options;
     const results = [];
-    (0, debug_1.debugLog)(`🚀 Executing ${operations.length} PumpFun operations in batches of ${maxParallel}`);
-    (0, debug_1.debugLog)(`📊 Batch options: maxParallel=${maxParallel}, delayBetween=${delayBetween}ms, retryFailed=${retryFailed}, combinePerBatch=${combinePerBatch}`);
+    (0, debug_1.debugLog)(`🚀 Executing ${operations.length} PumpFun operations with true multi-sender batching`);
+    (0, debug_1.debugLog)(`📊 Batch options: maxParallel=${maxParallel}, delayBetween=${delayBetween}ms, retryFailed=${retryFailed}, disableFallbackRetry=${disableFallbackRetry}, dynamicBatching=${dynamicBatching}`);
     if (feePayer) {
         (0, debug_1.debugLog)(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
     }
     else {
         (0, debug_1.debugLog)('💸 No fee payer provided: each signer will pay their own fees');
     }
+    // Determine optimal batch size if dynamic batching is enabled
+    let actualMaxParallel = maxParallel;
+    if (dynamicBatching && operations.length > 0) {
+        const { maxOpsPerBatch, reasoning } = await (0, batch_helper_1.determineOptimalBatchSize)(connection, operations, feePayer);
+        actualMaxParallel = Math.min(maxOpsPerBatch, maxParallel);
+        (0, debug_1.debugLog)(`🧠 Dynamic batching: ${reasoning}`);
+        (0, debug_1.debugLog)(`📏 Using batch size: ${actualMaxParallel} operations per batch`);
+    }
     // Execute operations in batches
-    const batches = (0, batch_helper_1.chunkArray)(operations, maxParallel);
+    const batches = (0, batch_helper_1.chunkArray)(operations, actualMaxParallel);
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
         const batch = batches[batchIndex];
         (0, debug_1.debugLog)(`🔄 Executing Batch ${batchIndex + 1}/${batches.length} (${batch.length} operations)`);
-        if (combinePerBatch) {
-            // Combine all compatible operations in this batch into a single transaction per sender
-            const groupedBySender = new Map();
+        try {
+            const ammSdk = new pump_swap_sdk_1.PumpAmmSdk(connection);
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+            // Collect all unique senders and build all instructions
+            const uniqueSenders = new Map();
+            const allInstructions = [];
+            // Process all operations in the batch
             for (const op of batch) {
-                const senderPubkey = (op.sender || wallet.publicKey.toString()).toString();
-                const sender = op.sender
-                    ? web3_js_1.Keypair.fromSecretKey(Uint8Array.from(JSON.parse(op.sender)))
-                    : wallet;
-                const entry = groupedBySender.get(senderPubkey) || { sender, ops: [] };
-                entry.ops.push(op);
-                groupedBySender.set(senderPubkey, entry);
-            }
-            for (const [, group] of groupedBySender) {
-                try {
-                    const instructions = [];
-                    const sender = group.sender;
-                    const ammSdk = new pump_swap_sdk_1.PumpAmmSdk(connection);
-                    for (const operation of group.ops) {
-                        switch (operation.type) {
-                            case 'transfer': {
-                                const { recipient, mint, amount } = operation.params;
-                                // Use the utility function from sendToken.ts for consistency
-                                const transferInstruction = (0, sendToken_1.createTokenTransferInstruction)(sender.publicKey, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), BigInt(amount), false // allowOwnerOffCurve
-                                );
-                                instructions.push(transferInstruction);
-                                break;
-                            }
-                            case 'sol-transfer': {
-                                const { recipient, lamports } = operation.params;
-                                // Use the utility function from sendSol.ts for consistency
-                                const solTransferInstruction = (0, sendSol_1.createSendSolInstruction)(sender, new web3_js_1.PublicKey(recipient), Number(lamports) / 1e9, // Convert lamports to SOL
-                                feePayer?.publicKey);
-                                instructions.push(solTransferInstruction);
-                                break;
-                            }
-                            case 'buy-bonding-curve': {
-                                const { mint, solAmount } = operation.params;
-                                // Get PDAs for bonding curve buy
-                                const pdas = await (0, bc_helper_1.getBondingCurvePDAs)(connection, new web3_js_1.PublicKey(mint), sender.publicKey);
-                                // Convert SOL amount to smallest units (9 decimals)
-                                const solAmountInSmallestUnits = solAmount * Math.pow(10, 9);
-                                instructions.push((0, bonding_curve_1.createBondingCurveBuyInstruction)(sender.publicKey, new web3_js_1.PublicKey(mint), solAmountInSmallestUnits, pdas, 1000 // maxSlippageBasisPoints
-                                ));
-                                break;
-                            }
-                            case 'sell-bonding-curve': {
-                                const { mint, amount } = operation.params;
-                                // Get PDAs for bonding curve sell
-                                const pdas = await (0, bc_helper_1.getBondingCurvePDAs)(connection, new web3_js_1.PublicKey(mint), sender.publicKey);
-                                // Convert amount to smallest units (6 decimals)
-                                const tokenAmountInSmallestUnits = amount * Math.pow(10, 6);
-                                // Calculate min SOL output (very low to avoid slippage issues)
-                                const minSolOutput = 0.000001 * 1e9; // 0.000001 SOL in lamports
-                                instructions.push((0, bonding_curve_1.createBondingCurveSellInstruction)(sender.publicKey, new web3_js_1.PublicKey(mint), tokenAmountInSmallestUnits, minSolOutput, pdas));
-                                break;
-                            }
-                            case 'buy-amm': {
-                                const { poolKey, quoteAmount, slippage = 1 } = operation.params;
-                                const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), sender.publicKey);
-                                const ixs = await (0, instructions_1.createAmmBuyInstructionsAssuming)(ammSdk, state, Number(quoteAmount), Number(slippage));
-                                ixs.forEach(ix => instructions.push(ix));
-                                break;
-                            }
-                            case 'sell-amm': {
-                                const { poolKey, amount, slippage = 1 } = operation.params;
-                                const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), sender.publicKey);
-                                const ixs = await (0, instructions_1.createAmmSellInstructionsAssuming)(ammSdk, state, Number(amount), Number(slippage));
-                                ixs.forEach(ix => instructions.push(ix));
-                                break;
-                            }
-                            default:
-                                throw new Error(`Unknown operation type: ${operation.type}`);
-                        }
+                let senderKeypair;
+                if (op.sender) {
+                    if (typeof op.sender === 'object' && 'publicKey' in op.sender) {
+                        senderKeypair = op.sender;
                     }
-                    // Assemble and send single transaction for this sender group
-                    const tx = new web3_js_1.Transaction();
-                    instructions.forEach(ix => tx.add(ix));
-                    const { blockhash } = await connection.getLatestBlockhash('confirmed');
-                    tx.recentBlockhash = blockhash;
-                    tx.feePayer = feePayer?.publicKey || sender.publicKey; // Use fee payer if provided
-                    tx.sign(sender);
-                    if (feePayer && !feePayer.publicKey.equals(sender.publicKey)) {
-                        tx.sign(feePayer);
+                    else {
+                        throw new Error('BatchOperation.sender must be a Keypair when provided');
                     }
-                    const signature = await connection.sendRawTransaction(tx.serialize(), {
-                        skipPreflight: false,
-                        preflightCommitment: 'confirmed',
-                    });
-                    const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-                    if (confirmation.value.err) {
-                        throw new Error(`Combined transaction failed: ${confirmation.value.err}`);
-                    }
-                    // Push a result per operation sharing the same signature
-                    group.ops.forEach(op => {
-                        results.push({ operationId: op.id, type: op.type, success: true, signature });
-                    });
                 }
-                catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : String(error);
-                    group.ops.forEach(op => {
-                        results.push({
-                            operationId: op.id,
-                            type: op.type,
-                            success: false,
-                            error: errorMessage,
-                        });
-                    });
+                else {
+                    throw new Error(`Operation ${op.id} is missing sender Keypair`);
                 }
-            }
-            // Delay between batches if configured
-            if (batchIndex < batches.length - 1 && delayBetween > 0) {
-                (0, debug_1.debugLog)(`⏳ Waiting ${delayBetween}ms before next batch...`);
-                await new Promise(resolve => setTimeout(resolve, delayBetween));
-            }
-            continue;
-        }
-        // Execute batch in parallel (legacy per-op mode)
-        const batchPromises = batch.map(async (operation) => {
-            try {
-                (0, debug_1.debugLog)(`🚀 Executing ${operation.type}: ${operation.description}`);
-                let result;
-                switch (operation.type) {
-                    case 'transfer': {
-                        const { recipient, mint, amount, createAccount = true } = operation.params;
-                        if (createAccount) {
-                            const transferResult = await (0, sendToken_1.sendTokenWithAccountCreation)(connection, wallet, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), BigInt(amount), false, // allowOwnerOffCurve
-                            feePayer);
-                            if (transferResult.success && transferResult.signature) {
-                                result = { success: true, signature: transferResult.signature, amount, mint };
-                            }
-                            else {
-                                result = { success: false, error: transferResult.error || 'Transfer failed' };
-                            }
-                        }
-                        else {
-                            const transferResult = await (0, sendToken_1.sendToken)(connection, wallet, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), BigInt(amount), false, // allowOwnerOffCurve
-                            false, // createRecipientAccount
-                            feePayer);
-                            if (transferResult.success && transferResult.signature) {
-                                result = { success: true, signature: transferResult.signature, amount, mint };
-                            }
-                            else {
-                                result = { success: false, error: transferResult.error || 'Transfer failed' };
-                            }
-                        }
-                        break;
-                    }
-                    case 'sol-transfer': {
-                        const { recipient, lamports, sender } = operation.params;
-                        // Convert lamports to SOL and use sendSol for consistency
-                        const amountSol = Number(lamports) / 1e9;
-                        const senderKeypair = sender && sender !== wallet.publicKey.toString()
-                            ? web3_js_1.Keypair.fromSecretKey(Buffer.from(JSON.parse(sender)))
-                            : wallet;
-                        const sendResult = await (0, sendSol_1.sendSol)(connection, senderKeypair, new web3_js_1.PublicKey(recipient), amountSol, feePayer);
-                        if (sendResult.success && sendResult.signature) {
-                            result = { success: true, signature: sendResult.signature };
-                        }
-                        else {
-                            result = { success: false, error: sendResult.error || 'SOL transfer failed' };
-                        }
-                        break;
-                    }
-                    case 'sell-bonding-curve': {
-                        const { mint, amount } = operation.params;
-                        const sellResult = await (0, sell_1.sellPumpFunToken)(connection, wallet, new web3_js_1.PublicKey(mint), amount);
-                        if (sellResult.success && sellResult.signature) {
-                            result = { success: true, signature: sellResult.signature, amount, mint };
-                        }
-                        else {
-                            result = { success: false, error: sellResult.error || 'Sell failed' };
-                        }
-                        break;
-                    }
-                    case 'sell-amm': {
-                        const { poolKey, amount, slippage = 1 } = operation.params;
-                        const sellResult = await (0, amm_1.sellAmmTokens)(connection, wallet, new web3_js_1.PublicKey(poolKey), amount, slippage, feePayer);
-                        if (sellResult.success && sellResult.signature) {
-                            // For AMM operations, poolKey is not a mint, so we use it as identifier
-                            result = { success: true, signature: sellResult.signature, amount, mint: poolKey };
-                        }
-                        else {
-                            result = { success: false, error: sellResult.error || 'Sell failed' };
-                        }
-                        break;
-                    }
-                    case 'buy-amm': {
-                        const { poolKey, quoteAmount, slippage = 1 } = operation.params;
-                        const buyResult = await (0, amm_1.buyAmmTokens)(connection, wallet, new web3_js_1.PublicKey(poolKey), Number(quoteAmount), Number(slippage), feePayer || wallet);
-                        if (buyResult.success && buyResult.signature) {
-                            result = {
-                                success: true,
-                                signature: buyResult.signature,
-                                amount: quoteAmount,
-                                mint: poolKey,
-                            };
-                        }
-                        else {
-                            result = { success: false, error: buyResult.error || 'Buy failed' };
-                        }
-                        break;
-                    }
-                    case 'buy-bonding-curve': {
-                        const { mint, solAmount } = operation.params;
-                        const signature = await (0, buy_1.buyPumpFunToken)(connection, wallet, new web3_js_1.PublicKey(mint), Number(solAmount), 1000);
-                        result = { success: true, signature, amount: solAmount, mint };
-                        break;
-                    }
-                    default:
-                        throw new Error(`Unknown operation type: ${operation.type}`);
+                const senderPubkeyStr = senderKeypair.publicKey.toString();
+                // Track unique senders
+                if (!uniqueSenders.has(senderPubkeyStr)) {
+                    uniqueSenders.set(senderPubkeyStr, senderKeypair);
                 }
-                return {
-                    operationId: operation.id,
-                    type: operation.type,
-                    success: result.success,
-                    signature: result.signature,
-                    error: result.error,
-                };
+                // Build instructions for this operation
+                const instructions = await (0, batch_helper_1.buildInstructionsForOperation)(connection, ammSdk, op, senderKeypair, feePayer);
+                allInstructions.push(...instructions);
             }
-            catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                (0, debug_1.logError)(`Error executing operation ${operation.id}: ${errorMessage}`);
-                return {
-                    operationId: operation.id,
-                    type: operation.type,
-                    success: false,
-                    error: errorMessage,
-                };
-            }
-        });
-        const batchResults = await Promise.allSettled(batchPromises);
-        // Process batch results
-        batchResults.forEach((result, index) => {
-            if (result.status === 'fulfilled') {
-                results.push(result.value);
+            // Create single transaction with all operations
+            const tx = new web3_js_1.Transaction();
+            allInstructions.forEach(ix => tx.add(ix));
+            tx.recentBlockhash = blockhash;
+            // Set fee payer
+            if (feePayer) {
+                tx.feePayer = feePayer.publicKey;
             }
             else {
-                results.push({
-                    operationId: batch[index].id,
-                    type: batch[index].type,
-                    success: false,
-                    error: result.reason?.message || 'Unknown error',
-                });
+                // If no fee payer, use the first sender as fee payer
+                const firstSender = uniqueSenders.values().next().value;
+                if (!firstSender) {
+                    throw new Error('No senders found in batch operations');
+                }
+                tx.feePayer = firstSender.publicKey;
             }
-        });
-        // Add delay between batches (except for the last batch)
+            // ALL unique senders must sign the combined transaction
+            (0, debug_1.debugLog)(`🔐 All ${uniqueSenders.size} unique senders will sign the combined transaction`);
+            (0, debug_1.debugLog)(`📋 Instructions in transaction: ${allInstructions.length}`);
+            allInstructions.forEach((ix, index) => {
+                (0, debug_1.debugLog)(`  📝 Instruction ${index + 1}: Program ${ix.programId.toString()}`);
+                (0, debug_1.debugLog)(`    Keys: ${ix.keys.length} accounts`);
+                ix.keys.forEach((key, keyIndex) => {
+                    (0, debug_1.debugLog)(`      ${keyIndex}: ${key.pubkey.toString()} (${key.isSigner ? 'SIGNER' : 'READONLY'})`);
+                });
+            });
+            const signersInOrder = [];
+            uniqueSenders.forEach((sender, pubkey) => {
+                (0, debug_1.debugLog)(`  • Will sign with: ${pubkey}`);
+                signersInOrder.push(sender);
+            });
+            if (feePayer) {
+                (0, debug_1.debugLog)(`💸 Will sign with fee payer: ${feePayer.publicKey.toString()}`);
+                signersInOrder.push(feePayer);
+            }
+            // Sign ONCE with all signers to avoid overwriting previous signatures
+            tx.sign(...signersInOrder);
+            (0, debug_1.debugLog)(`🔍 Transaction signatures after signing: ${tx.signatures.length}`);
+            tx.signatures.forEach((sig, index) => {
+                const present = sig.signature && sig.signature.length > 0;
+                (0, debug_1.debugLog)(`  Signature ${index + 1}: ${sig.publicKey.toString()} - ${present ? 'present' : 'MISSING'}`);
+            });
+            // Submit the combined transaction
+            (0, debug_1.debugLog)(`🚀 Submitting transaction with ${tx.signatures.length} signatures and ${allInstructions.length} instructions`);
+            (0, debug_1.debugLog)(`💰 Fee payer: ${tx.feePayer?.toString() || 'Not set'}`);
+            (0, debug_1.debugLog)(`📦 Transaction size: ${tx.serialize().length} bytes`);
+            const signature = await connection.sendRawTransaction(tx.serialize(), {
+                skipPreflight: false,
+                preflightCommitment: 'confirmed',
+            });
+            const confirmation = await connection.confirmTransaction({
+                signature,
+                blockhash,
+                lastValidBlockHeight,
+            }, 'confirmed');
+            if (confirmation.value.err) {
+                throw new Error(`Combined multi-sender transaction failed: ${confirmation.value.err}`);
+            }
+            // Push results for all operations sharing the same signature
+            batch.forEach(op => {
+                results.push({ operationId: op.id, type: op.type, success: true, signature });
+            });
+            (0, debug_1.debugLog)(`✅ Multi-sender batch executed successfully with signature: ${signature}`);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            (0, debug_1.debugLog)(`❌ Multi-sender batch failed: ${errorMessage}`);
+            batch.forEach(op => {
+                results.push({
+                    operationId: op.id,
+                    type: op.type,
+                    success: false,
+                    error: errorMessage,
+                });
+            });
+        }
+        // Delay between batches if configured
         if (batchIndex < batches.length - 1 && delayBetween > 0) {
             (0, debug_1.debugLog)(`⏳ Waiting ${delayBetween}ms before next batch...`);
             await new Promise(resolve => setTimeout(resolve, delayBetween));
@@ -293,17 +159,24 @@ async function batchTransactions(connection, wallet, operations, feePayer, optio
     if (retryFailed) {
         const failedOperations = operations.filter(op => !results.find(r => r.operationId === op.id && r.success));
         if (failedOperations.length > 0) {
-            (0, debug_1.debugLog)(`🔄 Retrying ${failedOperations.length} failed operations...`);
-            for (const operation of failedOperations) {
-                (0, debug_1.debugLog)(`🔄 Retrying operation: ${operation.id}`);
-                const retryResult = await executeOperation(connection, wallet, feePayer, operation);
-                // Update the existing result
-                const existingIndex = results.findIndex(r => r.operationId === operation.id);
-                if (existingIndex >= 0) {
-                    results[existingIndex] = retryResult;
-                }
-                else {
-                    results.push(retryResult);
+            if (disableFallbackRetry) {
+                (0, debug_1.debugLog)(`⚠️  Fallback retry disabled - ${failedOperations.length} operations failed and will not be retried`);
+                (0, debug_1.debugLog)(`💡 To enable fallback retry, set disableFallbackRetry=false`);
+            }
+            else {
+                (0, debug_1.debugLog)(`🔄 Retrying ${failedOperations.length} failed operations using fallback method...`);
+                (0, debug_1.debugLog)(`⚠️  WARNING: Using fallback retry - operations will be executed individually (not batched)`);
+                for (const operation of failedOperations) {
+                    (0, debug_1.debugLog)(`🔄 Retrying operation: ${operation.id}`);
+                    const retryResult = await executeOperation(connection, feePayer, operation);
+                    // Update the existing result
+                    const existingIndex = results.findIndex(r => r.operationId === operation.id);
+                    if (existingIndex >= 0) {
+                        results[existingIndex] = retryResult;
+                    }
+                    else {
+                        results.push(retryResult);
+                    }
                 }
             }
         }
@@ -313,39 +186,32 @@ async function batchTransactions(connection, wallet, operations, feePayer, optio
 /**
  * Execute a single operation
  */
-async function executeOperation(connection, wallet, feePayer, operation) {
+async function executeOperation(connection, feePayer, operation) {
     try {
         (0, debug_1.debugLog)(`🚀 Executing ${operation.type}: ${operation.description}`);
         let result;
-        switch (operation.type) {
+        const { type } = operation;
+        if (!operation.sender) {
+            throw new Error(`Operation ${operation.id} is missing sender Keypair`);
+        }
+        const wallet = operation.sender;
+        switch (type) {
             case 'transfer': {
-                const { recipient, mint, amount, createAccount = true } = operation.params;
-                if (createAccount) {
-                    const transferResult = await (0, sendToken_1.sendTokenWithAccountCreation)(connection, wallet, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), BigInt(amount), false, // allowOwnerOffCurve
-                    feePayer);
-                    if (transferResult.success && transferResult.signature) {
-                        result = { success: true, signature: transferResult.signature, amount, mint };
-                    }
-                    else {
-                        result = { success: false, error: transferResult.error || 'Transfer failed' };
-                    }
+                const { recipient, mint, amount } = operation.params;
+                const transferResult = await (0, sendToken_1.sendToken)(connection, wallet, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), amount, false, // allowOwnerOffCurve
+                false, // createRecipientAccount
+                feePayer);
+                if (transferResult.success && transferResult.signature) {
+                    result = { success: true, signature: transferResult.signature, amount, mint };
                 }
                 else {
-                    const transferResult = await (0, sendToken_1.sendToken)(connection, wallet, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), BigInt(amount), false, // allowOwnerOffCurve
-                    false, // createRecipientAccount
-                    feePayer);
-                    if (transferResult.success && transferResult.signature) {
-                        result = { success: true, signature: transferResult.signature, amount, mint };
-                    }
-                    else {
-                        result = { success: false, error: transferResult.error || 'Transfer failed' };
-                    }
+                    result = { success: false, error: transferResult.error || 'Transfer failed' };
                 }
                 break;
             }
             case 'sell-bonding-curve': {
                 const { mint, amount } = operation.params;
-                const sellResult = await (0, sell_1.sellPumpFunToken)(connection, wallet, new web3_js_1.PublicKey(mint), amount);
+                const sellResult = await (0, bonding_curve_1.sellPumpFunToken)(connection, wallet, new web3_js_1.PublicKey(mint), amount);
                 if (sellResult.success && sellResult.signature) {
                     result = { success: true, signature: sellResult.signature, amount, mint };
                 }
@@ -366,13 +232,13 @@ async function executeOperation(connection, wallet, feePayer, operation) {
                 break;
             }
             case 'buy-amm': {
-                const { poolKey, quoteAmount, slippage = 1 } = operation.params;
-                const buyResult = await (0, amm_1.buyAmmTokens)(connection, wallet, new web3_js_1.PublicKey(poolKey), Number(quoteAmount), Number(slippage), feePayer || wallet);
+                const { poolKey, amount, slippage = 1 } = operation.params;
+                const buyResult = await (0, amm_1.buyAmmTokens)(connection, wallet, new web3_js_1.PublicKey(poolKey), amount, slippage, feePayer || wallet);
                 if (buyResult.success && buyResult.signature) {
                     result = {
                         success: true,
                         signature: buyResult.signature,
-                        amount: quoteAmount,
+                        amount,
                         mint: poolKey,
                     };
                 }
@@ -382,17 +248,16 @@ async function executeOperation(connection, wallet, feePayer, operation) {
                 break;
             }
             case 'buy-bonding-curve': {
-                const { mint, solAmount } = operation.params;
-                const signature = await (0, buy_1.buyPumpFunToken)(connection, wallet, new web3_js_1.PublicKey(mint), Number(solAmount), 1000);
-                result = { success: true, signature, amount: solAmount, mint };
+                const { mint, amount } = operation.params;
+                const signature = await (0, bonding_curve_1.buyPumpFunToken)(connection, wallet, new web3_js_1.PublicKey(mint), amount, 1000);
+                result = { success: true, signature, amount, mint };
                 break;
             }
             case 'sol-transfer': {
-                const { recipient, lamports } = operation.params;
-                const sendResult = await (0, sendSol_1.sendSol)(connection, wallet, new web3_js_1.PublicKey(recipient), Number(lamports) / 1e9, // Convert lamports to SOL
-                feePayer);
+                const { recipient, amount } = operation.params;
+                const sendResult = await (0, sendSol_1.sendSol)(connection, wallet, new web3_js_1.PublicKey(recipient), amount, feePayer);
                 if (sendResult.success && sendResult.signature) {
-                    result = { success: true, signature: sendResult.signature, amount: lamports };
+                    result = { success: true, signature: sendResult.signature, amount };
                 }
                 else {
                     result = { success: false, error: sendResult.error || 'SOL transfer failed' };
@@ -400,7 +265,7 @@ async function executeOperation(connection, wallet, feePayer, operation) {
                 break;
             }
             default:
-                throw new Error(`Unknown operation type: ${operation.type}`);
+                throw new Error(`Unknown operation type: ${type}`);
         }
         return {
             operationId: operation.id,
@@ -463,7 +328,7 @@ function validatePumpFunBatchOperations(operations) {
                 }
                 break;
             case 'sol-transfer':
-                if (!op.params.recipient || op.params.lamports === undefined) {
+                if (!op.params.recipient || op.params.amount === undefined) {
                     errors.push(`Operation ${index}: Missing required SOL transfer parameters`);
                 }
                 break;
@@ -480,12 +345,12 @@ function validatePumpFunBatchOperations(operations) {
                 }
                 break;
             case 'buy-amm':
-                if (!op.params.poolKey || op.params.quoteAmount === undefined) {
+                if (!op.params.poolKey || op.params.amount === undefined) {
                     errors.push(`Operation ${index}: Missing required buy AMM parameters`);
                 }
                 break;
             case 'buy-bonding-curve':
-                if (!op.params.mint || op.params.solAmount === undefined) {
+                if (!op.params.mint || op.params.amount === undefined) {
                     errors.push(`Operation ${index}: Missing required buy bonding curve parameters`);
                 }
                 break;

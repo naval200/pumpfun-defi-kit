@@ -6,7 +6,7 @@
  */
 
 import {
-  executeBatch as batchTransactions,
+  batchTransactions,
   validatePumpFunBatchOperations as validateBatchOperations,
 } from '../src/batch';
 import { BatchOperation } from '../src/@types';
@@ -15,6 +15,11 @@ import { Connection, Keypair } from '@solana/web3.js';
 /**
  * Example batch operations
  */
+// Demo senders (replace with your own Keypairs in real usage)
+const senderA = Keypair.generate();
+const senderB = Keypair.generate();
+const senderC = Keypair.generate();
+
 const exampleOperations: BatchOperation[] = [
   {
     type: 'sol-transfer',
@@ -22,8 +27,9 @@ const exampleOperations: BatchOperation[] = [
     description: 'Send 0.01 SOL to recipient X',
     params: {
       recipient: '11111111111111111111111111111111',
-      lamports: 10000000,
+      amount: 10000000,
     },
+    sender: senderA,
   },
   {
     type: 'transfer',
@@ -32,9 +38,9 @@ const exampleOperations: BatchOperation[] = [
     params: {
       recipient: '11111111111111111111111111111111',
       mint: '22222222222222222222222222222222',
-      amount: '100000000',
-      createAccount: true,
+      amount: 100000000,
     },
+    sender: senderB,
   },
   {
     type: 'buy-amm',
@@ -42,9 +48,10 @@ const exampleOperations: BatchOperation[] = [
     description: 'Buy via AMM without ATA creation',
     params: {
       poolKey: '33333333333333333333333333333333',
-      quoteAmount: 10000000,
+      amount: 10000000,
       slippage: 1,
     },
+    sender: senderA,
   },
   {
     type: 'sell-amm',
@@ -55,6 +62,7 @@ const exampleOperations: BatchOperation[] = [
       amount: 1000,
       slippage: 1,
     },
+    sender: senderB,
   },
   {
     type: 'sell-bonding-curve',
@@ -65,6 +73,7 @@ const exampleOperations: BatchOperation[] = [
       amount: 500,
       slippage: 1000,
     },
+    sender: senderC,
   },
 ];
 
@@ -80,10 +89,11 @@ async function main() {
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
     // In a real scenario, you would load these from wallet files
-    const wallet = Keypair.generate(); // Replace with actual wallet
     const feePayer = Keypair.generate(); // Replace with actual fee payer
 
-    console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
+    console.log(
+      `👛 Using senders: ${[senderA.publicKey.toString(), senderB.publicKey.toString(), senderC.publicKey.toString()].join(', ')}`
+    );
     console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
 
     // Validate operations before execution
@@ -108,10 +118,12 @@ async function main() {
     // Execute batch transactions
     console.log('\n🚀 Executing batch transactions...');
 
-    const results = await batchTransactions(connection, wallet, exampleOperations, feePayer, {
-      maxParallel: 2, // Execute 2 operations at a time
+    const results = await batchTransactions(connection, exampleOperations, feePayer, {
+      maxParallel: 3, // Execute 3 operations at a time (as requested)
       delayBetween: 1500, // 1.5 second delay between batches
       retryFailed: true, // Retry failed operations
+      disableFallbackRetry: false, // Allow fallback retry
+      dynamicBatching: false, // Disable dynamic batching as requested
     });
 
     // Display results
@@ -166,8 +178,7 @@ function createDynamicOperations(): BatchOperation[] {
       params: {
         recipient: `recipient${i + 1}11111111111111111111111111111111`,
         mint: '22222222222222222222222222222222',
-        amount: '50000000',
-        createAccount: true,
+        amount: 50000000,
       },
     });
   }
@@ -190,11 +201,7 @@ function createDynamicOperations(): BatchOperation[] {
 /**
  * Example of conditional operations based on previous results
  */
-async function executeConditionalBatch(
-  connection: Connection,
-  wallet: Keypair,
-  feePayer: Keypair
-): Promise<void> {
+async function executeConditionalBatch(connection: Connection, feePayer: Keypair): Promise<void> {
   console.log('\n🔄 Executing conditional batch...');
 
   // First batch: transfers
@@ -206,19 +213,15 @@ async function executeConditionalBatch(
       params: {
         recipient: '11111111111111111111111111111111',
         mint: '22222222222222222222222222222222',
-        amount: '100000000',
-        createAccount: true,
+        amount: 100000000,
       },
+      sender: senderA,
     },
   ];
 
-  const transferResults = await batchTransactions(
-    connection,
-    wallet,
-    transferOperations,
-    feePayer,
-    { maxParallel: 1 }
-  );
+  const transferResults = await batchTransactions(connection, transferOperations, feePayer, {
+    maxParallel: 1,
+  });
 
   // Check if first operation succeeded
   if (transferResults[0]?.success) {
@@ -235,16 +238,13 @@ async function executeConditionalBatch(
           amount: 1000,
           slippage: 1,
         },
+        sender: senderB,
       },
     ];
 
-    const additionalResults = await batchTransactions(
-      connection,
-      wallet,
-      additionalOperations,
-      feePayer,
-      { maxParallel: 1 }
-    );
+    const additionalResults = await batchTransactions(connection, additionalOperations, feePayer, {
+      maxParallel: 1,
+    });
 
     console.log('📊 Additional operations completed:', additionalResults.length);
   } else {

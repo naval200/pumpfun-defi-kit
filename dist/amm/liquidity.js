@@ -3,10 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.addLiquidity = addLiquidity;
 exports.removeLiquidity = removeLiquidity;
 const tslib_1 = require("tslib");
+const pump_swap_sdk_1 = require("@pump-fun/pump-swap-sdk");
+const bn_js_1 = tslib_1.__importDefault(require("bn.js"));
 const transaction_1 = require("../utils/transaction");
 const retry_1 = require("../utils/retry");
-const bn_js_1 = tslib_1.__importDefault(require("bn.js"));
-const pump_swap_sdk_1 = require("@pump-fun/pump-swap-sdk");
 const debug_1 = require("../utils/debug");
 /**
  * Add liquidity to pool with retry logic and better error handling
@@ -25,9 +25,7 @@ async function addLiquidity(connection, wallet, poolKey, baseAmount, slippage = 
         // Calculate quote amount and LP tokens with retry logic
         (0, debug_1.log)('🧮 Calculating liquidity amounts...');
         const { quote, lpToken } = await (0, retry_1.retryWithBackoff)(async () => {
-            // Convert to BN for SDK compatibility
-            const baseAmountBN = new bn_js_1.default(baseAmount);
-            return await pumpAmmSdk.depositAutocompleteQuoteAndLpTokenFromBase(liquiditySolanaState, baseAmountBN, slippage);
+            return await pumpAmmSdk.depositAutocompleteQuoteAndLpTokenFromBase(liquiditySolanaState, new bn_js_1.default(baseAmount), slippage);
         }, 3, 2000);
         (0, debug_1.log)(`Required SOL: ${quote}, LP tokens: ${lpToken}`);
         // Get deposit instructions with retry logic
@@ -44,7 +42,7 @@ async function addLiquidity(connection, wallet, poolKey, baseAmount, slippage = 
         return {
             success: true,
             signature,
-            lpTokenAmount: Number(lpToken),
+            lpTokenAmount: Number(lpToken.toString()),
         };
     }
     catch (error) {
@@ -80,7 +78,6 @@ async function removeLiquidity(connection, wallet, poolKey, lpTokenAmount, slipp
         // Calculate withdrawal amounts with retry logic
         (0, debug_1.log)('🧮 Calculating withdrawal amounts...');
         const { base, quote } = await (0, retry_1.retryWithBackoff)(async () => {
-            // Convert to BN for SDK compatibility
             const lpTokenAmountBN = new bn_js_1.default(lpTokenAmount);
             return pumpAmmSdk.withdrawAutoCompleteBaseAndQuoteFromLpToken(liquiditySolanaState, lpTokenAmountBN, slippage);
         }, 3, 2000);
@@ -88,7 +85,6 @@ async function removeLiquidity(connection, wallet, poolKey, lpTokenAmount, slipp
         // Get withdrawal instructions with retry logic
         (0, debug_1.log)('📝 Getting withdrawal instructions...');
         const withdrawInstructions = await (0, retry_1.retryWithBackoff)(async () => {
-            // Convert to BN for SDK compatibility
             const lpTokenAmountBN = new bn_js_1.default(lpTokenAmount);
             return await pumpAmmSdk.withdrawInstructions(liquiditySolanaState, lpTokenAmountBN, slippage);
         }, 3, 2000);
@@ -101,8 +97,8 @@ async function removeLiquidity(connection, wallet, poolKey, lpTokenAmount, slipp
         return {
             success: true,
             signature,
-            baseAmount: Number(base),
-            quoteAmount: Number(quote),
+            baseAmount: Number(base.toString()),
+            quoteAmount: Number(quote.toString()),
         };
     }
     catch (error) {

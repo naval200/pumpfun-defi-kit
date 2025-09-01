@@ -27,19 +27,19 @@ async function sellAmmTokens(connection, wallet, poolKey, baseAmount, slippage =
                 return await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey);
             }, 3, 2000);
         const { poolBaseAmount, poolQuoteAmount } = swapSolanaState;
-        const baseReserve = Number(poolBaseAmount);
-        const quoteReserve = Number(poolQuoteAmount);
-        (0, debug_1.debugLog)(`Pool reserves - Base: ${baseReserve}, Quote: ${quoteReserve}`);
+        const baseReserve = new bn_js_1.default(poolBaseAmount);
+        const quoteReserve = new bn_js_1.default(poolQuoteAmount);
+        (0, debug_1.debugLog)(`Pool reserves - Base: ${baseReserve.toString()}, Quote: ${quoteReserve.toString()}`);
         // Calculate expected quote amount using simple AMM formula
         // This is a simplified calculation - in practice, you'd use the SDK's methods
-        const k = baseReserve * quoteReserve;
-        const newBaseReserve = baseReserve + baseAmount;
-        const newQuoteReserve = k / newBaseReserve;
-        const quoteOut = quoteReserve - newQuoteReserve;
-        (0, debug_1.debugLog)(`Expected quote amount: ${quoteOut}`);
+        const k = baseReserve.mul(quoteReserve);
+        const newBaseReserve = baseReserve.add(new bn_js_1.default(baseAmount));
+        const newQuoteReserve = k.div(newBaseReserve);
+        const quoteOut = quoteReserve.sub(newQuoteReserve);
+        (0, debug_1.debugLog)(`Expected quote amount: ${quoteOut.toString()}`);
         // Execute sell transaction with retry logic
         (0, debug_1.debugLog)('📝 Executing sell transaction...');
-        const instructions = await (0, instructions_1.createAmmSellInstructionsAssuming)(pumpAmmSdk, swapSolanaState, new bn_js_1.default(baseAmount), slippage);
+        const instructions = await (0, instructions_1.createAmmSellInstructionsAssuming)(pumpAmmSdk, swapSolanaState, baseAmount, slippage);
         // Send transaction with retry logic
         (0, debug_1.debugLog)('📤 Sending sell transaction...');
         const signature = await (0, retry_1.retryWithBackoff)(async () => {
@@ -55,7 +55,7 @@ async function sellAmmTokens(connection, wallet, poolKey, baseAmount, slippage =
         return {
             success: true,
             signature,
-            quoteAmount: Number(quoteOut),
+            quoteAmount: Number(quoteOut.toString()),
         };
     }
     catch (error) {
@@ -90,8 +90,7 @@ async function createSignedAmmSellTransaction(connection, wallet, poolKey, baseA
         const swapSolanaState = _options?.swapSolanaState || (await pumpAmmSdk.swapSolanaState(poolKey, wallet.publicKey));
         // Create sell instructions
         (0, debug_1.debugLog)('📝 Creating sell instructions...');
-        const baseAmountBN = new bn_js_1.default(baseAmount);
-        const instructions = await pumpAmmSdk.sellBaseInput(swapSolanaState, baseAmountBN, slippage);
+        const instructions = await pumpAmmSdk.sellBaseInput(swapSolanaState, new bn_js_1.default(baseAmount), slippage);
         // Create transaction
         const transaction = new web3_js_1.Transaction();
         instructions.forEach(instruction => transaction.add(instruction));

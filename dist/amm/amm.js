@@ -9,23 +9,23 @@ const pump_swap_sdk_1 = require("@pump-fun/pump-swap-sdk");
 const web3_js_1 = require("@solana/web3.js");
 const bn_js_1 = tslib_1.__importDefault(require("bn.js"));
 const debug_1 = require("../utils/debug");
+const amounts_1 = require("../utils/amounts");
 /**
  * Get pool creation data with BigNumber parameters
  */
 async function getPoolCreationData(pumpAmmSdk, index, creator, baseMint, quoteMint, baseIn, quoteIn) {
-    // Convert to BN for SDK compatibility
-    const baseInBN = new bn_js_1.default(baseIn);
-    const quoteInLamports = Math.floor(quoteIn * web3_js_1.LAMPORTS_PER_SOL);
-    const quoteInBN = new bn_js_1.default(quoteInLamports);
-    (0, debug_1.debugLog)(`🔧 Converting pool creation parameters to BN:`);
-    (0, debug_1.debugLog)(`   Base amount: ${baseIn} -> ${baseInBN.toString()}`);
-    (0, debug_1.debugLog)(`   Quote amount: ${quoteIn} SOL -> ${quoteInLamports} lamports -> ${quoteInBN.toString()}`);
+    (0, debug_1.debugLog)(`🔧 Converting pool creation parameters to bigint:`);
+    (0, debug_1.debugLog)(`   Base amount: ${baseIn.toString()}`);
+    (0, debug_1.debugLog)(`   Quote amount: ${(0, amounts_1.formatLamportsAsSol)(quoteIn)} SOL`);
     // Get pool creation state
     const createPoolSolanaState = await pumpAmmSdk.createPoolSolanaState(index, creator, baseMint, quoteMint);
+    const baseInBN = new bn_js_1.default(baseIn);
+    const quoteInBN = new bn_js_1.default(quoteIn);
     // Get pool creation instructions with BigNumber parameters
     const createPoolInstructions = await pumpAmmSdk.createPoolInstructions(createPoolSolanaState, baseInBN, quoteInBN);
     // Get initial pool price for UI
-    const initialPoolPrice = pumpAmmSdk.createAutocompleteInitialPoolPrice(baseInBN, quoteInBN);
+    const initialPoolPriceBN = await pumpAmmSdk.createAutocompleteInitialPoolPrice(baseInBN, quoteInBN);
+    const initialPoolPrice = Number(initialPoolPriceBN.toString());
     return {
         createPoolSolanaState,
         createPoolInstructions,

@@ -146,21 +146,21 @@ async function getBondingCurveAccount(connection, mint, commitment = 'confirmed'
     }
     // For now, return a placeholder object - you'll need to implement BondingCurveAccount
     return {
-        getBuyPrice: (solAmount) => solAmount * 1000n, // Placeholder
-        getSellPrice: (tokenAmount, _feeBasisPoints) => (tokenAmount * (10000n - _feeBasisPoints)) / 10000n, // Placeholder
+        getBuyPrice: (amountLamports) => Math.floor(amountLamports * 1000), // Placeholder
+        getSellPrice: (tokenAmount, _feeBasisPoints) => Math.floor((tokenAmount * (10000 - _feeBasisPoints)) / 10000), // Placeholder
     };
 }
 /**
  * Calculate buy amount with slippage
  */
-function calculateWithSlippageBuy(solAmount, slippageBasisPoints) {
-    return (solAmount * (10000n + slippageBasisPoints)) / 10000n;
+function calculateWithSlippageBuy(amountLamports, slippageBasisPoints) {
+    return Math.floor((amountLamports * (10000 + slippageBasisPoints)) / 10000);
 }
 /**
  * Calculate sell amount with slippage
  */
-function calculateWithSlippageSell(solAmount, slippageBasisPoints) {
-    return (solAmount * (10000n - slippageBasisPoints)) / 10000n;
+function calculateWithSlippageSell(amountLamports, slippageBasisPoints) {
+    return Math.floor((amountLamports * (10000 - slippageBasisPoints)) / 10000);
 }
 // ============================================================================
 // ADDITIONAL PDA DERIVATION FUNCTIONS

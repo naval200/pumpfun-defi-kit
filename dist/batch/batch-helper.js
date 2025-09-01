@@ -1,246 +1,182 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.executeGenericBatch = executeGenericBatch;
-exports.executeCombinedTransaction = executeCombinedTransaction;
+exports.buildInstructionsForOperation = buildInstructionsForOperation;
 exports.chunkArray = chunkArray;
-exports.validateGenericBatchOperations = validateGenericBatchOperations;
-exports.calculateOptimalBatchSize = calculateOptimalBatchSize;
-exports.createBatchExecutionPlan = createBatchExecutionPlan;
+exports.estimateTransactionLimits = estimateTransactionLimits;
+exports.determineOptimalBatchSize = determineOptimalBatchSize;
 const web3_js_1 = require("@solana/web3.js");
+const pump_swap_sdk_1 = require("@pump-fun/pump-swap-sdk");
+const sendToken_1 = require("../sendToken");
+const sendSol_1 = require("../sendSol");
+const bonding_curve_1 = require("../bonding-curve");
+const amm_1 = require("../amm");
+const amounts_1 = require("../utils/amounts");
 const debug_1 = require("../utils/debug");
 /**
- * Execute generic batch operations with custom execution logic
- *
- * This helper function allows you to batch any type of homogeneous operations
- * by providing a custom executor function for each operation type.
+ * Build instructions for a single batch operation
  */
-async function executeGenericBatch(connection, operations, executor, options) {
-    const { maxParallel = 3, delayBetween = 1000, retryFailed = false, feePayer } = options;
-    const results = [];
-    if (!feePayer) {
-        throw new Error('Fee payer is required for batch transactions');
-    }
-    (0, debug_1.debugLog)(`🚀 Executing ${operations.length} generic operations in batches of ${maxParallel}`);
-    (0, debug_1.debugLog)(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);
-    // Execute operations individually in batches
-    const batches = chunkArray(operations, maxParallel);
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-        const batch = batches[batchIndex];
-        (0, debug_1.debugLog)(`🔄 Executing Batch ${batchIndex + 1}/${batches.length} (${batch.length} operations)`);
-        // Execute batch in parallel
-        const batchPromises = batch.map(async (operation) => {
-            try {
-                (0, debug_1.debugLog)(`🚀 Executing ${operation.type}: ${operation.description}`);
-                const result = await executor(operation, connection, feePayer);
-                return {
-                    operationId: operation.id,
-                    type: operation.type,
-                    success: result.success,
-                    signature: result.signature,
-                    error: result.error,
-                };
-            }
-            catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                (0, debug_1.logError)(`Error executing operation ${operation.id}: ${errorMessage}`);
-                return {
-                    operationId: operation.id,
-                    type: operation.type,
-                    success: false,
-                    error: errorMessage,
-                };
-            }
-        });
-        const batchResults = await Promise.allSettled(batchPromises);
-        // Process batch results
-        batchResults.forEach((result, index) => {
-            if (result.status === 'fulfilled') {
-                results.push(result.value);
-            }
-            else {
-                results.push({
-                    operationId: batch[index].id,
-                    type: batch[index].type,
-                    success: false,
-                    error: result.reason?.message || 'Unknown error',
-                });
-            }
-        });
-        // Add delay between batches (except for the last batch)
-        if (batchIndex < batches.length - 1 && delayBetween > 0) {
-            (0, debug_1.debugLog)(`⏳ Waiting ${delayBetween}ms before next batch...`);
-            await new Promise(resolve => setTimeout(resolve, delayBetween));
+async function buildInstructionsForOperation(connection, ammSdk, operation, senderKeypair, feePayer) {
+    const instructions = [];
+    switch (operation.type) {
+        case 'transfer': {
+            const { recipient, mint, amount } = operation.params;
+            const ix = (0, sendToken_1.createTokenTransferInstruction)(senderKeypair.publicKey, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), amount, false // allowOwnerOffCurve
+            );
+            instructions.push(ix);
+            break;
+        }
+        case 'sol-transfer': {
+            const { recipient, amount } = operation.params;
+            const ix = (0, sendSol_1.createSendSolInstruction)(senderKeypair, new web3_js_1.PublicKey(recipient), amount, feePayer?.publicKey);
+            instructions.push(ix);
+            break;
+        }
+        case 'buy-bonding-curve': {
+            const { mint, amount } = operation.params;
+            const pdas = await (0, bonding_curve_1.getBondingCurvePDAs)(connection, new web3_js_1.PublicKey(mint), senderKeypair.publicKey);
+            const ix = (0, bonding_curve_1.createBondingCurveBuyInstruction)(senderKeypair.publicKey, new web3_js_1.PublicKey(mint), amount, pdas, 1000);
+            instructions.push(ix);
+            break;
+        }
+        case 'sell-bonding-curve': {
+            const { mint, amount } = operation.params;
+            const pdas = await (0, bonding_curve_1.getBondingCurvePDAs)(connection, new web3_js_1.PublicKey(mint), senderKeypair.publicKey);
+            const minSolOutput = (0, amounts_1.minSolLamports)();
+            const ix = (0, bonding_curve_1.createBondingCurveSellInstruction)(senderKeypair.publicKey, new web3_js_1.PublicKey(mint), amount, minSolOutput, pdas);
+            instructions.push(ix);
+            break;
+        }
+        case 'buy-amm': {
+            const { poolKey, amount, slippage = 1 } = operation.params;
+            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey);
+            const ixs = await (0, amm_1.createAmmBuyInstructionsAssuming)(ammSdk, state, amount, slippage);
+            instructions.push(...ixs);
+            break;
+        }
+        case 'sell-amm': {
+            const { poolKey, amount, slippage = 1 } = operation.params;
+            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey);
+            const ixs = await (0, amm_1.createAmmSellInstructionsAssuming)(ammSdk, state, amount, slippage);
+            instructions.push(...ixs);
+            break;
+        }
+        default: {
+            throw new Error(`Unknown operation type: ${operation.type}`);
         }
     }
-    // Retry failed operations if requested
-    if (retryFailed) {
-        const failedOperations = operations.filter(op => !results.find(r => r.operationId === op.id && r.success));
-        if (failedOperations.length > 0) {
-            (0, debug_1.debugLog)(`🔄 Retrying ${failedOperations.length} failed operations...`);
-            for (const operation of failedOperations) {
-                (0, debug_1.debugLog)(`🔄 Retrying operation: ${operation.id}`);
-                const retryResult = await executor(operation, connection, feePayer);
-                // Update the existing result
-                const existingIndex = results.findIndex(r => r.operationId === operation.id);
-                if (existingIndex >= 0) {
-                    results[existingIndex] = {
-                        operationId: operation.id,
-                        type: operation.type,
-                        success: retryResult.success,
-                        signature: retryResult.signature,
-                        error: retryResult.error,
-                    };
-                }
-                else {
-                    results.push({
-                        operationId: operation.id,
-                        type: operation.type,
-                        success: retryResult.success,
-                        signature: retryResult.signature,
-                        error: retryResult.error,
-                    });
-                }
-            }
-        }
-    }
-    return results;
+    return instructions;
 }
 /**
- * Execute operations in a single combined transaction
- *
- * This is useful for operations that can be safely combined into one transaction,
- * such as multiple SPL token transfers or other homogeneous operations.
+ * Solana transaction limits
  */
-async function executeCombinedTransaction(connection, operations, instructionBuilder, signers, feePayer, options = {}) {
-    try {
-        (0, debug_1.debugLog)(`🔗 Building combined transaction with ${operations.length} operations`);
-        // Get recent blockhash
-        const { blockhash } = await connection.getLatestBlockhash('confirmed');
-        // Create transaction
-        const transaction = new web3_js_1.Transaction();
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = feePayer.publicKey;
-        // Add all instructions
-        operations.forEach(operation => {
-            const instructions = instructionBuilder(operation);
-            instructions.forEach(instruction => transaction.add(instruction));
-        });
-        // Sign with all signers
-        signers.forEach(signer => transaction.partialSign(signer));
-        // Send transaction
-        const signature = await connection.sendRawTransaction(transaction.serialize(), {
-            skipPreflight: options.skipPreflight || false,
-            preflightCommitment: options.preflightCommitment || 'confirmed',
-        });
-        // Wait for confirmation
-        const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-        if (confirmation.value.err) {
-            throw new Error(`Transaction failed: ${confirmation.value.err}`);
-        }
-        (0, debug_1.debugLog)(`✅ Combined transaction confirmed: ${signature}`);
-        return {
-            success: true,
-            signature,
-        };
+const SOLANA_TRANSACTION_SIZE_LIMIT = 1232; // bytes
+const SOLANA_MAX_ACCOUNTS_PER_TX = 64;
+// Single-purpose helper used by batchTransactions
+function chunkArray(items, chunkSize) {
+    if (!Array.isArray(items)) {
+        return [];
     }
-    catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        (0, debug_1.logError)(`Combined transaction failed: ${errorMessage}`);
-        return {
-            success: false,
-            error: errorMessage,
-        };
+    if (chunkSize <= 0) {
+        return [items];
     }
-}
-/**
- * Utility function to chunk array into smaller arrays
- */
-function chunkArray(array, chunkSize) {
     const chunks = [];
-    for (let i = 0; i < array.length; i += chunkSize) {
-        chunks.push(array.slice(i, i + chunkSize));
+    for (let i = 0; i < items.length; i += chunkSize) {
+        chunks.push(items.slice(i, i + chunkSize));
     }
     return chunks;
 }
 /**
- * Validate generic batch operations structure
+ * Estimate transaction size and validate against Solana limits
  */
-function validateGenericBatchOperations(operations, validTypes) {
-    const errors = [];
-    if (!Array.isArray(operations) || operations.length === 0) {
-        errors.push('Operations must be a non-empty array');
-        return { valid: false, errors };
-    }
-    operations.forEach((op, index) => {
-        // Check required fields
-        if (!op.type || !op.id || !op.description || !op.params) {
-            errors.push(`Operation ${index}: Missing required fields`);
-            return;
-        }
-        // Check operation type
-        if (!validTypes.includes(op.type)) {
-            errors.push(`Operation ${index}: Invalid type '${op.type}'`);
-            return;
-        }
-        // Check ID uniqueness
-        const duplicateIds = operations.filter(o => o.id === op.id);
-        if (duplicateIds.length > 1) {
-            errors.push(`Operation ${index}: Duplicate ID '${op.id}'`);
-            return;
-        }
+function estimateTransactionLimits(instructions, signers) {
+    const reasons = [];
+    // Count unique accounts across all instructions
+    const uniqueAccounts = new Set();
+    // Add signers
+    signers.forEach(signer => uniqueAccounts.add(signer.publicKey.toString()));
+    // Add accounts from instructions
+    instructions.forEach(ix => {
+        ix.keys.forEach(key => uniqueAccounts.add(key.pubkey.toString()));
+        uniqueAccounts.add(ix.programId.toString());
     });
+    const accountCount = uniqueAccounts.size;
+    // Rough transaction size estimation
+    const signatureSize = signers.length * 64; // 64 bytes per signature
+    const accountKeysSize = accountCount * 32; // 32 bytes per account
+    const instructionDataSize = instructions.reduce((total, ix) => {
+        return total + ix.data.length + 4; // instruction data + overhead
+    }, 0);
+    const instructionAccountsSize = instructions.reduce((total, ix) => {
+        return total + ix.keys.length * 1; // 1 byte per account index
+    }, 0);
+    const estimatedSize = signatureSize + accountKeysSize + instructionDataSize + instructionAccountsSize + 100; // +100 for overhead
+    // Check limits
+    let canFit = true;
+    if (estimatedSize > SOLANA_TRANSACTION_SIZE_LIMIT) {
+        canFit = false;
+        reasons.push(`Estimated size ${estimatedSize} bytes exceeds limit ${SOLANA_TRANSACTION_SIZE_LIMIT} bytes`);
+    }
+    if (accountCount > SOLANA_MAX_ACCOUNTS_PER_TX) {
+        canFit = false;
+        reasons.push(`Account count ${accountCount} exceeds limit ${SOLANA_MAX_ACCOUNTS_PER_TX}`);
+    }
     return {
-        valid: errors.length === 0,
-        errors,
+        canFit,
+        estimatedSize,
+        accountCount,
+        reasons,
     };
 }
 /**
- * Calculate optimal batch size based on transaction size limits
- *
- * Solana has a transaction size limit of ~1232 bytes for instructions.
- * This helper estimates how many operations can fit in a single transaction.
+ * Dynamically determine optimal batch size for operations
  */
-function calculateOptimalBatchSize(estimatedInstructionSize, maxTransactionSize = 1232) {
-    // Reserve some space for transaction overhead
-    const overhead = 100;
-    const availableSpace = maxTransactionSize - overhead;
-    // Calculate how many instructions can fit
-    const maxInstructions = Math.floor(availableSpace / estimatedInstructionSize);
-    // Ensure we don't exceed reasonable limits
-    return Math.min(maxInstructions, 20);
-}
-/**
- * Create a batch execution plan
- *
- * This helps optimize batch execution by grouping operations that can be combined
- * and determining the optimal execution strategy.
- */
-function createBatchExecutionPlan(operations, canCombine, maxBatchSize = 10) {
-    const combinedBatches = [];
-    const individualOperations = [];
-    // Group operations that can be combined
-    const processed = new Set();
-    for (let i = 0; i < operations.length; i++) {
-        if (processed.has(i))
-            continue;
-        const batch = [operations[i]];
-        processed.add(i);
-        // Find other operations that can be combined
-        for (let j = i + 1; j < operations.length && batch.length < maxBatchSize; j++) {
-            if (processed.has(j))
-                continue;
-            if (canCombine(operations[i], operations[j])) {
-                batch.push(operations[j]);
-                processed.add(j);
+async function determineOptimalBatchSize(connection, operations, feePayer) {
+    if (operations.length === 0) {
+        return { maxOpsPerBatch: 0, reasoning: 'No operations provided' };
+    }
+    const ammSdk = new pump_swap_sdk_1.PumpAmmSdk(connection);
+    let maxSafeOps = 1;
+    let lastSuccessfulSize = 0;
+    // Test increasing batch sizes until we hit a limit
+    for (let testSize = 1; testSize <= Math.min(operations.length, 20); testSize++) {
+        const testOps = operations.slice(0, testSize);
+        const instructions = [];
+        const signers = new Set();
+        try {
+            // Add fee payer if provided
+            if (feePayer) {
+                signers.add(feePayer.publicKey.toString());
+            }
+            // Build instructions for test batch
+            for (const op of testOps) {
+                if (!op.sender) {
+                    throw new Error(`Operation ${op.id} is missing sender Keypair for sizing`);
+                }
+                const senderKeypair = op.sender;
+                signers.add(senderKeypair.publicKey.toString());
+                // Use the helper function to build instructions
+                const opInstructions = await buildInstructionsForOperation(connection, ammSdk, op, senderKeypair, feePayer);
+                instructions.push(...opInstructions);
+            }
+            // Check if this batch size fits within limits
+            const signersArray = Array.from(signers).map(s => ({ publicKey: new web3_js_1.PublicKey(s) }));
+            const limits = estimateTransactionLimits(instructions, signersArray);
+            if (limits.canFit) {
+                maxSafeOps = testSize;
+                lastSuccessfulSize = limits.estimatedSize;
+            }
+            else {
+                // Hit a limit, stop testing
+                break;
             }
         }
-        if (batch.length > 1) {
-            combinedBatches.push(batch);
-        }
-        else {
-            individualOperations.push(operations[i]);
+        catch (error) {
+            // Error building instructions, stop testing
+            (0, debug_1.debugLog)(`Error testing batch size ${testSize}: ${error}`);
+            break;
         }
     }
-    return { combinedBatches, individualOperations };
+    const reasoning = `Determined max ${maxSafeOps} operations per batch (last successful size: ${lastSuccessfulSize} bytes)`;
+    return { maxOpsPerBatch: maxSafeOps, reasoning };
 }
 //# sourceMappingURL=batch-helper.js.map

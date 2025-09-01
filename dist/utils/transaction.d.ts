@@ -76,7 +76,7 @@ export declare function createTransactionWithComputeBudget(options?: Transaction
 /**
  * Send SOL (lamports) from one wallet to another
  */
-export declare function sendLamports(connection: Connection, sender: Keypair, recipient: PublicKey, lamports: number, feePayer?: Keypair): Promise<string>;
+export declare function sendLamports(connection: Connection, sender: Keypair, recipient: PublicKey, lamports: bigint, feePayer?: Keypair): Promise<string>;
 /**
  * Create and send a transaction with the given instructions
  * @param connection - Solana connection

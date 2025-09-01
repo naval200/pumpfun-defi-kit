@@ -6,6 +6,7 @@ const bc_helper_1 = require("./bc-helper");
 const instructions_1 = require("./idl/instructions");
 const constants_1 = require("./idl/constants");
 const debug_1 = require("../utils/debug");
+const amounts_1 = require("../utils/amounts");
 /**
  * Sell PumpFun tokens with simple approach
  */
@@ -19,18 +20,10 @@ async function sellPumpFunToken(connection, wallet, mint, tokenAmount) {
             };
         }
         (0, debug_1.log)('🔄 Executing sell of', tokenAmount, 'tokens...');
-        // Calculate minSolOutput based on bonding curve price
-        // For now, use a very low minimum to avoid slippage issues
-        // TODO: Calculate this properly based on bonding curve reserves
-        const minSolOutput = 0.000001; // Very low minimum to avoid slippage rejection
         // Get all required PDAs (including correct creator vault)
         const pdas = await (0, bc_helper_1.getAllRequiredPDAsForBuyAsync)(connection, constants_1.PUMP_PROGRAM_ID, mint, wallet.publicKey);
-        // Create sell instruction using simple approach
-        // Convert token amount to smallest units (6 decimals based on buy instruction)
-        const tokenAmountInSmallestUnits = tokenAmount * Math.pow(10, 6);
-        const sellInstruction = (0, instructions_1.createBondingCurveSellInstruction)(wallet.publicKey, mint, tokenAmountInSmallestUnits, // Token amount in smallest units (6 decimals)
-        minSolOutput * 1e9, // Convert SOL to lamports
-        pdas);
+        const minSolOutput = (0, amounts_1.minSolLamports)();
+        const sellInstruction = (0, instructions_1.createBondingCurveSellInstruction)(wallet.publicKey, mint, tokenAmount, minSolOutput, pdas);
         const transaction = new web3_js_1.Transaction().add(sellInstruction);
         // Set recent blockhash and fee payer
         const { blockhash } = await connection.getLatestBlockhash('confirmed');
@@ -50,7 +43,7 @@ async function sellPumpFunToken(connection, wallet, mint, tokenAmount) {
             ...(await connection.getLatestBlockhash('confirmed')),
         }, 'confirmed');
         (0, debug_1.logSuccess)('Sell transaction confirmed successfully!');
-        (0, debug_1.log)(`💰 Sold ${tokenAmount} tokens for ${minSolOutput} SOL`);
+        (0, debug_1.log)(`💰 Sold ${tokenAmount} tokens for at least ${(0, amounts_1.formatLamportsAsSol)(minSolOutput)} SOL`);
         (0, debug_1.logSignature)(signature, 'Sell');
         return {
             success: true,

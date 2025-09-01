@@ -8,6 +8,7 @@ const spl_token_1 = require("@solana/spl-token");
 const image_loader_1 = require("../utils/image-loader");
 const metadata_1 = require("../utils/metadata");
 const debug_1 = require("../utils/debug");
+const amounts_1 = require("../utils/amounts");
 // getBondingCurveState moved to helper.ts
 const buy_1 = require("./buy");
 const transaction_1 = require("../utils/transaction");
@@ -140,11 +141,11 @@ async function createPumpFunToken(connection, wallet, tokenConfig, isMainnet = f
         signature = createResult.signature;
         (0, debug_1.logSuccess)('Token created successfully!');
         // Store buy amount for later use after creator vault is extracted
-        const buyAmountSol = tokenConfig.initialBuyAmount || 0.01; // Default 0.01 SOL
+        const amountLamports = tokenConfig.initialBuyAmount || 1000000; // Default 0.001 SOL in lamports (smaller for testing)
         (0, debug_1.logSignature)(signature, 'Token creation');
         // Now we can perform the initial buy (creator vault is no longer needed)
         if (tokenConfig.initialBuyAmount && tokenConfig.initialBuyAmount > 0) {
-            (0, debug_1.log)(`💰 Performing initial buy: ${buyAmountSol} SOL`);
+            (0, debug_1.log)(`💰 Performing initial buy: ${(0, amounts_1.formatLamportsAsSol)(amountLamports)} SOL`);
             try {
                 // FIX: Wait for proper confirmation with commitment level
                 (0, debug_1.log)('⏳ Waiting for transaction to be fully confirmed...');
@@ -165,10 +166,10 @@ async function createPumpFunToken(connection, wallet, tokenConfig, isMainnet = f
                 }
                 (0, debug_1.logSuccess)(`✅ Associated token account created: ${createAtaResult.account?.toString()}`);
                 // Execute the initial buy using buy (no creator vault needed)
-                const buySignature = await (0, buy_1.buyPumpFunToken)(connection, wallet, mint.publicKey, buyAmountSol, 1000 // slippageBasisPoints
+                const buySignature = await (0, buy_1.buyPumpFunToken)(connection, wallet, mint.publicKey, amountLamports, 1000 // slippageBasisPoints
                 );
                 (0, debug_1.logSuccess)('Initial buy completed successfully!');
-                (0, debug_1.log)(`   Buy Amount: ${buyAmountSol} SOL`);
+                (0, debug_1.log)(`   💰 Buy Amount: ${(0, amounts_1.formatLamportsAsSol)(amountLamports)} SOL`);
                 (0, debug_1.logSignature)(buySignature, 'Initial buy');
             }
             catch (buyError) {

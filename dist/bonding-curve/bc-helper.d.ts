@@ -43,17 +43,17 @@ export declare function validateBondingCurve(connection: Connection, mint: Publi
  * Get bonding curve account info (placeholder implementation)
  */
 export declare function getBondingCurveAccount(connection: Connection, mint: PublicKey, commitment?: string): Promise<{
-    getBuyPrice: (solAmount: bigint) => bigint;
-    getSellPrice: (tokenAmount: bigint, _feeBasisPoints: bigint) => bigint;
+    getBuyPrice: (amountLamports: number) => number;
+    getSellPrice: (tokenAmount: number, _feeBasisPoints: number) => number;
 } | null>;
 /**
  * Calculate buy amount with slippage
  */
-export declare function calculateWithSlippageBuy(solAmount: bigint, slippageBasisPoints: bigint): bigint;
+export declare function calculateWithSlippageBuy(amountLamports: number, slippageBasisPoints: number): number;
 /**
  * Calculate sell amount with slippage
  */
-export declare function calculateWithSlippageSell(solAmount: bigint, slippageBasisPoints: bigint): bigint;
+export declare function calculateWithSlippageSell(amountLamports: number, slippageBasisPoints: number): number;
 /**
  * Get bonding curve PDA (alias for deriveBondingCurveAddress)
  */

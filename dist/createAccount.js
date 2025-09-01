@@ -85,6 +85,7 @@ async function getOrCreateAssociatedTokenAccount(connection, payer, owner, mint,
         // Check if ATA exists
         try {
             await (0, spl_token_1.getAccount)(connection, userTokenAccount);
+            // ATA already exists - return success
             return { success: true, account: userTokenAccount };
         }
         catch (error) {

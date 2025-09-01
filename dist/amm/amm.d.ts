@@ -1,13 +1,12 @@
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
-import BN from 'bn.js';
 /**
  * Get pool creation data with BigNumber parameters
  */
 export declare function getPoolCreationData(pumpAmmSdk: PumpAmmSdk, index: number, creator: PublicKey, baseMint: PublicKey, quoteMint: PublicKey, baseIn: number, quoteIn: number): Promise<{
     createPoolSolanaState: unknown;
     createPoolInstructions: TransactionInstruction[];
-    initialPoolPrice: Promise<BN>;
+    initialPoolPrice: number;
 }>;
 /**
  * Find AMM pools for a given token mint using SDK methods

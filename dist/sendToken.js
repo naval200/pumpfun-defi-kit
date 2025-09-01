@@ -179,7 +179,7 @@ async function sendTokenToExistingAccount(connection, sender, recipient, mint, a
  * @param sender - Sender's public key
  * @param recipient - Recipient's public key
  * @param mint - Token mint public key
- * @param amount - Amount to transfer (as bigint)
+ * @param amount - Amount to transfer (as number)
  * @param allowOwnerOffCurve - Whether to allow owner off curve (default: false)
  * @returns TransactionInstruction ready for batching
  */
