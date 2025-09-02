@@ -79,6 +79,7 @@ export type BatchOperationTransfer = BatchOperationBase<'transfer', {
     recipient: string;
     mint: string;
     amount: number;
+    createAccount?: boolean;
 }>;
 export type BatchOperationSolTransfer = BatchOperationBase<'sol-transfer', {
     recipient: string;
@@ -88,6 +89,8 @@ export type BatchOperationBuyAmm = BatchOperationBase<'buy-amm', {
     poolKey: string;
     amount: number;
     slippage: number;
+    createAccount?: boolean;
+    tokenMint?: string;
 }>;
 export type BatchOperationSellAmm = BatchOperationBase<'sell-amm', {
     poolKey: string;
@@ -98,6 +101,7 @@ export type BatchOperationBuyBondingCurve = BatchOperationBase<'buy-bonding-curv
     mint: string;
     amount: number;
     slippage: number;
+    createAccount?: boolean;
 }>;
 export type BatchOperationSellBondingCurve = BatchOperationBase<'sell-bonding-curve', {
     mint: string;

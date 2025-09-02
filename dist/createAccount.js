@@ -1,5 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAssociatedTokenAccountAddress = getAssociatedTokenAccountAddress;
+exports.createAssociatedTokenAccountInstruction = createAssociatedTokenAccountInstruction;
 exports.createAssociatedTokenAccount = createAssociatedTokenAccount;
 exports.getOrCreateAssociatedTokenAccount = getOrCreateAssociatedTokenAccount;
 exports.checkAssociatedTokenAccountExists = checkAssociatedTokenAccountExists;
@@ -9,14 +11,35 @@ const spl_token_1 = require("@solana/spl-token");
 const spl_token_2 = require("@solana/spl-token");
 const debug_1 = require("./utils/debug");
 /**
+ * Get the Associated Token Account address for a user and mint
+ */
+function getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve = false) {
+    return allowOwnerOffCurve
+        ? (0, spl_token_1.getAssociatedTokenAddressSync)(mint, owner, allowOwnerOffCurve)
+        : (0, spl_token_1.getAssociatedTokenAddressSync)(mint, owner);
+}
+/**
+ * Create the instruction for creating an Associated Token Account (ATA)
+ * This function only creates the instruction without executing it
+ */
+function createAssociatedTokenAccountInstruction(payer, owner, mint, allowOwnerOffCurve = false) {
+    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
+    const instruction = (0, spl_token_1.createAssociatedTokenAccountInstruction)(payer, // payer
+    userTokenAccount, // associated token account
+    owner, // owner
+    mint, // mint
+    spl_token_2.TOKEN_PROGRAM_ID, spl_token_2.ASSOCIATED_TOKEN_PROGRAM_ID);
+    return {
+        instruction,
+        account: userTokenAccount,
+    };
+}
+/**
  * Create an Associated Token Account (ATA) for a user and mint
  */
 async function createAssociatedTokenAccount(connection, payer, owner, mint, allowOwnerOffCurve = false) {
     try {
-        // Use getAssociatedTokenAddressSync for program-owned accounts
-        const userTokenAccount = allowOwnerOffCurve
-            ? (0, spl_token_1.getAssociatedTokenAddressSync)(mint, owner, allowOwnerOffCurve)
-            : await (0, spl_token_1.getAssociatedTokenAddress)(mint, owner);
+        const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
         (0, debug_1.debugLog)(`🏗️ Creating ATA: ${userTokenAccount.toString()}`);
         // Check if ATA already exists
         try {
@@ -31,12 +54,9 @@ async function createAssociatedTokenAccount(connection, payer, owner, mint, allo
             // ATA doesn't exist, create it
             (0, debug_1.debugLog)('🏗️ Creating new associated token account...');
         }
+        const { instruction } = createAssociatedTokenAccountInstruction(payer.publicKey, owner, mint, allowOwnerOffCurve);
         const createAtaTx = new web3_js_1.Transaction();
-        createAtaTx.add((0, spl_token_1.createAssociatedTokenAccountInstruction)(payer.publicKey, // payer
-        userTokenAccount, // associated token account
-        owner, // owner
-        mint, // mint
-        spl_token_2.TOKEN_PROGRAM_ID, spl_token_2.ASSOCIATED_TOKEN_PROGRAM_ID));
+        createAtaTx.add(instruction);
         // Get recent blockhash and set fee payer
         const { blockhash } = await connection.getLatestBlockhash('confirmed');
         createAtaTx.recentBlockhash = blockhash;
@@ -78,10 +98,7 @@ async function createAssociatedTokenAccount(connection, payer, owner, mint, allo
  */
 async function getOrCreateAssociatedTokenAccount(connection, payer, owner, mint, allowOwnerOffCurve = false) {
     try {
-        // Use getAssociatedTokenAddressSync for program-owned accounts
-        const userTokenAccount = allowOwnerOffCurve
-            ? (0, spl_token_1.getAssociatedTokenAddressSync)(mint, owner, allowOwnerOffCurve)
-            : await (0, spl_token_1.getAssociatedTokenAddress)(mint, owner);
+        const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
         // Check if ATA exists
         try {
             await (0, spl_token_1.getAccount)(connection, userTokenAccount);
@@ -117,7 +134,7 @@ async function getOrCreateAssociatedTokenAccount(connection, payer, owner, mint,
  */
 async function checkAssociatedTokenAccountExists(connection, owner, mint) {
     try {
-        const userTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, owner);
+        const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
         await (0, spl_token_1.getAccount)(connection, userTokenAccount);
         return true;
     }
@@ -130,7 +147,7 @@ async function checkAssociatedTokenAccountExists(connection, owner, mint) {
  */
 async function getAssociatedTokenBalance(connection, owner, mint) {
     try {
-        const userTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, owner);
+        const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
         const tokenAccount = await (0, spl_token_1.getAccount)(connection, userTokenAccount);
         return { success: true, balance: tokenAccount.amount };
     }
