@@ -18,6 +18,8 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 🔧 **CLI Tools**: Comprehensive command-line interface for all operations
 - 💸 **Fee Payer Support**: Optional separate fee payer wallets for treasury operations and batch transactions
 - 🔢 **User-Friendly Amounts**: CLI accepts SOL amounts, automatically converted to lamports internally for precision
+- 📦 **Batch Transactions**: Execute multiple operations efficiently with automatic account creation
+- 🏗️ **Automatic ATA Creation**: Seamlessly create token accounts during batch operations
 
 ## Project Structure
 
@@ -207,6 +209,49 @@ npm run cli:send-token \
 - **Gasless UX**: Users don't need SOL for transaction fees
 
 For detailed fee payer documentation, see [docs/fee-payer-usage.md](docs/fee-payer-usage.md).
+
+### Batch Transactions
+
+Execute multiple operations efficiently in single transactions with automatic account creation:
+
+```typescript
+import { createBatchInstructions, executeBatchInstructions } from './src/batch';
+
+const operations = [
+  {
+    type: 'transfer',
+    id: 'transfer-1',
+    params: {
+      recipient: 'RecipientPublicKey',
+      mint: 'TokenMintPublicKey',
+      amount: 1000,
+      createAccount: true, // ✅ Automatically creates ATA for recipient
+    },
+  },
+  {
+    type: 'buy-bonding-curve',
+    id: 'buy-1',
+    params: {
+      mint: 'TokenMintPublicKey',
+      amount: 1000000, // SOL amount in lamports
+      slippage: 1,
+      createAccount: true, // ✅ Automatically creates ATA for buyer
+    },
+  },
+];
+
+// Create and execute batch instructions
+const batchInstructions = await createBatchInstructions(connection, operations, feePayer);
+const results = await executeBatchInstructions(connection, batchInstructions, operations);
+```
+
+**Key Features:**
+- **Automatic ATA Creation**: Set `createAccount: true` to automatically create token accounts
+- **Atomic Operations**: All operations in a batch succeed or fail together
+- **Fee Optimization**: Single fee payer covers all operations
+- **Dynamic Batching**: Automatically optimizes batch sizes based on network conditions
+
+For detailed batch transaction documentation, see [docs/batch-transactions-usage.md](docs/batch-transactions-usage.md).
 
 ### AMM Trading
 

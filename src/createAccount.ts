@@ -1,12 +1,50 @@
 import { Connection, PublicKey, Transaction, Keypair } from '@solana/web3.js';
 import {
-  getAssociatedTokenAddress,
   getAssociatedTokenAddressSync,
-  createAssociatedTokenAccountInstruction,
+  createAssociatedTokenAccountInstruction as createAssociatedTokenAccountInstructionSPL,
   getAccount,
 } from '@solana/spl-token';
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { debugLog, logSuccess, logSignature } from './utils/debug';
+
+/**
+ * Get the Associated Token Account address for a user and mint
+ */
+export function getAssociatedTokenAccountAddress(
+  owner: PublicKey,
+  mint: PublicKey,
+  allowOwnerOffCurve: boolean = false
+): PublicKey {
+  return allowOwnerOffCurve
+    ? getAssociatedTokenAddressSync(mint, owner, allowOwnerOffCurve)
+    : getAssociatedTokenAddressSync(mint, owner);
+}
+
+/**
+ * Create the instruction for creating an Associated Token Account (ATA)
+ * This function only creates the instruction without executing it
+ */
+export function createAssociatedTokenAccountInstruction(
+  payer: PublicKey,
+  owner: PublicKey,
+  mint: PublicKey,
+  allowOwnerOffCurve: boolean = false
+): { instruction: any; account: PublicKey } {
+  const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
+  const instruction = createAssociatedTokenAccountInstructionSPL(
+    payer, // payer
+    userTokenAccount, // associated token account
+    owner, // owner
+    mint, // mint
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+
+  return {
+    instruction,
+    account: userTokenAccount,
+  };
+}
 
 /**
  * Create an Associated Token Account (ATA) for a user and mint
@@ -19,10 +57,7 @@ export async function createAssociatedTokenAccount(
   allowOwnerOffCurve: boolean = false
 ): Promise<{ success: boolean; signature?: string; error?: string; account?: PublicKey }> {
   try {
-    // Use getAssociatedTokenAddressSync for program-owned accounts
-    const userTokenAccount = allowOwnerOffCurve
-      ? getAssociatedTokenAddressSync(mint, owner, allowOwnerOffCurve)
-      : await getAssociatedTokenAddress(mint, owner);
+    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
 
     debugLog(`🏗️ Creating ATA: ${userTokenAccount.toString()}`);
 
@@ -39,17 +74,15 @@ export async function createAssociatedTokenAccount(
       debugLog('🏗️ Creating new associated token account...');
     }
 
-    const createAtaTx = new Transaction();
-    createAtaTx.add(
-      createAssociatedTokenAccountInstruction(
-        payer.publicKey, // payer
-        userTokenAccount, // associated token account
-        owner, // owner
-        mint, // mint
-        TOKEN_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID
-      )
+    const { instruction } = createAssociatedTokenAccountInstruction(
+      payer.publicKey,
+      owner,
+      mint,
+      allowOwnerOffCurve
     );
+
+    const createAtaTx = new Transaction();
+    createAtaTx.add(instruction);
 
     // Get recent blockhash and set fee payer
     const { blockhash } = await connection.getLatestBlockhash('confirmed');
@@ -103,10 +136,7 @@ export async function getOrCreateAssociatedTokenAccount(
   allowOwnerOffCurve: boolean = false
 ): Promise<{ success: boolean; account: PublicKey; error?: string }> {
   try {
-    // Use getAssociatedTokenAddressSync for program-owned accounts
-    const userTokenAccount = allowOwnerOffCurve
-      ? getAssociatedTokenAddressSync(mint, owner, allowOwnerOffCurve)
-      : await getAssociatedTokenAddress(mint, owner);
+    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
 
     // Check if ATA exists
     try {
@@ -151,7 +181,7 @@ export async function checkAssociatedTokenAccountExists(
   mint: PublicKey
 ): Promise<boolean> {
   try {
-    const userTokenAccount = await getAssociatedTokenAddress(mint, owner);
+    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
     await getAccount(connection, userTokenAccount);
     return true;
   } catch (error) {
@@ -168,7 +198,7 @@ export async function getAssociatedTokenBalance(
   mint: PublicKey
 ): Promise<{ success: boolean; balance?: bigint; error?: string }> {
   try {
-    const userTokenAccount = await getAssociatedTokenAddress(mint, owner);
+    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
     const tokenAccount = await getAccount(connection, userTokenAccount);
     return { success: true, balance: tokenAccount.amount };
   } catch (error) {

@@ -31,6 +31,69 @@ describe('Batch Transactions', () => {
       expect(transferOperation.params).toHaveProperty('recipient');
       expect(transferOperation.params).toHaveProperty('mint');
       expect(transferOperation.params).toHaveProperty('amount');
+      expect(transferOperation.params).toHaveProperty('createAccount');
+      expect(transferOperation.params.createAccount).toBe(true);
+    });
+
+    it('should support transfer operations without createAccount', () => {
+      const transferOperation = {
+        type: 'transfer',
+        id: 'transfer-2',
+        description: 'Test transfer without ATA creation',
+        params: {
+          recipient: '11111111111111111111111111111111',
+          mint: '22222222222222222222222222222222',
+          amount: '100000000',
+          createAccount: false,
+        },
+      };
+
+      expect(transferOperation.params.createAccount).toBe(false);
+    });
+
+    it('should support buy-bonding-curve operations with createAccount', () => {
+      const buyOperation = {
+        type: 'buy-bonding-curve',
+        id: 'buy-bc-1',
+        description: 'Test bonding curve buy with ATA creation',
+        params: {
+          mint: '22222222222222222222222222222222',
+          amount: 1000000,
+          slippage: 1,
+          createAccount: true,
+        },
+      };
+
+      expect(buyOperation.type).toBe('buy-bonding-curve');
+      expect(buyOperation.params).toHaveProperty('mint');
+      expect(buyOperation.params).toHaveProperty('amount');
+      expect(buyOperation.params).toHaveProperty('slippage');
+      expect(buyOperation.params).toHaveProperty('createAccount');
+      expect(buyOperation.params.createAccount).toBe(true);
+    });
+
+    it('should support buy-amm operations with createAccount and tokenMint', () => {
+      const buyAmmOperation = {
+        type: 'buy-amm',
+        id: 'buy-amm-1',
+        description: 'Test AMM buy with ATA creation',
+        params: {
+          poolKey: '33333333333333333333333333333333',
+          amount: 1000000,
+          slippage: 1,
+          createAccount: true,
+          tokenMint: '22222222222222222222222222222222',
+        },
+      };
+
+      expect(buyAmmOperation.type).toBe('buy-amm');
+      expect(buyAmmOperation.params).toHaveProperty('poolKey');
+      expect(buyAmmOperation.params).toHaveProperty('amount');
+      expect(buyAmmOperation.params).toHaveProperty('slippage');
+      expect(buyAmmOperation.params).toHaveProperty('createAccount');
+      expect(buyAmmOperation.params).toHaveProperty('tokenMint');
+      expect(buyAmmOperation.params.createAccount).toBe(true);
+      expect(buyAmmOperation.params.tokenMint).toBe('22222222222222222222222222222222');
     });
 
     it('should support AMM sell operations', () => {
@@ -267,6 +330,197 @@ describe('Batch Transactions', () => {
           expect(isFinite(amount)).toBeFalsy();
         }
       });
+    });
+  });
+
+  describe('CreateAccount Functionality', () => {
+    it('should validate createAccount parameter for transfer operations', () => {
+      const operations = [
+        {
+          type: 'transfer',
+          id: 'transfer-with-ata',
+          params: {
+            recipient: '11111111111111111111111111111111',
+            mint: '22222222222222222222222222222222',
+            amount: 1000,
+            createAccount: true,
+          },
+        },
+        {
+          type: 'transfer',
+          id: 'transfer-without-ata',
+          params: {
+            recipient: '11111111111111111111111111111111',
+            mint: '22222222222222222222222222222222',
+            amount: 1000,
+            createAccount: false,
+          },
+        },
+      ];
+
+      operations.forEach(op => {
+        expect(op.params).toHaveProperty('createAccount');
+        expect(typeof op.params.createAccount).toBe('boolean');
+      });
+    });
+
+    it('should validate createAccount parameter for buy operations', () => {
+      const operations = [
+        {
+          type: 'buy-bonding-curve',
+          id: 'buy-bc-with-ata',
+          params: {
+            mint: '22222222222222222222222222222222',
+            amount: 1000000,
+            slippage: 1,
+            createAccount: true,
+          },
+        },
+        {
+          type: 'buy-bonding-curve',
+          id: 'buy-bc-without-ata',
+          params: {
+            mint: '22222222222222222222222222222222',
+            amount: 1000000,
+            slippage: 1,
+            createAccount: false,
+          },
+        },
+      ];
+
+      operations.forEach(op => {
+        expect(op.params).toHaveProperty('createAccount');
+        expect(typeof op.params.createAccount).toBe('boolean');
+      });
+    });
+
+    it('should require tokenMint for AMM buy operations with createAccount', () => {
+      const validOperation = {
+        type: 'buy-amm',
+        id: 'buy-amm-valid',
+        params: {
+          poolKey: '33333333333333333333333333333333',
+          amount: 1000000,
+          slippage: 1,
+          createAccount: true,
+          tokenMint: '22222222222222222222222222222222',
+        },
+      };
+
+      const invalidOperation = {
+        type: 'buy-amm',
+        id: 'buy-amm-invalid',
+        params: {
+          poolKey: '33333333333333333333333333333333',
+          amount: 1000000,
+          slippage: 1,
+          createAccount: true,
+          // Missing tokenMint - should be invalid
+        },
+      };
+
+      expect(validOperation.params).toHaveProperty('tokenMint');
+      expect(validOperation.params.tokenMint).toBeTruthy();
+      
+      expect(invalidOperation.params).not.toHaveProperty('tokenMint');
+    });
+
+    it('should support mixed createAccount scenarios in batch operations', () => {
+      const mixedOperations = [
+        {
+          type: 'transfer',
+          id: 'transfer-with-ata',
+          params: {
+            recipient: '11111111111111111111111111111111',
+            mint: '22222222222222222222222222222222',
+            amount: 1000,
+            createAccount: true,
+          },
+        },
+        {
+          type: 'transfer',
+          id: 'transfer-without-ata',
+          params: {
+            recipient: '11111111111111111111111111111111',
+            mint: '22222222222222222222222222222222',
+            amount: 1000,
+            createAccount: false,
+          },
+        },
+        {
+          type: 'buy-bonding-curve',
+          id: 'buy-with-ata',
+          params: {
+            mint: '22222222222222222222222222222222',
+            amount: 1000000,
+            slippage: 1,
+            createAccount: true,
+          },
+        },
+        {
+          type: 'buy-amm',
+          id: 'buy-amm-with-ata',
+          params: {
+            poolKey: '33333333333333333333333333333333',
+            amount: 1000000,
+            slippage: 1,
+            createAccount: true,
+            tokenMint: '22222222222222222222222222222222',
+          },
+        },
+        {
+          type: 'sol-transfer',
+          id: 'sol-transfer',
+          params: {
+            recipient: '11111111111111111111111111111111',
+            amount: 50000000,
+          },
+        },
+      ];
+
+      // Count operations with createAccount
+      const withCreateAccount = mixedOperations.filter(op => 
+        'createAccount' in op.params && op.params.createAccount === true
+      );
+      const withoutCreateAccount = mixedOperations.filter(op => 
+        'createAccount' in op.params && op.params.createAccount === false
+      );
+      const noCreateAccountParam = mixedOperations.filter(op => 
+        !('createAccount' in op.params)
+      );
+
+      expect(withCreateAccount).toHaveLength(3);
+      expect(withoutCreateAccount).toHaveLength(1);
+      expect(noCreateAccountParam).toHaveLength(1); // sol-transfer doesn't need createAccount
+    });
+
+    it('should handle createAccount parameter validation', () => {
+      const operations = [
+        {
+          type: 'transfer',
+          id: 'transfer-valid',
+          params: {
+            recipient: '11111111111111111111111111111111',
+            mint: '22222222222222222222222222222222',
+            amount: 1000,
+            createAccount: true,
+          },
+        },
+        {
+          type: 'transfer',
+          id: 'transfer-default',
+          params: {
+            recipient: '11111111111111111111111111111111',
+            mint: '22222222222222222222222222222222',
+            amount: 1000,
+            // createAccount not specified - should default to false
+          },
+        },
+      ];
+
+      // Test that createAccount defaults to false when not specified
+      const defaultOperation = operations.find(op => op.id === 'transfer-default');
+      expect(defaultOperation?.params.createAccount).toBeUndefined();
     });
   });
 

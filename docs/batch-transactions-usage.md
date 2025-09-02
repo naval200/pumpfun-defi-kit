@@ -252,6 +252,75 @@ const results = await Promise.all(executionPromises);
 - `buy-amm`: Buy tokens via AMM
 - `sell-amm`: Sell tokens via AMM
 
+## Automatic Account Creation
+
+The batch system supports automatic Associated Token Account (ATA) creation for operations that require it. This eliminates the need to manually create token accounts before executing batch operations.
+
+### Supported Operations with Account Creation
+
+- **Transfer operations**: Creates ATA for the recipient if it doesn't exist
+- **Buy operations**: Creates ATA for the buyer if it doesn't exist
+
+### Usage
+
+Add the `createAccount: true` flag to operation parameters:
+
+```typescript
+const operations: BatchOperation[] = [
+  {
+    id: 'transfer-1',
+    type: 'transfer',
+    description: 'Transfer tokens to user, create ATA if needed',
+    sender: senderKeypair,
+    params: {
+      recipient: 'RecipientPublicKey',
+      mint: 'TokenMintPublicKey',
+      amount: 1000,
+      createAccount: true, // ✅ Creates ATA for recipient
+    },
+  },
+  {
+    id: 'buy-bc-1',
+    type: 'buy-bonding-curve',
+    description: 'Buy tokens, create ATA if needed',
+    sender: buyerKeypair,
+    params: {
+      mint: 'TokenMintPublicKey',
+      amount: 1000000, // SOL amount in lamports
+      slippage: 1,
+      createAccount: true, // ✅ Creates ATA for buyer
+    },
+  },
+  {
+    id: 'buy-amm-1',
+    type: 'buy-amm',
+    description: 'Buy tokens via AMM, create ATA if needed',
+    sender: buyerKeypair,
+    params: {
+      poolKey: 'PoolPublicKey',
+      amount: 1000000, // SOL amount in lamports
+      slippage: 1,
+      createAccount: true, // ✅ Creates ATA for buyer
+      tokenMint: 'TokenMintPublicKey', // Required when createAccount is true
+    },
+  },
+];
+```
+
+### How It Works
+
+1. **Automatic Detection**: When `createAccount: true` is set, the batch helper automatically detects this
+2. **Instruction Prepending**: ATA creation instruction is added **BEFORE** the main operation instruction
+3. **Proper Payer**: Uses `feePayer` (if provided) or `sender` as the payer for ATA creation
+4. **Atomic Transactions**: All instructions are batched together in a single transaction
+5. **Error Handling**: Validates required parameters (e.g., `tokenMint` for AMM operations)
+
+### Special Requirements
+
+- **AMM Buy Operations**: When `createAccount: true` is set for AMM buy operations, you must also provide the `tokenMint` parameter
+- **Fee Payer**: The fee payer (or sender if no fee payer) will pay for the ATA creation
+- **Account Ownership**: The ATA is created for the appropriate owner (recipient for transfers, buyer for purchases)
+
 ## Configuration Options
 
 ### Batch Creation Options

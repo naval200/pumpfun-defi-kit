@@ -8,6 +8,7 @@ import {
   createBondingCurveSellInstruction,
 } from '../bonding-curve';
 import { createAmmBuyInstructionsAssuming, createAmmSellInstructionsAssuming } from '../amm';
+import { createAssociatedTokenAccountInstruction } from '../createAccount';
 import { minSolLamports } from '../utils/amounts';
 import { debugLog } from '../utils/debug';
 import type { BatchOperation } from '../@types';
@@ -26,7 +27,20 @@ export async function buildInstructionsForOperation(
 
   switch (operation.type) {
     case 'transfer': {
-      const { recipient, mint, amount } = operation.params;
+      const { recipient, mint, amount, createAccount = false } = operation.params;
+
+      // If createAccount is true, add the ATA creation instruction first
+      if (createAccount) {
+        const { instruction: createAtaIx } = createAssociatedTokenAccountInstruction(
+          feePayer?.publicKey || senderKeypair.publicKey, // payer
+          new PublicKey(recipient), // owner
+          new PublicKey(mint), // mint
+          false // allowOwnerOffCurve
+        );
+        instructions.push(createAtaIx);
+        debugLog(`🏗️ Added ATA creation instruction for transfer operation ${operation.id}`);
+      }
+
       const ix = createTokenTransferInstruction(
         senderKeypair.publicKey,
         new PublicKey(recipient),
@@ -49,7 +63,22 @@ export async function buildInstructionsForOperation(
       break;
     }
     case 'buy-bonding-curve': {
-      const { mint, amount } = operation.params;
+      const { mint, amount, createAccount = false } = operation.params;
+
+      // If createAccount is true, add the ATA creation instruction first
+      if (createAccount) {
+        const { instruction: createAtaIx } = createAssociatedTokenAccountInstruction(
+          feePayer?.publicKey || senderKeypair.publicKey, // payer
+          senderKeypair.publicKey, // owner (buyer)
+          new PublicKey(mint), // mint
+          false // allowOwnerOffCurve
+        );
+        instructions.push(createAtaIx);
+        debugLog(
+          `🏗️ Added ATA creation instruction for bonding curve buy operation ${operation.id}`
+        );
+      }
+
       const pdas = await getBondingCurvePDAs(
         connection,
         new PublicKey(mint),
@@ -84,7 +113,25 @@ export async function buildInstructionsForOperation(
       break;
     }
     case 'buy-amm': {
-      const { poolKey, amount, slippage = 1 } = operation.params;
+      const { poolKey, amount, slippage = 1, createAccount = false, tokenMint } = operation.params;
+
+      // If createAccount is true, we need the tokenMint parameter
+      if (createAccount) {
+        if (!tokenMint) {
+          throw new Error(
+            `tokenMint is required when createAccount is true for AMM buy operation ${operation.id}`
+          );
+        }
+        const { instruction: createAtaIx } = createAssociatedTokenAccountInstruction(
+          feePayer?.publicKey || senderKeypair.publicKey, // payer
+          senderKeypair.publicKey, // owner (buyer)
+          new PublicKey(tokenMint), // mint from params
+          false // allowOwnerOffCurve
+        );
+        instructions.push(createAtaIx);
+        debugLog(`🏗️ Added ATA creation instruction for AMM buy operation ${operation.id}`);
+      }
+
       const state = await ammSdk.swapSolanaState(new PublicKey(poolKey), senderKeypair.publicKey);
       const ixs = await createAmmBuyInstructionsAssuming(ammSdk, state, amount, slippage);
       instructions.push(...ixs);

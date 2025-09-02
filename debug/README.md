@@ -6,11 +6,12 @@ This directory contains bash scripts for testing the batch transaction system wi
 
 The scripts create a complete test environment with:
 - 20 user wallets (no SOL, just for testing)
-- Initial token distribution to 10 wallets
+- Initial token distribution to 10 wallets using batch transactions with automatic ATA creation
 - Send and sell operations testing with transfers
 - SOL transfer operations testing
 - Buy and SOL transfer operations testing
 - Comprehensive testing with mixed operation types
+- **NEW**: CreateAccount feature testing with automatic ATA creation
 - Detailed logging and reporting
 
 ## 📋 Prerequisites
@@ -53,8 +54,11 @@ This will execute all phases automatically and generate a comprehensive report.
 
 ### Option 2: Run Individual Phases
 ```bash
-# Phase 1: Setup wallets and distribute tokens
+# Phase 1: Setup wallets and distribute tokens (traditional approach)
 ./01-setup-user-wallets.sh
+
+# Phase 1 (NEW): Setup wallets using batch transactions with createAccount
+./01-setup-user-wallets-with-batch.sh
 
 # Phase 2: Test send and sell operations (10 transfers)
 ./02-test-batch-send-and-sell.sh
@@ -64,6 +68,9 @@ This will execute all phases automatically and generate a comprehensive report.
 
 # Phase 4: Test comprehensive batch operations (mixed types)
 ./09-test-comprehensive-batch.sh
+
+# Phase 5 (NEW): Test createAccount feature specifically
+./05-test-createaccount-feature.sh
 ```
 
 ## 📁 Script Details
@@ -73,13 +80,24 @@ This will execute all phases automatically and generate a comprehensive report.
 - **What it does**: Runs all phases sequentially with error handling
 - **Output**: Comprehensive test report and all generated files
 
-### `01-setup-user-wallets.sh` - Setup Phase
-- **Purpose**: Creates test environment
+### `01-setup-user-wallets.sh` - Setup Phase (Traditional)
+- **Purpose**: Creates test environment using traditional approach
 - **What it does**:
   - Generates 20 user wallets using `solana-keygen new`
+  - Manually creates ATAs using `create-ata` CLI command
   - Transfers PumpFun tokens to first 10 wallets
   - Uses creator wallet as source, treasury wallet as fee payer
 - **Output**: 20 wallet files in `user-wallets/` directory
+
+### `01-setup-user-wallets-with-batch.sh` - Setup Phase (NEW - Batch with CreateAccount)
+- **Purpose**: Creates test environment using batch transactions with automatic ATA creation
+- **What it does**:
+  - Generates 20 user wallets using `solana-keygen new`
+  - Creates batch operations with `createAccount: true` for automatic ATA creation
+  - Executes batch transactions to distribute tokens with automatic ATA creation
+  - Uses creator wallet as source and fee payer
+- **Output**: 20 wallet files + batch operations JSON + execution logs
+- **Benefits**: Demonstrates the new createAccount feature, atomic operations, single transaction
 
 ### `02-test-batch-send-and-sell.sh` - Batch Send Testing
 - **Purpose**: Tests basic batch send operations
@@ -105,6 +123,17 @@ This will execute all phases automatically and generate a comprehensive report.
   - Tests complex batch scenarios with all operation types
   - Generates detailed execution logs
 - **Output**: Comprehensive operations JSON and detailed logs
+
+### `05-test-createaccount-feature.sh` - CreateAccount Feature Testing (NEW)
+- **Purpose**: Demonstrates the new createAccount functionality
+- **What it does**:
+  - Creates test operations with mixed createAccount settings
+  - Tests transfer operations with and without automatic ATA creation
+  - Tests buy operations with and without automatic ATA creation
+  - Includes SOL transfers (no ATA creation needed)
+  - Verifies ATA creation results
+- **Output**: Test operations JSON, execution logs, and verification results
+- **Benefits**: Shows how createAccount simplifies batch operations
 
 ## 🔧 Configuration
 
@@ -144,6 +173,18 @@ debug/
 ```
 
 ## 🧪 Testing Scenarios
+
+### CreateAccount Feature Test (NEW)
+- **Operations**: 5 mixed operations demonstrating createAccount functionality
+- **Types**: 
+  - Transfer with createAccount: true (automatic ATA creation)
+  - Transfer with createAccount: false (assumes ATA exists)
+  - Buy bonding curve with createAccount: true (automatic ATA creation)
+  - Buy bonding curve with createAccount: false (assumes ATA exists)
+  - SOL transfer (no ATA creation needed)
+- **Fee Payer**: Treasury wallet or individual wallets
+- **Max Parallel**: 3 operations
+- **Expected**: Demonstrates automatic ATA creation and mixed scenarios
 
 ### Batch Send Test
 - **Operations**: 10 transfer operations
@@ -240,12 +281,52 @@ The test suite is designed with a logical progression:
 2. **Basic Operations** - Test simple send and sell operations
 3. **Batched Instructions** - Test true instruction batching with mixed operations
 4. **Comprehensive** - Test all operation types together
+5. **CreateAccount Feature** - Test automatic ATA creation functionality
 
 This progression allows for:
 - **Incremental testing** - Each phase builds on the previous
 - **Isolated debugging** - Issues can be identified at specific levels
 - **Performance analysis** - Compare different operation types
 - **Scalability testing** - Test with increasing complexity
+- **Feature validation** - Test new createAccount functionality
+
+## 🏗️ CreateAccount Feature Benefits
+
+The new createAccount feature provides significant advantages:
+
+### Traditional Approach vs. CreateAccount Approach
+
+**Traditional Approach:**
+```bash
+# Step 1: Manually create ATAs
+npm run cli:create-ata -- --wallet creator --mint TOKEN_MINT --owner RECIPIENT
+
+# Step 2: Transfer tokens
+npm run cli:send-token -- --wallet creator --recipient RECIPIENT --mint TOKEN_MINT --amount 1000
+```
+
+**CreateAccount Approach:**
+```bash
+# Single batch operation with automatic ATA creation
+npm run cli:batch-transactions -- --operations batch.json
+# Where batch.json contains: { "createAccount": true }
+```
+
+### Key Benefits
+
+1. **Simplified Workflow**: No need to manually create ATAs before transfers
+2. **Atomic Operations**: ATA creation and transfer happen in single transaction
+3. **Error Reduction**: Eliminates manual ATA creation steps that can fail
+4. **Better UX**: Users don't need to know about ATA creation details
+5. **Batch Efficiency**: Multiple operations with ATA creation in single transaction
+6. **Flexible Control**: Can still use createAccount: false when ATAs already exist
+
+### Use Cases
+
+- **New User Onboarding**: Send tokens to users who don't have token accounts yet
+- **Batch Distributions**: Distribute tokens to multiple new users efficiently
+- **Trading Operations**: Buy tokens for users who don't have token accounts yet
+- **Mixed Scenarios**: Handle both new and existing users in same batch
 
 ## 🤝 Contributing
 
