@@ -78,17 +78,19 @@ export async function demonstrateBatchWithCreateAccount() {
     console.log(`\n${index + 1}. ${op.description}`);
     console.log(`   Type: ${op.type}`);
     console.log(`   ID: ${op.id}`);
-    console.log(`   Create Account: ${op.params.createAccount ? '✅ Yes' : '❌ No'}`);
 
     if (op.type === 'transfer') {
+      console.log(`   Create Account: ${op.params.createAccount ? '✅ Yes' : '❌ No'}`);
       console.log(`   Recipient: ${op.params.recipient}`);
       console.log(`   Mint: ${op.params.mint}`);
       console.log(`   Amount: ${op.params.amount}`);
     } else if (op.type === 'buy-bonding-curve') {
+      console.log(`   Create Account: ${op.params.createAccount ? '✅ Yes' : '❌ No'}`);
       console.log(`   Mint: ${op.params.mint}`);
       console.log(`   Amount: ${op.params.amount} lamports`);
       console.log(`   Slippage: ${op.params.slippage}%`);
     } else if (op.type === 'buy-amm') {
+      console.log(`   Create Account: ${op.params.createAccount ? '✅ Yes' : '❌ No'}`);
       console.log(`   Pool Key: ${op.params.poolKey}`);
       console.log(`   Amount: ${op.params.amount} lamports`);
       console.log(`   Slippage: ${op.params.slippage}%`);
