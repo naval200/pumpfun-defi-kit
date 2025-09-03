@@ -47,7 +47,6 @@ export async function createBatchInstructions(
   const { maxParallel = 3, dynamicBatching = false } = options;
 
   debugLog(`🔧 Creating instructions for ${operations.length} PumpFun operations`);
-  debugLog(`📊 Batch options: maxParallel=${maxParallel}, dynamicBatching=${dynamicBatching}`);
 
   // Determine optimal batch size if dynamic batching is enabled
   let actualMaxParallel = maxParallel;
@@ -68,9 +67,9 @@ export async function createBatchInstructions(
 
   for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
     const batch = batches[batchIndex];
-    debugLog(
-      `🔧 Creating instructions for Batch ${batchIndex + 1}/${batches.length} (${batch.length} operations)`
-    );
+
+    
+    try {
 
     const ammSdk = new PumpAmmSdk(connection);
     const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
@@ -139,7 +138,13 @@ export async function createBatchInstructions(
     });
     if (feePayer) {
       debugLog(`💸 Will sign with fee payer: ${feePayer.publicKey.toString()}`);
-      signersInOrder.push(feePayer);
+      // Check if fee payer is already in the signers list
+      const feePayerAlreadyInSigners = signersInOrder.some(s => s.publicKey.equals(feePayer.publicKey));
+      if (!feePayerAlreadyInSigners) {
+        signersInOrder.push(feePayer);
+      } else {
+        debugLog(`  ℹ️  Fee payer already in signers list, not adding duplicate`);
+      }
     }
 
     debugLog(`🔐 All ${uniqueSenders.size} unique senders will sign the combined transaction`);
@@ -155,7 +160,13 @@ export async function createBatchInstructions(
     });
 
     debugLog(`💰 Fee payer: ${finalFeePayer.toString()}`);
-    debugLog(`📦 Transaction size: ${tx.serialize().length} bytes`);
+    
+    // Note: We don't serialize the transaction here because it hasn't been signed yet
+    // Serialization will happen in the execution phase after signing
+
+
+    // Log essential transaction info for debugging
+    debugLog(`🔍 Batch ${batchIndex + 1}: ${allInstructions.length} instructions, ${signersInOrder.length} signers`);
 
     results.push({
       transaction: tx,
@@ -167,7 +178,13 @@ export async function createBatchInstructions(
       instructionCount: allInstructions.length,
       uniqueSendersCount: uniqueSenders.size,
     });
+    
+    } catch (batchError) {
+      debugLog(`❌ Error creating batch ${batchIndex + 1}:`, batchError);
+      throw new Error(`Failed to create batch ${batchIndex + 1}: ${batchError}`);
+    }
   }
+
 
   return results;
 }

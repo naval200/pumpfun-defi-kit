@@ -1,7 +1,7 @@
 import { Connection, Keypair, Transaction } from '@solana/web3.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 
-import { debugLog, logError } from '../utils/debug';
+import { debugLog, logError, DEBUG_MODE } from '../utils/debug';
 import { createBatchInstructions, BatchInstructionResult } from './instructions';
 import { buildInstructionsForOperation } from './batch-helper';
 import type {
@@ -76,6 +76,8 @@ export async function executeBatchInstructions(
     disableFallbackRetry?: boolean;
   } = {}
 ): Promise<BatchResult[]> {
+  debugLog(`🚀 Executing ${batchInstructions.length} batch instructions`);
+  
   const { delayBetween = 1000, retryFailed = false, disableFallbackRetry = false } = options;
 
   const results: BatchResult[] = [];
@@ -89,28 +91,54 @@ export async function executeBatchInstructions(
     try {
       const { transaction, blockhash, lastValidBlockHeight, signers } = batchInstruction;
 
+      // Validate transaction before signing
+      const validation = validateTransaction(transaction, signers);
+      if (!validation.valid) {
+        debugLog(`❌ Transaction validation failed:`);
+        validation.errors.forEach(error => debugLog(`  - ${error}`));
+        throw new Error(`Transaction validation failed: ${validation.errors.join(', ')}`);
+      }
+      debugLog(`✅ Transaction validation passed`);
+
       // Sign ONCE with all signers to avoid overwriting previous signatures
       transaction.sign(...signers);
 
-      debugLog(`🔍 Transaction signatures after signing: ${transaction.signatures.length}`);
-      transaction.signatures.forEach((sig, index) => {
-        const present = sig.signature && sig.signature.length > 0;
-        debugLog(
-          `  Signature ${index + 1}: ${sig.publicKey.toString()} - ${present ? 'present' : 'MISSING'}`
-        );
+      debugLog(`🔍 Signatures: ${transaction.signatures.length}/${signers.length} present`);
+
+      // Validate all required signers have signatures
+      const requiredSigners = new Set<string>();
+      transaction.instructions.forEach(ix => {
+        ix.keys.filter(k => k.isSigner).forEach(key => {
+          requiredSigners.add(key.pubkey.toString());
+        });
       });
+      if (transaction.feePayer) {
+        requiredSigners.add(transaction.feePayer.toString());
+      }
+
+      const signedKeys = new Set(transaction.signatures.map(s => s.publicKey.toString()));
+      const missingSignatures = Array.from(requiredSigners).filter(key => !signedKeys.has(key));
+      
+      if (missingSignatures.length > 0) {
+        debugLog(`❌ Missing signatures: ${missingSignatures.join(', ')}`);
+        throw new Error(`Missing signatures for required signers: ${missingSignatures.join(', ')}`);
+      }
 
       // Submit the combined transaction
-      debugLog(
-        `🚀 Submitting transaction with ${transaction.signatures.length} signatures and ${batchInstruction.instructionCount} instructions`
-      );
-      debugLog(`💰 Fee payer: ${transaction.feePayer?.toString() || 'Not set'}`);
-      debugLog(`📦 Transaction size: ${transaction.serialize().length} bytes`);
+      let serializedTransaction: Buffer;
+      try {
+        serializedTransaction = transaction.serialize();
+        debugLog(`📦 Submitting ${serializedTransaction.length} byte transaction`);
+      } catch (serializeError) {
+        throw new Error(`Failed to serialize transaction: ${serializeError}`);
+      }
 
-      const signature = await connection.sendRawTransaction(transaction.serialize(), {
+      const signature = await connection.sendRawTransaction(serializedTransaction, {
         skipPreflight: false,
         preflightCommitment: 'confirmed',
       });
+      
+      debugLog(`📝 Signature: ${signature}`);
 
       const confirmation = await connection.confirmTransaction(
         {
@@ -199,6 +227,80 @@ export async function executeBatchInstructions(
   }
 
   return results;
+}
+
+/**
+ * Validate transaction before sending
+ */
+function validateTransaction(transaction: Transaction, signers: Keypair[]): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Check if transaction has fee payer
+  if (!transaction.feePayer) {
+    errors.push('Transaction missing fee payer');
+  }
+
+  // Check if transaction has recent blockhash
+  if (!transaction.recentBlockhash) {
+    errors.push('Transaction missing recent blockhash');
+  }
+
+  // Check if transaction has instructions
+  if (transaction.instructions.length === 0) {
+    errors.push('Transaction has no instructions');
+  }
+
+  // Collect all required signers from instructions
+  const requiredSigners = new Set<string>();
+  transaction.instructions.forEach((ix, index) => {
+    ix.keys.filter(k => k.isSigner).forEach(key => {
+      requiredSigners.add(key.pubkey.toString());
+    });
+  });
+
+  // Add fee payer to required signers
+  if (transaction.feePayer) {
+    requiredSigners.add(transaction.feePayer.toString());
+  }
+
+  // Check if all required signers are in the signers array
+  const signerKeys = new Set(signers.map(s => s.publicKey.toString()));
+  const missingSigners = Array.from(requiredSigners).filter(key => !signerKeys.has(key));
+  
+  if (missingSigners.length > 0) {
+    errors.push(`Missing signers in signers array: ${missingSigners.join(', ')}`);
+  }
+
+  // Check for duplicate signers
+  const signerKeyStrings = signers.map(s => s.publicKey.toString());
+  const uniqueSignerKeys = new Set(signerKeyStrings);
+  if (signerKeyStrings.length !== uniqueSignerKeys.size) {
+    errors.push('Duplicate signers in signers array');
+  }
+
+  // Check transaction size (estimate without serializing since it's not signed yet)
+  try {
+    // Estimate transaction size without serializing
+    const signatureSize = signers.length * 64; // 64 bytes per signature
+    const accountKeysSize = transaction.instructions.reduce((total, ix) => {
+      return total + ix.keys.length * 32; // 32 bytes per account
+    }, 0);
+    const instructionDataSize = transaction.instructions.reduce((total, ix) => {
+      return total + ix.data.length + 4; // instruction data + overhead
+    }, 0);
+    const estimatedSize = signatureSize + accountKeysSize + instructionDataSize + 100; // +100 for overhead
+    
+    if (estimatedSize > 1232) {
+      errors.push(`Estimated transaction size too large: ${estimatedSize} bytes (limit: 1232)`);
+    }
+  } catch (error) {
+    errors.push(`Failed to estimate transaction size: ${error}`);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
 }
 
 /**
