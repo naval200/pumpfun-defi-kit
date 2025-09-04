@@ -12,7 +12,7 @@ export async function sellToken() {
   const args = parseArgs();
 
   if (args.help) {
-    printUsage('cli:bc-sell', [
+    printUsage('cli:bond-sell', [
       '  --amount <number>           Amount of tokens to sell (required)',
       '  --slippage <number>         Slippage tolerance in basis points (default: 1000)',
       '  --input-token <path>        Path to token info JSON file',
@@ -25,7 +25,7 @@ export async function sellToken() {
   // Validate required arguments
   if (!args.amount || args.amount <= 0) {
     logError('❌ Error: --amount is required and must be greater than 0');
-    printUsage('cli:bc-sell');
+    printUsage('cli:bond-sell');
     return;
   }
 

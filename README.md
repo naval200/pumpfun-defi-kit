@@ -28,16 +28,25 @@ pumpfun-defikit/
 ├── src/                    # Source code
 │   ├── amm/               # AMM trading functionality
 │   ├── bonding-curve/     # Bonding curve trading
-│   ├── utils/             # Utility functions
-│   └── types.ts           # TypeScript definitions
+│   │   └── idl/           # Program IDL and constants
+│   ├── batch/             # Batch transaction functionality
+│   └── utils/             # Utility functions
 ├── cli/                   # Command-line tools
 │   ├── amm/               # AMM CLI commands
-│   ├── bonding-curve/     # Bonding curve CLI commands
-│   └── graduation-check-cli.ts
+│   └── bonding-curve/     # Bonding curve CLI commands
 ├── tests/                 # Test suite
+│   ├── amm/               # AMM tests
+│   ├── bonding-curve/     # Bonding curve tests
+│   ├── integration/       # Integration tests
+│   └── utils/             # Utility tests
 ├── debug/                 # Debug scripts for testing
+│   └── user-wallets/      # Test wallet storage
 ├── docs/                  # Documentation
-└── fixtures/              # Test wallet configurations and token info
+├── examples/              # Usage examples
+├── fixtures/              # Test configurations and token info
+├── dist/                  # Compiled JavaScript output
+├── coverage/              # Test coverage reports
+└── scripts/               # Build and deployment scripts
 ```
 
 ## Installation
@@ -77,27 +86,37 @@ The PumpFun DeFi Kit provides comprehensive CLI tools for all operations:
 #### From Local Development
 ```bash
 # Run CLI commands from the project directory
-npm run cli:bc-create-token -- --help
+npm run cli:bond-create-token -- --help
 npm run cli:amm-sell -- --help
 npm run cli:check-balances -- --help
 ```
 
 #### From Parent Repository (When Installed as npm Module)
 ```bash
-# Use global CLI commands
+# Use global CLI commands (after npm install)
 pumpfun-cli --help
-pumpfun-cli bc-create-token --help
+pumpfun-cli bond-create-token --help
 pumpfun-cli amm-sell --help
 pumpfun-cli check-balances --help
 
-# Or use npx
-npx pumpfun-bc-create-token --help
-npx pumpfun-amm-sell --help
-npx pumpfun-check-balances --help
+# Or use npx (recommended)
+npx pumpfun-cli bond-create-token --help
+npx pumpfun-cli amm-sell --help
+npx pumpfun-cli check-balances --help
+
+# Direct command usage
+npx pumpfun-cli bond-create-token --token-name "MyToken" --token-symbol "MTK" --wallet ./wallet.json
+npx pumpfun-cli amm-buy --amount 0.1 --input-token ./token-info.json --wallet ./wallet.json
 ```
 
 #### Available CLI Commands
-- **Bonding Curve**: `bc-create-token`, `bc-buy`, `bc-sell`, `bc-check-accounts`
+
+**Global Commands (when installed as npm module):**
+- **Main CLI**: `pumpfun-cli` - Command dispatcher (use subcommands below)
+- **Subcommands**: `bond-create-token`, `bond-buy`, `bond-sell`, `amm-buy`, `amm-sell`, `amm-create-pool`, `amm-info`, `amm-liquidity`, `send-sol`, `send-token`, `check-balances`, `create-ata`, `batch`
+
+**Local Development Commands:**
+- **Bonding Curve**: `bond-create-token`, `bond-buy`, `bond-sell`, `bond-check-accounts`
 - **AMM**: `amm-buy`, `amm-sell`, `amm-create-pool`, `amm-info`, `amm-liquidity`
 - **Utilities**: `send-sol`, `send-token`, `check-balances`, `create-ata`
 - **Batch**: `batch` (for batch operations)
@@ -219,7 +238,7 @@ const sendResult = await sendToken({
 
 ```bash
 # Buy tokens with separate fee payer (0.1 SOL)
-npm run cli:curve:buy \
+npm run cli:bond-buy \
   --amount 0.1 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/user-wallet.json \
@@ -364,7 +383,7 @@ npm test -- tests/sendToken.test.ts
 
 # Run CLI tests
 tsx cli/check-wallet-balances.ts
-npm run cli:curve:buy -- --amount 0.01 --input-token wallets/token-info-2.json --wallet wallets/creator-wallet.json
+npm run cli:bond-buy -- --amount 0.01 --input-token wallets/token-info-2.json --wallet wallets/creator-wallet.json
 ```
 
 ## API Reference
@@ -534,10 +553,9 @@ The library includes comprehensive command-line tools for testing and developmen
 
 ```bash
 # Bonding Curve (BC) Operations
-npm run cli:curve:create-token -- --help    # Create new tokens
-npm run cli:curve:buy -- --help             # Buy tokens via bonding curve
-npm run cli:curve:sell -- --help            # Sell tokens via bonding curve
-npm run cli:curve:sdk-buy -- --help         # SDK-based token buying
+npm run cli:bond-create-token -- --help    # Create new tokens
+npm run cli:bond-buy -- --help             # Buy tokens via bonding curve
+npm run cli:bond-sell -- --help            # Sell tokens via bonding curve
 
 # AMM Operations
 npm run cli:amm:buy -- --help               # Buy tokens from AMM pool

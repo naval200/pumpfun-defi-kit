@@ -10,11 +10,11 @@ const { execSync } = require('child_process');
 const path = require('path');
 
 const commands = {
-  'bc-create-token': 'bonding-curve/create-token-cli.ts',
-  'bc-buy': 'bonding-curve/buy-cli.ts',
-  'bc-sell': 'bonding-curve/sell-cli.ts',
-  'bc-check-accounts': 'bonding-curve/check-accounts-cli.ts',
-  'bc-create-account': 'bonding-curve/create-account.ts',
+  'bond-create-token': 'bonding-curve/create-token-cli.ts',
+  'bond-buy': 'bonding-curve/buy-cli.ts',
+  'bond-sell': 'bonding-curve/sell-cli.ts',
+  'bond-check-accounts': 'bonding-curve/check-accounts-cli.ts',
+  'bond-create-account': 'bonding-curve/create-account.ts',
   'amm-buy': 'amm/buy-cli.ts',
   'amm-sell': 'amm/sell-cli.ts',
   'amm-create-pool': 'amm/create-pool-cli.ts',
@@ -33,11 +33,11 @@ function showHelp() {
   console.log('Available commands:\n');
   
   console.log('📈 Bonding Curve Operations:');
-  console.log('  pumpfun-cli bc-create-token --help');
-  console.log('  pumpfun-cli bc-buy --help');
-  console.log('  pumpfun-cli bc-sell --help');
-  console.log('  pumpfun-cli bc-check-accounts --help');
-  console.log('  pumpfun-cli bc-create-account --help\n');
+  console.log('  pumpfun-cli bond-create-token --help');
+  console.log('  pumpfun-cli bond-buy --help');
+  console.log('  pumpfun-cli bond-sell --help');
+  console.log('  pumpfun-cli bond-check-accounts --help');
+  console.log('  pumpfun-cli bond-create-account --help\n');
   
   console.log('🏊 AMM Operations:');
   console.log('  pumpfun-cli amm-buy --help');

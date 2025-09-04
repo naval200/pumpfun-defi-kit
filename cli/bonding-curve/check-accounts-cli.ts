@@ -34,7 +34,7 @@ function parseArgs(): Args {
       case '--help':
       case '-h':
         console.log(`
-Usage: npm run cli:curve:check-accounts -- [options]
+Usage: npm run cli:bond-check-accounts -- [options]
 
 Options:
   --wallet <path>     Path to wallet JSON file
@@ -42,7 +42,7 @@ Options:
   --help, -h          Show this help message
 
 Examples:
-  npm run cli:curve:check-accounts -- --wallet fixtures/creator-wallet.json --token fixtures/test-token.json
+  npm run cli:bond-check-accounts -- --wallet fixtures/creator-wallet.json --token fixtures/test-token.json
         `);
         break;
       default:

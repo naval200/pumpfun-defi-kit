@@ -17,9 +17,9 @@ When working with the source code directly:
 ### Using npm scripts (Recommended)
 ```bash
 # Bonding Curve Operations
-npm run cli:bc-create-token -- --help
-npm run cli:bc-buy -- --amount 0.1 --input-token ./token-info.json
-npm run cli:bc-sell -- --amount 1000 --input-token ./token-info.json
+npm run cli:bond-create-token -- --help
+npm run cli:bond-buy -- --amount 0.1 --input-token ./token-info.json
+npm run cli:bond-sell -- --amount 1000 --input-token ./token-info.json
 
 # AMM Operations
 npm run cli:amm-buy -- --amount 0.1 --input-token ./token-info.json
@@ -52,9 +52,9 @@ After installing the package, the CLI commands are available globally:
 pumpfun-cli --help
 
 # Bonding Curve Operations
-pumpfun-cli bc-create-token --help
-pumpfun-cli bc-buy --amount 0.1 --input-token ./token-info.json
-pumpfun-cli bc-sell --amount 1000 --input-token ./token-info.json
+pumpfun-cli bond-create-token --help
+pumpfun-cli bond-buy --amount 0.1 --input-token ./token-info.json
+pumpfun-cli bond-sell --amount 1000 --input-token ./token-info.json
 
 # AMM Operations
 pumpfun-cli amm-buy --amount 0.1 --input-token ./token-info.json
@@ -67,14 +67,23 @@ pumpfun-cli send-sol --from-wallet ./wallet.json --to-address <address> --amount
 pumpfun-cli send-token --recipient <address> --mint <mint> --amount 1000
 ```
 
-### Method 2: Using npx
+### Method 2: Using npx (Recommended)
 
 ```bash
-# Individual commands with npx
-npx pumpfun-bc-create-token --help
-npx pumpfun-amm-sell --help
-npx pumpfun-check-balances --help
-npx pumpfun-send-sol --help
+# Use the main CLI via npx
+npx pumpfun-cli bond-create-token --help
+npx pumpfun-cli bond-buy --amount 0.1 --input-token ./token-info.json
+npx pumpfun-cli bond-sell --amount 1000 --input-token ./token-info.json
+
+npx pumpfun-cli amm-buy --amount 0.1 --input-token ./token-info.json
+npx pumpfun-cli amm-sell --amount 1000 --input-token ./token-info.json
+npx pumpfun-cli amm-create-pool --base-amount 1000000 --quote-amount 0.1
+
+npx pumpfun-cli check-balances --wallet ./wallet.json --input-token ./token-info.json
+npx pumpfun-cli send-sol --from-wallet ./wallet.json --to-address <address> --amount 0.1
+npx pumpfun-cli send-token --recipient <address> --mint <mint> --amount 1000
+npx pumpfun-cli create-ata --wallet ./wallet.json --mint <mint> --owner <owner>
+npx pumpfun-cli batch --operations ./batch-operations.json
 ```
 
 ### Method 3: Custom npm Scripts
@@ -84,9 +93,9 @@ Add to your parent project's `package.json`:
 ```json
 {
   "scripts": {
-    "create-token": "pumpfun-cli bc-create-token",
-    "buy-tokens": "pumpfun-cli bc-buy",
-    "sell-tokens": "pumpfun-cli bc-sell",
+    "create-token": "pumpfun-cli bond-create-token",
+    "buy-tokens": "pumpfun-cli bond-buy",
+    "sell-tokens": "pumpfun-cli bond-sell",
     "check-balances": "pumpfun-cli check-balances",
     "send-sol": "pumpfun-cli send-sol",
     "send-token": "pumpfun-cli send-token",
@@ -106,27 +115,53 @@ npm run check-balances -- --wallet ./wallet.json
 
 ## Available Commands
 
-### Bonding Curve Operations
-- `bc-create-token` - Create new PumpFun tokens
-- `bc-buy` - Buy tokens from bonding curve
-- `bc-sell` - Sell tokens back to bonding curve
-- `bc-check-accounts` - Check bonding curve accounts
-- `bc-create-account` - Create bonding curve account
+### Global CLI (when installed as npm module)
 
-### AMM Operations
+These commands are available globally when the package is installed:
+
+#### Main CLI
+- `pumpfun-cli` - Main command dispatcher with help system
+
+#### Use subcommands with the main CLI
+- `pumpfun-cli bond-create-token` - Create new PumpFun tokens
+- `pumpfun-cli bond-buy` - Buy tokens from bonding curve
+- `pumpfun-cli bond-sell` - Sell tokens back to bonding curve
+- `pumpfun-cli amm-buy` - Buy tokens from AMM pool
+- `pumpfun-cli amm-sell` - Sell tokens to AMM pool
+- `pumpfun-cli amm-create-pool` - Create new AMM liquidity pool
+- `pumpfun-cli amm-info` - Get AMM pool information
+- `pumpfun-cli amm-liquidity` - Add/remove liquidity from pool
+- `pumpfun-cli send-sol` - Send SOL between wallets
+- `pumpfun-cli send-token` - Send tokens between wallets
+- `pumpfun-cli check-balances` - Check wallet balances
+- `pumpfun-cli create-ata` - Create Associated Token Account
+- `pumpfun-cli batch` - Execute batch transactions
+
+### Local Development Commands
+
+When working with the source code directly:
+
+#### Bonding Curve Operations
+- `bond-create-token` - Create new PumpFun tokens
+- `bond-buy` - Buy tokens from bonding curve
+- `bond-sell` - Sell tokens back to bonding curve
+- `bond-check-accounts` - Check bonding curve accounts
+- `bond-create-account` - Create bonding curve account
+
+#### AMM Operations
 - `amm-buy` - Buy tokens from AMM pool
 - `amm-sell` - Sell tokens to AMM pool
 - `amm-create-pool` - Create new AMM liquidity pool
 - `amm-info` - Get AMM pool information
 - `amm-liquidity` - Add/remove liquidity from pool
 
-### Utilities
+#### Utilities
 - `send-sol` - Send SOL between wallets
 - `send-token` - Send tokens between wallets
 - `check-balances` - Check wallet balances
 - `create-ata` - Create Associated Token Account
 
-### Batch Operations
+#### Batch Operations
 - `batch` - Execute batch transactions
 
 ## Command Examples
@@ -134,15 +169,23 @@ npm run check-balances -- --wallet ./wallet.json
 ### Create a Token
 ```bash
 # Local development
-npm run cli:bc-create-token -- \
+npm run cli:bond-create-token -- \
   --wallet ./fixtures/creator-wallet.json \
   --token-name "My Token" \
   --token-symbol "MTK" \
   --token-description "A test token" \
   --initial-buy 0.001
 
-# From parent repository
-pumpfun-cli bc-create-token \
+# From parent repository - Method 1: Main CLI
+pumpfun-cli bond-create-token \
+  --wallet ./fixtures/creator-wallet.json \
+  --token-name "My Token" \
+  --token-symbol "MTK" \
+  --token-description "A test token" \
+  --initial-buy 0.001
+
+# From parent repository - Method 2: Using npx with main CLI (Recommended)
+npx pumpfun-cli bond-create-token \
   --wallet ./fixtures/creator-wallet.json \
   --token-name "My Token" \
   --token-symbol "MTK" \
@@ -153,13 +196,19 @@ pumpfun-cli bc-create-token \
 ### Buy Tokens
 ```bash
 # Local development
-npm run cli:bc-buy -- \
+npm run cli:bond-buy -- \
   --amount 0.1 \
   --input-token ./token-info.json \
   --wallet ./user-wallet.json
 
-# From parent repository
-pumpfun-cli bc-buy \
+# From parent repository - Method 1: Main CLI
+pumpfun-cli bond-buy \
+  --amount 0.1 \
+  --input-token ./token-info.json \
+  --wallet ./user-wallet.json
+
+# From parent repository - Method 2: Using npx with main CLI (Recommended)
+npx pumpfun-cli bond-buy \
   --amount 0.1 \
   --input-token ./token-info.json \
   --wallet ./user-wallet.json
@@ -172,8 +221,13 @@ npm run cli:check-balances -- \
   --wallet ./user-wallet.json \
   --input-token ./token-info.json
 
-# From parent repository
+# From parent repository - Method 1: Main CLI
 pumpfun-cli check-balances \
+  --wallet ./user-wallet.json \
+  --input-token ./token-info.json
+
+# From parent repository - Method 2: Using npx with main CLI (Recommended)
+npx pumpfun-cli check-balances \
   --wallet ./user-wallet.json \
   --input-token ./token-info.json
 ```
@@ -186,8 +240,14 @@ npm run cli:amm-create-pool -- \
   --base-amount 1000000 \
   --quote-amount 0.1
 
-# From parent repository
+# From parent repository - Method 1: Main CLI
 pumpfun-cli amm-create-pool \
+  --wallet ./creator-wallet.json \
+  --base-amount 1000000 \
+  --quote-amount 0.1
+
+# From parent repository - Method 2: Using npx with main CLI (Recommended)
+npx pumpfun-cli amm-create-pool \
   --wallet ./creator-wallet.json \
   --base-amount 1000000 \
   --quote-amount 0.1
@@ -233,7 +293,7 @@ npx tsx cli/check-wallet-balances.ts --help
 For any command, use the `--help` flag:
 ```bash
 pumpfun-cli --help
-pumpfun-cli bc-create-token --help
+pumpfun-cli bond-create-token --help
 pumpfun-cli amm-sell --help
 ```
 
@@ -241,7 +301,7 @@ pumpfun-cli amm-sell --help
 
 For detailed logging, set the `DEBUG` environment variable:
 ```bash
-DEBUG=true pumpfun-cli bc-create-token --help
+DEBUG=true pumpfun-cli bond-create-token --help
 ```
 
 ## Best Practices

@@ -24,7 +24,7 @@ cli/
 
 ### 1. Create a Token
 ```bash
-npm run cli:bc-create-token -- \
+npm run cli:bond-create-token -- \
   --token-name "MyToken" \
   --token-symbol "MTK" \
   --token-description "My awesome token" \
@@ -34,7 +34,7 @@ npm run cli:bc-create-token -- \
 
 ### 2. Buy Tokens via Bonding Curve
 ```bash
-npm run cli:bc-buy -- \
+npm run cli:bond-buy -- \
   --amount 0.1 \
   --slippage 1000 \
   --input-token ./fixtures/my-token.json \
@@ -80,7 +80,7 @@ All CLI commands support these common options:
 
 ## Command-Specific Options
 
-### Bonding Curve Create Token (`cli:bc-create-token`)
+### Bonding Curve Create Token (`cli:bond-create-token`)
 | Option | Short | Description | Required |
 |--------|-------|-------------|----------|
 | `--token-name` | `-n` | Token name | ✅ |
@@ -89,7 +89,7 @@ All CLI commands support these common options:
 | `--image-path` | `-p` | Path to token image | ❌ |
 | `--initial-buy` | `-b` | Initial buy amount in SOL | ❌ |
 
-### Buy Operations (`cli:bc-buy`, `cli:amm-buy`)
+### Buy Operations (`cli:bond-buy`, `cli:amm-buy`)
 | Option | Short | Description | Required |
 |--------|-------|-------------|----------|
 | `--amount` | `-a` | Amount of SOL to spend | ✅ |
@@ -116,14 +116,14 @@ All CLI commands support these common options:
 ### Create and Trade a Token
 ```bash
 # 1. Create token
-npm run cli:bc-create-token -- \
+npm run cli:bond-create-token -- \
   --token-name "TestToken" \
   --token-symbol "TST" \
   --wallet ./fixtures/creator-wallet.json \
   --output-token ./fixtures/test-token.json
 
 # 2. Buy tokens via bonding curve
-npm run cli:bc-buy -- \
+npm run cli:bond-buy -- \
   --amount 0.1 \
   --input-token ./fixtures/test-token.json \
   --wallet ./fixtures/creator-wallet.json
@@ -159,13 +159,13 @@ npm run cli:send-token -- --recipient 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgA
 ### Using Different Wallets and Token Files
 ```bash
 # Use custom wallet
-npm run cli:bc-buy -- \
+npm run cli:bond-buy -- \
   --amount 0.1 \
   --wallet ./fixtures/my-custom-wallet.json \
   --input-token ./fixtures/different-token.json
 
 # Save to custom location
-npm run cli:bc-create-token -- \
+npm run cli:bond-create-token -- \
   --token-name "CustomToken" \
   --token-symbol "CST" \
   --output-token ./fixtures/custom-token.json
@@ -203,9 +203,9 @@ All CLI commands include comprehensive error handling:
 
 Get help for any command:
 ```bash
-npm run cli:bc-create-token -- --help
+npm run cli:bond-create-token -- --help
 npm run cli:amm-buy -- --help
-npm run cli:bc-buy -- --help
+npm run cli:bond-buy -- --help
 npm run cli:send-token -- --help
 ```
 

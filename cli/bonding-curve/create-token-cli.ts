@@ -13,7 +13,7 @@ export async function createToken() {
   const args = parseArgs();
 
   if (args.help) {
-    printUsage('cli:bc-create-token', [
+    printUsage('cli:bond-create-token', [
       '  --token-name <name>        Token name (required)',
       '  --token-symbol <symbol>    Token symbol (required)',
       '  --token-description <desc> Token description',
@@ -28,7 +28,7 @@ export async function createToken() {
   // Validate required arguments
   if (!args.tokenName || !args.tokenSymbol) {
     console.error('❌ Error: --token-name and --token-symbol are required');
-    printUsage('cli:bc-create-token');
+    printUsage('cli:bond-create-token');
     return;
   }
 

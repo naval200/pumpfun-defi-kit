@@ -74,7 +74,7 @@ async function main() {
       if (!fs.existsSync(tokenInfoPath)) {
         console.log(`❌ Token info file not found: ${tokenInfoPath}`);
         console.log(
-          '💡 Please provide --mint or create a token first with: npm run cli:curve:create-token'
+          '💡 Please provide --mint or create a token first with: npm run cli:bond-create-token'
         );
         return;
       }
