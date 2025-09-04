@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Global CLI Commands**: Added `bin` section to package.json for global CLI access
 - **Parent Repository Support**: CLI commands now work from parent repositories when installed as npm module
 - **CLI Usage Guide**: Comprehensive documentation for using CLI commands in different environments
+- **Bin Command System**: Individual CLI commands available as global bin commands (e.g., `npx pumpfun-bc-create-token`)
+- **Main CLI Dispatcher**: `pumpfun-cli` command for unified CLI interface
+- **CLI File Inclusion**: Added `cli` folder to npm package files for proper CLI distribution
 
 ### Changed
 - **Directory Structure**: Renamed `wallets/` directory to `fixtures/` to better reflect its contents
@@ -32,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation**: Updated CLI documentation with comprehensive examples and usage
 - **Check Wallet Balances CLI**: Added timeout protection to prevent hanging on large token account queries
 - **Sell CLI**: Fixed TypeScript error and properly implemented fee payer support
+- **Parent Repository CLI**: Enhanced CLI commands to work seamlessly from parent repositories
+- **CLI Accessibility**: Multiple ways to access CLI commands (bin commands, main CLI, npm scripts)
+- **Documentation**: Updated README, CLI Usage Guide, and Getting Started with bin command examples
 
 ### Fixed
 - **TypeScript Compilation**: Fixed parameter mismatch in `sellPumpFunToken` function call

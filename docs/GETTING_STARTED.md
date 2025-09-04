@@ -40,31 +40,42 @@ npm install github:naval200/pumpfun-defi-kit#dist
 
 When installed as an npm module in a parent project, you can use the CLI commands in several ways:
 
-#### Method 1: Direct CLI Commands (Recommended)
+#### Method 1: Direct Bin Commands (Recommended)
 ```bash
-# After installing the package, use the global CLI commands
+# After installing the package, use the global bin commands directly
+npx pumpfun-bc-create-token --help
+npx pumpfun-bc-buy --amount 0.1 --input-token ./token-info.json
+npx pumpfun-bc-sell --amount 1000 --input-token ./token-info.json
+npx pumpfun-amm-buy --amount 0.1 --input-token ./token-info.json
+npx pumpfun-amm-sell --amount 1000 --input-token ./token-info.json
+npx pumpfun-check-balances --wallet ./wallet.json --input-token ./token-info.json
+npx pumpfun-send-sol --from-wallet ./wallet.json --to-address <address> --amount 0.1
+npx pumpfun-send-token --recipient <address> --mint <mint> --amount 1000
+npx pumpfun-create-ata --wallet ./wallet.json --mint <mint> --owner <owner>
+npx pumpfun-batch --operations ./batch-operations.json
+```
+
+#### Method 2: Main CLI Dispatcher
+```bash
+# Use the main CLI dispatcher
 pumpfun-cli --help
 pumpfun-cli bc-create-token --help
 pumpfun-cli amm-sell --help
 pumpfun-cli check-balances --help
 ```
 
-#### Method 2: Using npx
-```bash
-# Use npx to run specific CLI commands
-npx pumpfun-bc-create-token --help
-npx pumpfun-amm-sell --help
-npx pumpfun-check-balances --help
-```
-
 #### Method 3: Using npm scripts in parent package.json
 ```json
 {
   "scripts": {
-    "create-token": "pumpfun-cli bc-create-token",
-    "buy-tokens": "pumpfun-cli bc-buy",
-    "sell-tokens": "pumpfun-cli bc-sell",
-    "check-balances": "pumpfun-cli check-balances"
+    "create-token": "npx pumpfun-bc-create-token",
+    "buy-tokens": "npx pumpfun-bc-buy",
+    "sell-tokens": "npx pumpfun-bc-sell",
+    "check-balances": "npx pumpfun-check-balances",
+    "amm-buy": "npx pumpfun-amm-buy",
+    "amm-sell": "npx pumpfun-amm-sell",
+    "send-sol": "npx pumpfun-send-sol",
+    "send-token": "npx pumpfun-send-token"
   }
 }
 ```
@@ -73,6 +84,7 @@ Then run:
 ```bash
 npm run create-token -- --help
 npm run buy-tokens -- --amount 0.1 --input-token ./token-info.json
+npm run check-balances -- --wallet ./wallet.json
 ```
 
 ## Environment Setup
@@ -299,65 +311,100 @@ async function batchOperations() {
 
 The library provides comprehensive CLI tools for all operations:
 
-### Token Transfer CLI
+### Local Development CLI
+
+When working with the source code directly:
 
 ```bash
-# Basic token transfer
+# Token Transfer
 npm run cli:send-token -- \
   --recipient <recipient-address> \
   --mint <token-mint-address> \
   --amount 1000 \
   --wallet ./fixtures/wallet.json
 
-# Transfer with fee payer
-npm run cli:send-token -- \
-  --recipient <recipient-address> \
-  --mint <token-mint-address> \
-  --amount 1000 \
-  --wallet ./fixtures/wallet.json \
-  --fee-payer ./fixtures/treasury-wallet.json
-```
-
-### Bonding Curve CLI
-
-```bash
-# Buy tokens
+# Bonding Curve Operations
 npm run cli:curve:buy -- \
   --amount 0.1 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/wallet.json
 
-# Sell tokens
-npm run cli:curve:sell -- \
-  --amount 1000 \
-  --input-token ./fixtures/token-info.json \
-  --wallet ./fixtures/wallet.json
-```
-
-### AMM CLI
-
-```bash
-# Buy tokens from AMM
+# AMM Operations
 npm run cli:amm:buy -- \
   --amount 0.1 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/wallet.json
 
-# Sell tokens to AMM
-npm run cli:amm:sell -- \
-  --amount 1000 \
-  --input-token ./fixtures/token-info.json \
-  --wallet ./fixtures/wallet.json
-```
-
-### Batch Operations CLI
-
-```bash
-# Execute batch operations
+# Batch Operations
 npm run cli:batch-transactions -- \
   --operations ./fixtures/batch-operations.json \
   --fee-payer ./fixtures/treasury-wallet.json \
   --max-parallel 5
+```
+
+### Parent Repository CLI (Recommended)
+
+When installed as an npm module, use the global bin commands:
+
+```bash
+# Token Transfer
+npx pumpfun-send-token \
+  --recipient <recipient-address> \
+  --mint <token-mint-address> \
+  --amount 1000 \
+  --wallet ./fixtures/wallet.json
+
+# Bonding Curve Operations
+npx pumpfun-bc-buy \
+  --amount 0.1 \
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/wallet.json
+
+npx pumpfun-bc-sell \
+  --amount 1000 \
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/wallet.json
+
+# AMM Operations
+npx pumpfun-amm-buy \
+  --amount 0.1 \
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/wallet.json
+
+npx pumpfun-amm-sell \
+  --amount 1000 \
+  --input-token ./fixtures/token-info.json \
+  --wallet ./fixtures/wallet.json
+
+# Utilities
+npx pumpfun-check-balances \
+  --wallet ./fixtures/wallet.json \
+  --input-token ./fixtures/token-info.json
+
+npx pumpfun-send-sol \
+  --from-wallet ./fixtures/wallet.json \
+  --to-address <recipient-address> \
+  --amount 0.1
+
+# Batch Operations
+npx pumpfun-batch \
+  --operations ./fixtures/batch-operations.json \
+  --fee-payer ./fixtures/treasury-wallet.json \
+  --max-parallel 5
+```
+
+### Main CLI Dispatcher
+
+Use the main CLI for a unified interface:
+
+```bash
+# Show all available commands
+pumpfun-cli --help
+
+# Use specific commands
+pumpfun-cli bc-buy --amount 0.1 --input-token ./token-info.json --wallet ./wallet.json
+pumpfun-cli amm-sell --amount 1000 --input-token ./token-info.json --wallet ./wallet.json
+pumpfun-cli check-balances --wallet ./wallet.json --input-token ./token-info.json
 ```
 
 ## Testing and Debugging

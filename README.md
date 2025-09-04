@@ -84,19 +84,32 @@ npm run cli:check-balances -- --help
 
 #### From Parent Repository (When Installed as npm Module)
 ```bash
-# Use global CLI commands
+# Use global CLI commands (after npm install)
 pumpfun-cli --help
 pumpfun-cli bc-create-token --help
 pumpfun-cli amm-sell --help
 pumpfun-cli check-balances --help
 
-# Or use npx
+# Or use npx (recommended)
 npx pumpfun-bc-create-token --help
 npx pumpfun-amm-sell --help
 npx pumpfun-check-balances --help
+
+# Direct command usage
+npx pumpfun-bc-create-token --token-name "MyToken" --token-symbol "MTK" --wallet ./wallet.json
+npx pumpfun-amm-buy --amount 0.1 --input-token ./token-info.json --wallet ./wallet.json
 ```
 
 #### Available CLI Commands
+
+**Global Commands (when installed as npm module):**
+- **Main CLI**: `pumpfun-cli` - Main command dispatcher
+- **Bonding Curve**: `pumpfun-bc-create-token`, `pumpfun-bc-buy`, `pumpfun-bc-sell`
+- **AMM**: `pumpfun-amm-buy`, `pumpfun-amm-sell`, `pumpfun-amm-create-pool`, `pumpfun-amm-info`, `pumpfun-amm-liquidity`
+- **Utilities**: `pumpfun-send-sol`, `pumpfun-send-token`, `pumpfun-check-balances`, `pumpfun-create-ata`
+- **Batch**: `pumpfun-batch` (for batch operations)
+
+**Local Development Commands:**
 - **Bonding Curve**: `bc-create-token`, `bc-buy`, `bc-sell`, `bc-check-accounts`
 - **AMM**: `amm-buy`, `amm-sell`, `amm-create-pool`, `amm-info`, `amm-liquidity`
 - **Utilities**: `send-sol`, `send-token`, `check-balances`, `create-ata`

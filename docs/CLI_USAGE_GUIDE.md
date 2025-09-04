@@ -67,14 +67,23 @@ pumpfun-cli send-sol --from-wallet ./wallet.json --to-address <address> --amount
 pumpfun-cli send-token --recipient <address> --mint <mint> --amount 1000
 ```
 
-### Method 2: Using npx
+### Method 2: Using npx (Recommended)
 
 ```bash
-# Individual commands with npx
+# Individual commands with npx - these are the global bin commands
 npx pumpfun-bc-create-token --help
-npx pumpfun-amm-sell --help
-npx pumpfun-check-balances --help
-npx pumpfun-send-sol --help
+npx pumpfun-bc-buy --amount 0.1 --input-token ./token-info.json
+npx pumpfun-bc-sell --amount 1000 --input-token ./token-info.json
+
+npx pumpfun-amm-buy --amount 0.1 --input-token ./token-info.json
+npx pumpfun-amm-sell --amount 1000 --input-token ./token-info.json
+npx pumpfun-amm-create-pool --base-amount 1000000 --quote-amount 0.1
+
+npx pumpfun-check-balances --wallet ./wallet.json --input-token ./token-info.json
+npx pumpfun-send-sol --from-wallet ./wallet.json --to-address <address> --amount 0.1
+npx pumpfun-send-token --recipient <address> --mint <mint> --amount 1000
+npx pumpfun-create-ata --wallet ./wallet.json --mint <mint> --owner <owner>
+npx pumpfun-batch --operations ./batch-operations.json
 ```
 
 ### Method 3: Custom npm Scripts
@@ -106,27 +115,59 @@ npm run check-balances -- --wallet ./wallet.json
 
 ## Available Commands
 
-### Bonding Curve Operations
+### Global Bin Commands (when installed as npm module)
+
+These commands are available globally when the package is installed:
+
+#### Main CLI
+- `pumpfun-cli` - Main command dispatcher with help system
+
+#### Bonding Curve Operations
+- `pumpfun-bc-create-token` - Create new PumpFun tokens
+- `pumpfun-bc-buy` - Buy tokens from bonding curve
+- `pumpfun-bc-sell` - Sell tokens back to bonding curve
+
+#### AMM Operations
+- `pumpfun-amm-buy` - Buy tokens from AMM pool
+- `pumpfun-amm-sell` - Sell tokens to AMM pool
+- `pumpfun-amm-create-pool` - Create new AMM liquidity pool
+- `pumpfun-amm-info` - Get AMM pool information
+- `pumpfun-amm-liquidity` - Add/remove liquidity from pool
+
+#### Utilities
+- `pumpfun-send-sol` - Send SOL between wallets
+- `pumpfun-send-token` - Send tokens between wallets
+- `pumpfun-check-balances` - Check wallet balances
+- `pumpfun-create-ata` - Create Associated Token Account
+
+#### Batch Operations
+- `pumpfun-batch` - Execute batch transactions
+
+### Local Development Commands
+
+When working with the source code directly:
+
+#### Bonding Curve Operations
 - `bc-create-token` - Create new PumpFun tokens
 - `bc-buy` - Buy tokens from bonding curve
 - `bc-sell` - Sell tokens back to bonding curve
 - `bc-check-accounts` - Check bonding curve accounts
 - `bc-create-account` - Create bonding curve account
 
-### AMM Operations
+#### AMM Operations
 - `amm-buy` - Buy tokens from AMM pool
 - `amm-sell` - Sell tokens to AMM pool
 - `amm-create-pool` - Create new AMM liquidity pool
 - `amm-info` - Get AMM pool information
 - `amm-liquidity` - Add/remove liquidity from pool
 
-### Utilities
+#### Utilities
 - `send-sol` - Send SOL between wallets
 - `send-token` - Send tokens between wallets
 - `check-balances` - Check wallet balances
 - `create-ata` - Create Associated Token Account
 
-### Batch Operations
+#### Batch Operations
 - `batch` - Execute batch transactions
 
 ## Command Examples
@@ -141,8 +182,16 @@ npm run cli:bc-create-token -- \
   --token-description "A test token" \
   --initial-buy 0.001
 
-# From parent repository
+# From parent repository - Method 1: Main CLI
 pumpfun-cli bc-create-token \
+  --wallet ./fixtures/creator-wallet.json \
+  --token-name "My Token" \
+  --token-symbol "MTK" \
+  --token-description "A test token" \
+  --initial-buy 0.001
+
+# From parent repository - Method 2: Direct bin command (Recommended)
+npx pumpfun-bc-create-token \
   --wallet ./fixtures/creator-wallet.json \
   --token-name "My Token" \
   --token-symbol "MTK" \
@@ -158,8 +207,14 @@ npm run cli:bc-buy -- \
   --input-token ./token-info.json \
   --wallet ./user-wallet.json
 
-# From parent repository
+# From parent repository - Method 1: Main CLI
 pumpfun-cli bc-buy \
+  --amount 0.1 \
+  --input-token ./token-info.json \
+  --wallet ./user-wallet.json
+
+# From parent repository - Method 2: Direct bin command (Recommended)
+npx pumpfun-bc-buy \
   --amount 0.1 \
   --input-token ./token-info.json \
   --wallet ./user-wallet.json
@@ -172,8 +227,13 @@ npm run cli:check-balances -- \
   --wallet ./user-wallet.json \
   --input-token ./token-info.json
 
-# From parent repository
+# From parent repository - Method 1: Main CLI
 pumpfun-cli check-balances \
+  --wallet ./user-wallet.json \
+  --input-token ./token-info.json
+
+# From parent repository - Method 2: Direct bin command (Recommended)
+npx pumpfun-check-balances \
   --wallet ./user-wallet.json \
   --input-token ./token-info.json
 ```
@@ -186,8 +246,14 @@ npm run cli:amm-create-pool -- \
   --base-amount 1000000 \
   --quote-amount 0.1
 
-# From parent repository
+# From parent repository - Method 1: Main CLI
 pumpfun-cli amm-create-pool \
+  --wallet ./creator-wallet.json \
+  --base-amount 1000000 \
+  --quote-amount 0.1
+
+# From parent repository - Method 2: Direct bin command (Recommended)
+npx pumpfun-amm-create-pool \
   --wallet ./creator-wallet.json \
   --base-amount 1000000 \
   --quote-amount 0.1
