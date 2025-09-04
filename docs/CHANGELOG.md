@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Transaction Confirmation**: Enhanced transaction handling with explorer links and balance verification
 - **Debug Scripts**: Comprehensive testing scripts for batch operations and wallet management
 - **Batch Operations Testing**: End-to-end testing of token transfers, buys, and SOL transfers
+- **Sell Operation Fee Payer Support**: Added fee payer parameter to `sellPumpFunToken` function
+- **Enhanced Check Wallet Balances CLI**: Added timeout protection and `--input-token` parameter support
+- **API Documentation**: Comprehensive API reference with bonding curve and AMM operations
 
 ### Changed
 - **Directory Structure**: Renamed `wallets/` directory to `fixtures/` to better reflect its contents
@@ -24,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI Infrastructure**: Improved command-line argument parsing and validation
 - **Error Handling**: Better error messages and validation for CLI commands
 - **Documentation**: Updated CLI documentation with comprehensive examples and usage
+- **Check Wallet Balances CLI**: Added timeout protection to prevent hanging on large token account queries
+- **Sell CLI**: Fixed TypeScript error and properly implemented fee payer support
+
+### Fixed
+- **TypeScript Compilation**: Fixed parameter mismatch in `sellPumpFunToken` function call
+- **CLI Hanging Issues**: Added timeout protection to prevent CLI from hanging on slow RPC calls
+- **Fee Payer Implementation**: Properly implemented fee payer support for sell operations
 
 ### Removed
 - `getGlobalAccount` function from `src/bonding-curve/helper.ts` - was unused placeholder implementation

@@ -16,7 +16,7 @@ The following operations now support fee payers:
 
 ### 1. Bonding Curve Operations
 - **Buy tokens**: `--fee-payer <path>` option
-- **Sell tokens**: `--fee-payer <path>` option
+- **Sell tokens**: `--fee-payer <path>` option (✅ **NEW**: Fee payer can be different from token owner)
 
 ### 2. AMM Operations
 - **Buy tokens**: `--fee-payer <path>` option
@@ -37,7 +37,7 @@ npm run cli:bc-buy \
   --wallet ./fixtures/user-wallet.json \
   --fee-payer ./fixtures/treasury-wallet.json
 
-# Sell tokens with separate fee payer
+# Sell tokens with separate fee payer (NEW: Fee payer can be different from token owner)
 npm run cli:bc-sell \
   --amount 1000 \
   --input-token ./fixtures/token-info.json \
