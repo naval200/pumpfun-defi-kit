@@ -9,6 +9,7 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 - **[Getting Started Guide](./GETTING_STARTED.md)** - Complete setup and first steps
 - **[Main README](../README.md)** - Project overview and quick start guide
 - **[Installation Guide](../README.md#installation)** - How to install and set up
+- **[CLI Usage Guide](./CLI_USAGE_GUIDE.md)** - Comprehensive CLI usage for local and parent repositories
 
 ### API Reference
 

@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sell Operation Fee Payer Support**: Added fee payer parameter to `sellPumpFunToken` function
 - **Enhanced Check Wallet Balances CLI**: Added timeout protection and `--input-token` parameter support
 - **API Documentation**: Comprehensive API reference with bonding curve and AMM operations
+- **Global CLI Commands**: Added `bin` section to package.json for global CLI access
+- **Parent Repository Support**: CLI commands now work from parent repositories when installed as npm module
+- **CLI Usage Guide**: Comprehensive documentation for using CLI commands in different environments
 
 ### Changed
 - **Directory Structure**: Renamed `wallets/` directory to `fixtures/` to better reflect its contents

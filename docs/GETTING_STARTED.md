@@ -36,6 +36,45 @@ npm run build
 npm install github:naval200/pumpfun-defi-kit#dist
 ```
 
+### Option 3: Using CLI Commands from Parent Repository
+
+When installed as an npm module in a parent project, you can use the CLI commands in several ways:
+
+#### Method 1: Direct CLI Commands (Recommended)
+```bash
+# After installing the package, use the global CLI commands
+pumpfun-cli --help
+pumpfun-cli bc-create-token --help
+pumpfun-cli amm-sell --help
+pumpfun-cli check-balances --help
+```
+
+#### Method 2: Using npx
+```bash
+# Use npx to run specific CLI commands
+npx pumpfun-bc-create-token --help
+npx pumpfun-amm-sell --help
+npx pumpfun-check-balances --help
+```
+
+#### Method 3: Using npm scripts in parent package.json
+```json
+{
+  "scripts": {
+    "create-token": "pumpfun-cli bc-create-token",
+    "buy-tokens": "pumpfun-cli bc-buy",
+    "sell-tokens": "pumpfun-cli bc-sell",
+    "check-balances": "pumpfun-cli check-balances"
+  }
+}
+```
+
+Then run:
+```bash
+npm run create-token -- --help
+npm run buy-tokens -- --amount 0.1 --input-token ./token-info.json
+```
+
 ## Environment Setup
 
 ### 1. Solana Network Configuration
