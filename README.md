@@ -16,7 +16,7 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 📤 **Token Transfer**: Send tokens between wallets with automatic account creation
 - 🎯 **Graduation Support**: Check token graduation status and requirements
 - 🔧 **CLI Tools**: Comprehensive command-line interface for all operations
-- 💸 **Fee Payer Support**: Optional separate fee payer wallets for treasury operations and batch transactions
+- 💸 **Fee Payer Support**: Optional separate fee payer wallets for treasury operations, batch transactions, and individual trades
 - 🔢 **User-Friendly Amounts**: CLI accepts SOL amounts, automatically converted to lamports internally for precision
 - 📦 **Batch Transactions**: Execute multiple operations efficiently with automatic account creation
 - 🏗️ **Automatic ATA Creation**: Seamlessly create token accounts during batch operations
@@ -69,6 +69,38 @@ npm run build
 ## Quick Start
 
 **Note**: Since this is a beta version, you'll need to clone the repository and build it locally before running the examples.
+
+### CLI Usage
+
+The PumpFun DeFi Kit provides comprehensive CLI tools for all operations:
+
+#### From Local Development
+```bash
+# Run CLI commands from the project directory
+npm run cli:bc-create-token -- --help
+npm run cli:amm-sell -- --help
+npm run cli:check-balances -- --help
+```
+
+#### From Parent Repository (When Installed as npm Module)
+```bash
+# Use global CLI commands
+pumpfun-cli --help
+pumpfun-cli bc-create-token --help
+pumpfun-cli amm-sell --help
+pumpfun-cli check-balances --help
+
+# Or use npx
+npx pumpfun-bc-create-token --help
+npx pumpfun-amm-sell --help
+npx pumpfun-check-balances --help
+```
+
+#### Available CLI Commands
+- **Bonding Curve**: `bc-create-token`, `bc-buy`, `bc-sell`, `bc-check-accounts`
+- **AMM**: `amm-buy`, `amm-sell`, `amm-create-pool`, `amm-info`, `amm-liquidity`
+- **Utilities**: `send-sol`, `send-token`, `check-balances`, `create-ata`
+- **Batch**: `batch` (for batch operations)
 
 ### Testing with Debug Scripts
 
