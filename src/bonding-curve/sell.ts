@@ -12,7 +12,8 @@ export async function sellPumpFunToken(
   connection: Connection,
   wallet: Keypair,
   mint: PublicKey,
-  tokenAmount: number
+  tokenAmount: number,
+  feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string }> {
   try {
     // Validate that tokenAmount is specified
@@ -47,10 +48,14 @@ export async function sellPumpFunToken(
     // Set recent blockhash and fee payer
     const { blockhash } = await connection.getLatestBlockhash('confirmed');
     transaction.recentBlockhash = blockhash;
-    transaction.feePayer = wallet.publicKey;
+    transaction.feePayer = feePayer ? feePayer.publicKey : wallet.publicKey;
 
     // Sign the transaction
-    transaction.sign(wallet);
+    if (feePayer) {
+      transaction.sign(wallet, feePayer);
+    } else {
+      transaction.sign(wallet);
+    }
 
     // Send transaction
     debugLog('📡 Sending transaction...');

@@ -58,8 +58,7 @@ export async function sellToken() {
       connection,
       wallet,
       new PublicKey(tokenInfo.mint),
-      args.amount,
-      feePayer || undefined
+      args.amount
     );
 
     if (result) {
