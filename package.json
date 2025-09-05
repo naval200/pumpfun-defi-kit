@@ -101,13 +101,21 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
     "@pump-fun/pump-swap-sdk": "^1.7.2",
-    "@solana/spl-token": "^0.4.13",
+    "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.95.4",
     "@types/bignumber.js": "^4.0.3",
     "bignumber.js": "^9.3.1",
     "dotenv": "^16.4.5",
     "fetch-blob": "^4.0.0",
     "undici": "^7.14.0"
+  },
+  "overrides": {
+    "pumpdotfun-sdk": {
+      "@solana/spl-token": "0.4.14"
+    },
+    "@pump-fun/pump-swap-sdk": {
+      "@solana/spl-token": "0.4.14"
+    }
   },
   "devDependencies": {
     "@types/bn.js": "^5.2.0",
