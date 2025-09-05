@@ -10,7 +10,7 @@ const amounts_1 = require("../utils/amounts");
 /**
  * Sell PumpFun tokens with simple approach
  */
-async function sellPumpFunToken(connection, wallet, mint, tokenAmount) {
+async function sellPumpFunToken(connection, wallet, mint, tokenAmount, feePayer) {
     try {
         // Validate that tokenAmount is specified
         if (tokenAmount === undefined) {
@@ -28,9 +28,14 @@ async function sellPumpFunToken(connection, wallet, mint, tokenAmount) {
         // Set recent blockhash and fee payer
         const { blockhash } = await connection.getLatestBlockhash('confirmed');
         transaction.recentBlockhash = blockhash;
-        transaction.feePayer = wallet.publicKey;
+        transaction.feePayer = feePayer ? feePayer.publicKey : wallet.publicKey;
         // Sign the transaction
-        transaction.sign(wallet);
+        if (feePayer) {
+            transaction.sign(wallet, feePayer);
+        }
+        else {
+            transaction.sign(wallet);
+        }
         // Send transaction
         (0, debug_1.debugLog)('📡 Sending transaction...');
         const signature = await connection.sendRawTransaction(transaction.serialize(), {

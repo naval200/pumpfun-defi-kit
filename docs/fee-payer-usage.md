@@ -16,7 +16,7 @@ The following operations now support fee payers:
 
 ### 1. Bonding Curve Operations
 - **Buy tokens**: `--fee-payer <path>` option
-- **Sell tokens**: `--fee-payer <path>` option
+- **Sell tokens**: `--fee-payer <path>` option (✅ **NEW**: Fee payer can be different from token owner)
 
 ### 2. AMM Operations
 - **Buy tokens**: `--fee-payer <path>` option
@@ -31,14 +31,14 @@ The following operations now support fee payers:
 
 ```bash
 # Buy tokens with separate fee payer
-npm run cli:bc-buy \
+npm run cli:bond-buy \
   --amount 0.1 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/user-wallet.json \
   --fee-payer ./fixtures/treasury-wallet.json
 
-# Sell tokens with separate fee payer
-npm run cli:bc-sell \
+# Sell tokens with separate fee payer (NEW: Fee payer can be different from token owner)
+npm run cli:bond-sell \
   --amount 1000 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/user-wallet.json \
@@ -83,12 +83,12 @@ solana transfer --from ~/.config/solana/id.json \
 #### Batch Operations
 ```bash
 # Multiple users can use the same treasury for fees
-npm run cli:bc-buy \
+npm run cli:bond-buy \
   --amount 0.05 \
   --wallet ./fixtures/user1-wallet.json \
   --fee-payer ./fixtures/treasury-wallet.json
 
-npm run cli:bc-buy \
+npm run cli:bond-buy \
   --amount 0.03 \
   --wallet ./fixtures/user2-wallet.json \
   --fee-payer ./fixtures/treasury-wallet.json

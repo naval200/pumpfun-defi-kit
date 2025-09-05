@@ -413,6 +413,202 @@ interface BatchResult {
 }
 ```
 
+## Bonding Curve Operations
+
+### `createPumpFunToken`
+
+Creates a new PumpFun token with bonding curve functionality.
+
+```typescript
+function createPumpFunToken(
+  connection: Connection,
+  wallet: Keypair,
+  tokenConfig: TokenConfig,
+  isMainnet?: boolean
+): Promise<CreateTokenResult>
+```
+
+**Parameters:**
+- `connection`: Solana Connection object
+- `wallet`: Keypair for the creator wallet
+- `tokenConfig`: Token configuration object
+- `isMainnet`: Whether to use mainnet (default: false for devnet)
+
+**Returns:** Promise<CreateTokenResult>
+
+**Example:**
+```typescript
+import { createPumpFunToken } from '@pump-fun/defikit';
+
+const tokenConfig = {
+  name: "My Token",
+  symbol: "MTK",
+  description: "A test token",
+  imagePath: "path/to/image.png",
+  initialBuyAmount: 1000000 // 0.001 SOL in lamports
+};
+
+const result = await createPumpFunToken(connection, wallet, tokenConfig);
+if (result.success) {
+  console.log(`Token created: ${result.mint}`);
+}
+```
+
+### `buyPumpFunToken`
+
+Buys tokens from the PumpFun bonding curve.
+
+```typescript
+function buyPumpFunToken(
+  connection: Connection,
+  wallet: Keypair,
+  mint: PublicKey,
+  solAmount: number,
+  slippageBasisPoints?: number,
+  feePayer?: Keypair
+): Promise<string>
+```
+
+**Parameters:**
+- `connection`: Solana Connection object
+- `wallet`: Keypair for the buyer wallet
+- `mint`: Token mint address
+- `solAmount`: Amount of SOL to spend (in lamports)
+- `slippageBasisPoints`: Slippage tolerance (default: 1000 = 10%)
+- `feePayer`: Optional fee payer keypair
+
+**Returns:** Promise<string> (transaction signature)
+
+**Example:**
+```typescript
+import { buyPumpFunToken } from '@pump-fun/defikit';
+
+const signature = await buyPumpFunToken(
+  connection,
+  wallet,
+  mintPublicKey,
+  100000000, // 0.1 SOL in lamports
+  1000, // 10% slippage
+  feePayer // Optional
+);
+```
+
+### `sellPumpFunToken`
+
+Sells tokens back to the PumpFun bonding curve.
+
+```typescript
+function sellPumpFunToken(
+  connection: Connection,
+  wallet: Keypair,
+  mint: PublicKey,
+  tokenAmount: number,
+  feePayer?: Keypair
+): Promise<{ success: boolean; signature?: string; error?: string }>
+```
+
+**Parameters:**
+- `connection`: Solana Connection object
+- `wallet`: Keypair for the seller wallet (token owner)
+- `mint`: Token mint address
+- `tokenAmount`: Number of tokens to sell
+- `feePayer`: Optional fee payer keypair (can be different from wallet)
+
+**Returns:** Promise<{ success: boolean; signature?: string; error?: string }>
+
+**Example:**
+```typescript
+import { sellPumpFunToken } from '@pump-fun/defikit';
+
+const result = await sellPumpFunToken(
+  connection,
+  wallet,
+  mintPublicKey,
+  1000, // 1000 tokens
+  feePayer // Optional - can be different from wallet
+);
+
+if (result.success) {
+  console.log(`Sell successful: ${result.signature}`);
+} else {
+  console.error(`Sell failed: ${result.error}`);
+}
+```
+
+### `TokenConfig`
+
+```typescript
+interface TokenConfig {
+  name: string;
+  symbol: string;
+  description: string;
+  imagePath?: string;
+  websiteUrl?: string;
+  twitterUrl?: string;
+  telegramUrl?: string;
+  initialBuyAmount?: number; // in lamports
+}
+```
+
+### `CreateTokenResult`
+
+```typescript
+interface CreateTokenResult {
+  success: boolean;
+  mint?: string;
+  mintKeypair?: Keypair;
+  signature?: string;
+  error?: string;
+}
+```
+
+## AMM Operations
+
+### `createPool`
+
+Creates a new AMM liquidity pool.
+
+```typescript
+function createPool(
+  connection: Connection,
+  wallet: Keypair,
+  baseMint: PublicKey,
+  quoteMint: PublicKey,
+  baseAmount: number,
+  quoteAmount: number,
+  poolIndex?: number
+): Promise<{ success: boolean; poolKey?: string; signature?: string; error?: string }>
+```
+
+### `addLiquidity`
+
+Adds liquidity to an existing AMM pool.
+
+```typescript
+function addLiquidity(
+  connection: Connection,
+  wallet: Keypair,
+  poolKey: PublicKey,
+  baseAmount: number,
+  quoteAmount: number,
+  slippageBasisPoints?: number
+): Promise<{ success: boolean; signature?: string; error?: string }>
+```
+
+### `removeLiquidity`
+
+Removes liquidity from an AMM pool.
+
+```typescript
+function removeLiquidity(
+  connection: Connection,
+  wallet: Keypair,
+  poolKey: PublicKey,
+  lpAmount: number,
+  slippageBasisPoints?: number
+): Promise<{ success: boolean; signature?: string; error?: string }>
+```
+
 ## Best Practices
 
 1. **Always handle errors**: Wrap function calls in try-catch blocks

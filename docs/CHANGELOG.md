@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Transaction Confirmation**: Enhanced transaction handling with explorer links and balance verification
 - **Debug Scripts**: Comprehensive testing scripts for batch operations and wallet management
 - **Batch Operations Testing**: End-to-end testing of token transfers, buys, and SOL transfers
+- **Sell Operation Fee Payer Support**: Added fee payer parameter to `sellPumpFunToken` function
+- **Enhanced Check Wallet Balances CLI**: Added timeout protection and `--input-token` parameter support
+- **API Documentation**: Comprehensive API reference with bonding curve and AMM operations
+- **Global CLI Commands**: Added `bin` section to package.json for global CLI access
+- **Parent Repository Support**: CLI commands now work from parent repositories when installed as npm module
+- **CLI Usage Guide**: Comprehensive documentation for using CLI commands with the main dispatcher
+- **Main CLI Dispatcher**: Use `pumpfun-cli <subcommand>` (via `npx` or installed)
+- **CLI File Inclusion**: Added `cli` folder to npm package files for proper CLI distribution
 
 ### Changed
 - **Directory Structure**: Renamed `wallets/` directory to `fixtures/` to better reflect its contents
@@ -24,6 +32,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI Infrastructure**: Improved command-line argument parsing and validation
 - **Error Handling**: Better error messages and validation for CLI commands
 - **Documentation**: Updated CLI documentation with comprehensive examples and usage
+- **Check Wallet Balances CLI**: Added timeout protection to prevent hanging on large token account queries
+- **Sell CLI**: Fixed TypeScript error and properly implemented fee payer support
+- **Parent Repository CLI**: Enhanced CLI commands to work seamlessly from parent repositories
+- **CLI Accessibility**: Multiple ways to access CLI commands (bin commands, main CLI, npm scripts)
+- **Documentation**: Updated README, CLI Usage Guide, and Getting Started with bin command examples
+
+### Fixed
+- **TypeScript Compilation**: Fixed parameter mismatch in `sellPumpFunToken` function call
+- **CLI Hanging Issues**: Added timeout protection to prevent CLI from hanging on slow RPC calls
+- **Fee Payer Implementation**: Properly implemented fee payer support for sell operations
 
 ### Removed
 - `getGlobalAccount` function from `src/bonding-curve/helper.ts` - was unused placeholder implementation
