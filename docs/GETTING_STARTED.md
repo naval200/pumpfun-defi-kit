@@ -40,26 +40,25 @@ npm install github:naval200/pumpfun-defi-kit#dist
 
 When installed as an npm module in a parent project, you can use the CLI commands in several ways:
 
-#### Method 1: Direct Bin Commands (Recommended)
+#### Method 1: Using npx with Main CLI (Recommended)
 ```bash
-# After installing the package, use the global bin commands directly
-npx pumpfun-bc-create-token --help
-npx pumpfun-bc-buy --amount 0.1 --input-token ./token-info.json
-npx pumpfun-bc-sell --amount 1000 --input-token ./token-info.json
-npx pumpfun-amm-buy --amount 0.1 --input-token ./token-info.json
-npx pumpfun-amm-sell --amount 1000 --input-token ./token-info.json
-npx pumpfun-check-balances --wallet ./wallet.json --input-token ./token-info.json
-npx pumpfun-send-sol --from-wallet ./wallet.json --to-address <address> --amount 0.1
-npx pumpfun-send-token --recipient <address> --mint <mint> --amount 1000
-npx pumpfun-create-ata --wallet ./wallet.json --mint <mint> --owner <owner>
-npx pumpfun-batch --operations ./batch-operations.json
+npx pumpfun-cli bond-create-token --help
+npx pumpfun-cli bond-buy --amount 0.1 --input-token ./token-info.json
+npx pumpfun-cli bond-sell --amount 1000 --input-token ./token-info.json
+npx pumpfun-cli amm-buy --amount 0.1 --input-token ./token-info.json
+npx pumpfun-cli amm-sell --amount 1000 --input-token ./token-info.json
+npx pumpfun-cli check-balances --wallet ./wallet.json --input-token ./token-info.json
+npx pumpfun-cli send-sol --from-wallet ./wallet.json --to-address <address> --amount 0.1
+npx pumpfun-cli send-token --recipient <address> --mint <mint> --amount 1000
+npx pumpfun-cli create-ata --wallet ./wallet.json --mint <mint> --owner <owner>
+npx pumpfun-cli batch --operations ./batch-operations.json
 ```
 
-#### Method 2: Main CLI Dispatcher
+#### Method 2: Installed Global CLI Dispatcher
 ```bash
 # Use the main CLI dispatcher
 pumpfun-cli --help
-pumpfun-cli bc-create-token --help
+pumpfun-cli bond-create-token --help
 pumpfun-cli amm-sell --help
 pumpfun-cli check-balances --help
 ```
@@ -68,14 +67,14 @@ pumpfun-cli check-balances --help
 ```json
 {
   "scripts": {
-    "create-token": "npx pumpfun-bc-create-token",
-    "buy-tokens": "npx pumpfun-bc-buy",
-    "sell-tokens": "npx pumpfun-bc-sell",
-    "check-balances": "npx pumpfun-check-balances",
-    "amm-buy": "npx pumpfun-amm-buy",
-    "amm-sell": "npx pumpfun-amm-sell",
-    "send-sol": "npx pumpfun-send-sol",
-    "send-token": "npx pumpfun-send-token"
+    "create-token": "pumpfun-cli bond-create-token",
+    "buy-tokens": "pumpfun-cli bond-buy",
+    "sell-tokens": "pumpfun-cli bond-sell",
+    "check-balances": "pumpfun-cli check-balances",
+    "amm-buy": "pumpfun-cli amm-buy",
+    "amm-sell": "pumpfun-cli amm-sell",
+    "send-sol": "pumpfun-cli send-sol",
+    "send-token": "pumpfun-cli send-token"
   }
 }
 ```
@@ -324,7 +323,7 @@ npm run cli:send-token -- \
   --wallet ./fixtures/wallet.json
 
 # Bonding Curve Operations
-npm run cli:curve:buy -- \
+npm run cli:bond-buy -- \
   --amount 0.1 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/wallet.json
@@ -355,12 +354,12 @@ npx pumpfun-send-token \
   --wallet ./fixtures/wallet.json
 
 # Bonding Curve Operations
-npx pumpfun-bc-buy \
+npx pumpfun-bond-buy \
   --amount 0.1 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/wallet.json
 
-npx pumpfun-bc-sell \
+npx pumpfun-bond-sell \
   --amount 1000 \
   --input-token ./fixtures/token-info.json \
   --wallet ./fixtures/wallet.json
@@ -402,7 +401,7 @@ Use the main CLI for a unified interface:
 pumpfun-cli --help
 
 # Use specific commands
-pumpfun-cli bc-buy --amount 0.1 --input-token ./token-info.json --wallet ./wallet.json
+pumpfun-cli bond-buy --amount 0.1 --input-token ./token-info.json --wallet ./wallet.json
 pumpfun-cli amm-sell --amount 1000 --input-token ./token-info.json --wallet ./wallet.json
 pumpfun-cli check-balances --wallet ./wallet.json --input-token ./token-info.json
 ```
@@ -448,7 +447,7 @@ chmod +x *.sh
 export DEBUG_PUMPFUN_DEFI_SDK=true
 
 # Or run with debug flag
-DEBUG_PUMPFUN_DEFI_SDK=true npm run cli:curve:buy -- --amount 0.1
+DEBUG_PUMPFUN_DEFI_SDK=true npm run cli:bond-buy -- --amount 0.1
 ```
 
 ## Common Patterns and Best Practices

@@ -31,7 +31,7 @@ function parseArgs(): Args {
       case '--help':
       case '-h':
         console.log(`
-Usage: npm run cli:curve:create-account -- [options]
+Usage: npm run cli:bond-create-account -- [options]
 
 Options:
   --wallet <path>     Path to wallet JSON file
@@ -40,8 +40,8 @@ Options:
   --help, -h          Show this help message
 
 Examples:
-  npm run cli:curve:create-account -- --wallet fixtures/trading-wallet.json --token fixtures/test-token-new-idl.json
-  npm run cli:curve:create-account -- --wallet fixtures/trading-wallet.json --token fixtures/test-token-new-idl.json --check-only
+  npm run cli:bond-create-account -- --wallet fixtures/trading-wallet.json --token fixtures/test-token-new-idl.json
+  npm run cli:bond-create-account -- --wallet fixtures/trading-wallet.json --token fixtures/test-token-new-idl.json --check-only
         `);
         break;
       default:

@@ -19,9 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API Documentation**: Comprehensive API reference with bonding curve and AMM operations
 - **Global CLI Commands**: Added `bin` section to package.json for global CLI access
 - **Parent Repository Support**: CLI commands now work from parent repositories when installed as npm module
-- **CLI Usage Guide**: Comprehensive documentation for using CLI commands in different environments
-- **Bin Command System**: Individual CLI commands available as global bin commands (e.g., `npx pumpfun-bc-create-token`)
-- **Main CLI Dispatcher**: `pumpfun-cli` command for unified CLI interface
+- **CLI Usage Guide**: Comprehensive documentation for using CLI commands with the main dispatcher
+- **Main CLI Dispatcher**: Use `pumpfun-cli <subcommand>` (via `npx` or installed)
 - **CLI File Inclusion**: Added `cli` folder to npm package files for proper CLI distribution
 
 ### Changed
