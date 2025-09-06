@@ -1,0 +1,62 @@
+[
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-1",
+    "description": "AMM airdrop to user-1",
+    "sender": "{{AIRDROP_WALLET}}",
+    "params": {
+      "recipient": "{{USER_1_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 300,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-2",
+    "description": "AMM airdrop to user-2",
+    "sender": "{{AIRDROP_WALLET}}",
+    "params": {
+      "recipient": "{{USER_2_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 300,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-3",
+    "description": "AMM airdrop to user-3",
+    "sender": "{{AIRDROP_WALLET}}",
+    "params": {
+      "recipient": "{{USER_3_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 300,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-4",
+    "description": "AMM airdrop to user-4",
+    "sender": "{{AIRDROP_WALLET}}",
+    "params": {
+      "recipient": "{{USER_4_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 300,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-5",
+    "description": "AMM airdrop to user-5",
+    "sender": "{{AIRDROP_WALLET}}",
+    "params": {
+      "recipient": "{{USER_5_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 300,
+      "createAccount": false
+    }
+  }
+]

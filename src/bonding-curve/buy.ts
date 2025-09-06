@@ -1,5 +1,5 @@
 import { getAllRequiredPDAsForBuyAsync } from './bc-helper';
-import { Connection, Keypair, PublicKey, Transaction } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey, Transaction, SendTransactionError } from '@solana/web3.js';
 import { debugLog, logError, log, logSuccess, logSignature } from '../utils/debug';
 import { formatLamportsAsSol } from '../utils/amounts';
 import { PUMP_PROGRAM_ID } from './idl/constants';
@@ -70,10 +70,32 @@ export async function buyPumpFunToken(
     const errorMessage = error instanceof Error ? error.message : String(error);
     logError(`Transaction failed: ${errorMessage}`);
 
+    // Enhanced error logging for SendTransactionError
+    if (error instanceof SendTransactionError) {
+      try {
+        const logs = await error.getLogs(connection);
+        if (logs && logs.length > 0) {
+          logError('📋 Transaction Logs:');
+          logs.forEach((logLine, index) => {
+            logError(`  ${index + 1}: ${logLine}`);
+          });
+        }
+      } catch (logError) {
+        debugLog('⚠️ Could not retrieve transaction logs');
+      }
+    }
+
     // If this is a seed constraint error, extract the expected address
     if (errorMessage.includes('ConstraintSeeds') || errorMessage.includes('seeds constraint')) {
       debugLog('🔧 Detected seed constraint error. Check the logs for the expected address.');
       debugLog('💡 Add the expected address to KNOWN_PDA_MAPPINGS for this wallet.');
+    }
+
+    // Check for AccountNotInitialized error (ATA issues)
+    if (errorMessage.includes('AccountNotInitialized') || errorMessage.includes('0xbc4')) {
+      logError('🔧 Account not initialized error detected!');
+      logError('💡 This usually means an Associated Token Account (ATA) needs to be created.');
+      logError('💡 Make sure the ATA exists for the correct token mint and wallet.');
     }
 
     throw error; // Re-throw to match expected behavior

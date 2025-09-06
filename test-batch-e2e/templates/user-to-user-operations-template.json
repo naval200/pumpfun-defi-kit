@@ -1,0 +1,62 @@
+[
+  {
+    "type": "transfer",
+    "id": "user-1-to-11",
+    "description": "transfer from user-1 to user-11",
+    "sender": "{{USER_1_WALLET}}",
+    "params": {
+      "recipient": "{{USER_11_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "user-2-to-12",
+    "description": "transfer from user-2 to user-12",
+    "sender": "{{USER_2_WALLET}}",
+    "params": {
+      "recipient": "{{USER_12_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "user-3-to-13",
+    "description": "transfer from user-3 to user-13",
+    "sender": "{{USER_3_WALLET}}",
+    "params": {
+      "recipient": "{{USER_13_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "user-4-to-14",
+    "description": "transfer from user-4 to user-14",
+    "sender": "{{USER_4_WALLET}}",
+    "params": {
+      "recipient": "{{USER_14_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "user-5-to-15",
+    "description": "transfer from user-5 to user-15",
+    "sender": "{{USER_5_WALLET}}",
+    "params": {
+      "recipient": "{{USER_15_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  }
+]

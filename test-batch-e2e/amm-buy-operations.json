@@ -1,0 +1,67 @@
+[
+  {
+    "type": "buy-amm",
+    "id": "amm-buy-1",
+    "description": "Buy HUE tokens via AMM for user-1",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-1.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 5000000,
+      "slippage": 100,
+      "createAccount": false,
+      "tokenMint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8"
+    }
+  },
+  {
+    "type": "buy-amm",
+    "id": "amm-buy-2",
+    "description": "Buy HUE tokens via AMM for user-2",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-2.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 7500000,
+      "slippage": 100,
+      "createAccount": false,
+      "tokenMint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8"
+    }
+  },
+  {
+    "type": "buy-amm",
+    "id": "amm-buy-3",
+    "description": "Buy HUE tokens via AMM for user-3",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-3.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 10000000,
+      "slippage": 100,
+      "createAccount": false,
+      "tokenMint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8"
+    }
+  },
+  {
+    "type": "buy-amm",
+    "id": "amm-buy-4",
+    "description": "Buy HUE tokens via AMM for user-4",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-4.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 12500000,
+      "slippage": 100,
+      "createAccount": false,
+      "tokenMint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8"
+    }
+  },
+  {
+    "type": "buy-amm",
+    "id": "amm-buy-5",
+    "description": "Buy HUE tokens via AMM for user-5",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-5.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 15000000,
+      "slippage": 100,
+      "createAccount": false,
+      "tokenMint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8"
+    }
+  }
+]

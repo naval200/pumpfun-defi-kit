@@ -1,0 +1,30 @@
+{
+  "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+  "name": "AMMToken201333",
+  "symbol": "AMM",
+  "description": "Test token AMMToken201333",
+  "bondingCurve": "JBYy8S8HUV1gAVTYeL5BHJjAJBUgD4zvDH3Cjgnx6tS",
+  "createdAt": "2025-09-06T14:43:52.250Z",
+  "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+  "poolCreatedAt": "2025-09-06T14:59:14.585Z",
+  "poolTransaction": "DA8wH9xS16Tn8QvYedTvmzYFr32afiZKmNeAYpXbHEcYHDL3wy4DfSULnbMhYfXsMasBQWPTSQVMUAYAddDQGaZ",
+  "poolConfig": {
+    "baseAmount": 10000000,
+    "quoteAmountLamports": "1000000000",
+    "poolIndex": 0,
+    "initialPoolPrice": 100
+  },
+  "pools": [
+    {
+      "index": 0,
+      "address": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "baseAmount": 10000000,
+      "quoteAmount": 1.0,
+      "quoteAmountLamports": "1000000000",
+      "initialPrice": 100,
+      "createdAt": "2025-09-06T14:59:14.585Z",
+      "transaction": "DA8wH9xS16Tn8QvYedTvmzYFr32afiZKmNeAYpXbHEcYHDL3wy4DfSULnbMhYfXsMasBQWPTSQVMUAYAddDQGaZ",
+      "status": "active"
+    }
+  ]
+}

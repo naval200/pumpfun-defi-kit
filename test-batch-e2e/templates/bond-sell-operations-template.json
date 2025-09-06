@@ -1,0 +1,57 @@
+[
+  {
+    "type": "sell-bonding-curve",
+    "id": "bond-sell-1",
+    "description": "Sell HUE tokens via bonding curve for user-1",
+    "sender": "{{USER_1_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 20000,
+      "slippage": 1000
+    }
+  },
+  {
+    "type": "sell-bonding-curve",
+    "id": "bond-sell-2",
+    "description": "Sell HUE tokens via bonding curve for user-2",
+    "sender": "{{USER_2_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 30000,
+      "slippage": 1000
+    }
+  },
+  {
+    "type": "sell-bonding-curve",
+    "id": "bond-sell-3",
+    "description": "Sell HUE tokens via bonding curve for user-3",
+    "sender": "{{USER_3_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 40000,
+      "slippage": 1000
+    }
+  },
+  {
+    "type": "sell-bonding-curve",
+    "id": "bond-sell-4",
+    "description": "Sell HUE tokens via bonding curve for user-4",
+    "sender": "{{USER_4_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 50000,
+      "slippage": 1000
+    }
+  },
+  {
+    "type": "sell-bonding-curve",
+    "id": "bond-sell-5",
+    "description": "Sell HUE tokens via bonding curve for user-5",
+    "sender": "{{USER_5_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 60000,
+      "slippage": 1000
+    }
+  }
+]

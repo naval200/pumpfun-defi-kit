@@ -1,0 +1,62 @@
+[
+  {
+    "type": "transfer",
+    "id": "amm-user-1-to-6",
+    "description": "AMM transfer from user-1 to user-6",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/user-wallets/user-wallet-1.json",
+    "params": {
+      "recipient": "84qLVzHmoUASCXQXZ5JSo1xZF9gR5P6nTsTARjecHr1w",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-user-2-to-7",
+    "description": "AMM transfer from user-2 to user-7",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/user-wallets/user-wallet-2.json",
+    "params": {
+      "recipient": "GzjGrdRNZtEebik9XyeqjS4o29zu77sUWJzLV2eZymox",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-user-3-to-8",
+    "description": "AMM transfer from user-3 to user-8",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/user-wallets/user-wallet-3.json",
+    "params": {
+      "recipient": "ArWctUuHD6PmmNeWNT8ym29Xccpq1tEFMCJJCmqZiCrR",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-user-4-to-9",
+    "description": "AMM transfer from user-4 to user-9",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/user-wallets/user-wallet-4.json",
+    "params": {
+      "recipient": "5mKCaJAFEFuswVmsPrZtvuogWu1sGEUXedRYyiCfJ8uS",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-user-5-to-10",
+    "description": "AMM transfer from user-5 to user-10",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/user-wallets/user-wallet-5.json",
+    "params": {
+      "recipient": "6ggwXNkmfE7Y6pGBWmAiJU1mUB2Q3u5RDTVYdZ9Aos15",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 50,
+      "createAccount": false
+    }
+  }
+]

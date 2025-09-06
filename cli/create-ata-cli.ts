@@ -100,7 +100,7 @@ async function main() {
 
   try {
     // Load wallet
-    const walletPath = join(process.cwd(), args.wallet);
+    const walletPath = args.wallet.startsWith('/') ? args.wallet : join(process.cwd(), args.wallet);
     const walletData = JSON.parse(readFileSync(walletPath, 'utf8'));
     const wallet = Keypair.fromSecretKey(new Uint8Array(walletData));
 

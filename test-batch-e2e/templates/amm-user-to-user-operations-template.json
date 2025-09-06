@@ -1,0 +1,62 @@
+[
+  {
+    "type": "transfer",
+    "id": "amm-user-1-to-6",
+    "description": "AMM transfer from user-1 to user-6",
+    "sender": "{{USER_1_WALLET}}",
+    "params": {
+      "recipient": "{{USER_6_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-user-2-to-7",
+    "description": "AMM transfer from user-2 to user-7",
+    "sender": "{{USER_2_WALLET}}",
+    "params": {
+      "recipient": "{{USER_7_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-user-3-to-8",
+    "description": "AMM transfer from user-3 to user-8",
+    "sender": "{{USER_3_WALLET}}",
+    "params": {
+      "recipient": "{{USER_8_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-user-4-to-9",
+    "description": "AMM transfer from user-4 to user-9",
+    "sender": "{{USER_4_WALLET}}",
+    "params": {
+      "recipient": "{{USER_9_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-user-5-to-10",
+    "description": "AMM transfer from user-5 to user-10",
+    "sender": "{{USER_5_WALLET}}",
+    "params": {
+      "recipient": "{{USER_10_ADDRESS}}",
+      "mint": "{{MINT}}",
+      "amount": 50,
+      "createAccount": false
+    }
+  }
+]

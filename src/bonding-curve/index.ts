@@ -10,4 +10,4 @@ export {
 } from './idl/instructions';
 
 // Utility functions
-export { getBondingCurvePDAs } from './bc-helper';
+export { getBondingCurvePDAs, getAllRequiredPDAsForBuy } from './bc-helper';

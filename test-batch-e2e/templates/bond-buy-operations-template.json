@@ -1,0 +1,62 @@
+[
+  {
+    "type": "buy-bonding-curve",
+    "id": "bond-buy-1",
+    "description": "Buy HUE tokens via bonding curve for user-1",
+    "sender": "{{USER_1_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 5000000,
+      "slippage": 1000,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "buy-bonding-curve",
+    "id": "bond-buy-2",
+    "description": "Buy HUE tokens via bonding curve for user-2",
+    "sender": "{{USER_2_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 7500000,
+      "slippage": 1000,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "buy-bonding-curve",
+    "id": "bond-buy-3",
+    "description": "Buy HUE tokens via bonding curve for user-3",
+    "sender": "{{USER_3_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 10000000,
+      "slippage": 1000,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "buy-bonding-curve",
+    "id": "bond-buy-4",
+    "description": "Buy HUE tokens via bonding curve for user-4",
+    "sender": "{{USER_4_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 12500000,
+      "slippage": 1000,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "buy-bonding-curve",
+    "id": "bond-buy-5",
+    "description": "Buy HUE tokens via bonding curve for user-5",
+    "sender": "{{USER_5_WALLET}}",
+    "params": {
+      "mint": "{{MINT}}",
+      "amount": 15000000,
+      "slippage": 1000,
+      "createAccount": false
+    }
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-1",
+    "description": "AMM airdrop to user-1",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/treasury-wallet.json",
+    "params": {
+      "recipient": "FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 300,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-2",
+    "description": "AMM airdrop to user-2",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/treasury-wallet.json",
+    "params": {
+      "recipient": "HwQDSbFMiT49h2gzYjq4QgJLHDF3rSmL8muAcXm35WP8",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 300,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-3",
+    "description": "AMM airdrop to user-3",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/treasury-wallet.json",
+    "params": {
+      "recipient": "8wz5Zd7o51Gor2WDXNvz3uqdWWd8DSAKtrm7pPuHf4KU",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 300,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-4",
+    "description": "AMM airdrop to user-4",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/treasury-wallet.json",
+    "params": {
+      "recipient": "Eqk2hH2bBBkLo4rZSiNy7Cp8Nb2MLXX9HDyCBETzohQT",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 300,
+      "createAccount": false
+    }
+  },
+  {
+    "type": "transfer",
+    "id": "amm-airdrop-5",
+    "description": "AMM airdrop to user-5",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/test-batch-e2e/../fixtures/treasury-wallet.json",
+    "params": {
+      "recipient": "EeB2FbVEdpfvq9anqbN2QaVt2kmsV6BGw1QfgyN4vnM9",
+      "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
+      "amount": 300,
+      "createAccount": false
+    }
+  }
+]

@@ -101,11 +101,6 @@ fixtures/
 *.key
 *.pem
 
-# Debug files
-debug/
-working_transaciton.txt
-commands.txt
-
 # Temporary files
 *.tmp
 *.temp
