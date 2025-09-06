@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getBondingCurvePDAs = exports.createBondingCurveSellInstruction = exports.createBondingCurveBuyInstruction = exports.sellPumpFunToken = exports.buyPumpFunToken = exports.createPumpFunToken = void 0;
+exports.getAllRequiredPDAsForBuy = exports.getBondingCurvePDAs = exports.createBondingCurveSellInstruction = exports.createBondingCurveBuyInstruction = exports.sellPumpFunToken = exports.buyPumpFunToken = exports.createPumpFunToken = void 0;
 // Main bonding curve functions
 var createToken_1 = require("./createToken");
 Object.defineProperty(exports, "createPumpFunToken", { enumerable: true, get: function () { return createToken_1.createPumpFunToken; } });
@@ -15,4 +15,5 @@ Object.defineProperty(exports, "createBondingCurveSellInstruction", { enumerable
 // Utility functions
 var bc_helper_1 = require("./bc-helper");
 Object.defineProperty(exports, "getBondingCurvePDAs", { enumerable: true, get: function () { return bc_helper_1.getBondingCurvePDAs; } });
+Object.defineProperty(exports, "getAllRequiredPDAsForBuy", { enumerable: true, get: function () { return bc_helper_1.getAllRequiredPDAsForBuy; } });
 //# sourceMappingURL=index.js.map

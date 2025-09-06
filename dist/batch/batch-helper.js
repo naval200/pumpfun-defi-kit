@@ -69,6 +69,14 @@ async function buildInstructionsForOperation(connection, ammSdk, operation, send
         }
         case 'buy-amm': {
             const { poolKey, amount, slippage = 1, createAccount = false, tokenMint } = operation.params;
+            // Get pool information to determine base and quote mints
+            const pool = await ammSdk.fetchPool(new web3_js_1.PublicKey(poolKey));
+            const baseMint = pool.baseMint;
+            const quoteMint = pool.quoteMint; // This should be SOL
+            // Get the user's token accounts
+            const userBaseTokenAccount = (0, createAccount_1.getAssociatedTokenAccountAddress)(senderKeypair.publicKey, baseMint, false);
+            // For SOL, use the wallet's main account (no separate token account needed)
+            const userQuoteTokenAccount = senderKeypair.publicKey;
             // If createAccount is true, we need the tokenMint parameter
             if (createAccount) {
                 if (!tokenMint) {
@@ -82,14 +90,35 @@ async function buildInstructionsForOperation(connection, ammSdk, operation, send
                 instructions.push(createAtaIx);
                 (0, debug_1.debugLog)(`🏗️ Added ATA creation instruction for AMM buy operation ${operation.id}`);
             }
-            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey);
+            (0, debug_1.debugLog)(`🔍 Using explicit token accounts for buy-amm:`);
+            (0, debug_1.debugLog)(`   Base token account: ${userBaseTokenAccount.toString()}`);
+            (0, debug_1.debugLog)(`   Quote token account (SOL): ${userQuoteTokenAccount.toString()}`);
+            // For buy-amm operations, we need to pass the HUE token account but NOT the SOL token account
+            // SOL is native currency and doesn't need a token account
+            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey, userBaseTokenAccount, // HUE token account
+            undefined // No SOL token account needed
+            );
             const ixs = await (0, amm_1.createAmmBuyInstructionsAssuming)(ammSdk, state, amount, slippage);
             instructions.push(...ixs);
             break;
         }
         case 'sell-amm': {
             const { poolKey, amount, slippage = 1 } = operation.params;
-            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey);
+            // Get pool information to determine base and quote mints
+            const pool = await ammSdk.fetchPool(new web3_js_1.PublicKey(poolKey));
+            const baseMint = pool.baseMint;
+            // Get the user's token accounts
+            const userBaseTokenAccount = (0, createAccount_1.getAssociatedTokenAccountAddress)(senderKeypair.publicKey, baseMint, false);
+            // For SOL, use the wallet's main account (no separate token account needed)
+            const userQuoteTokenAccount = senderKeypair.publicKey;
+            (0, debug_1.debugLog)(`🔍 Using explicit token accounts for sell-amm:`);
+            (0, debug_1.debugLog)(`   Base token account: ${userBaseTokenAccount.toString()}`);
+            (0, debug_1.debugLog)(`   Quote token account (SOL): ${userQuoteTokenAccount.toString()}`);
+            // For sell-amm operations, we need to pass the HUE token account but NOT the SOL token account
+            // SOL is native currency and doesn't need a token account
+            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey, userBaseTokenAccount, // HUE token account
+            undefined // No SOL token account needed
+            );
             const ixs = await (0, amm_1.createAmmSellInstructionsAssuming)(ammSdk, state, amount, slippage);
             instructions.push(...ixs);
             break;
