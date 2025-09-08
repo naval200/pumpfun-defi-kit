@@ -7,8 +7,7 @@
     "params": {
       "recipient": "{{USER_11_ADDRESS}}",
       "mint": "{{MINT}}",
-      "amount": 50,
-      "createAccount": false
+      "amount": 50
     }
   },
   {
@@ -19,8 +18,7 @@
     "params": {
       "recipient": "{{USER_12_ADDRESS}}",
       "mint": "{{MINT}}",
-      "amount": 50,
-      "createAccount": false
+      "amount": 50
     }
   },
   {
@@ -31,8 +29,7 @@
     "params": {
       "recipient": "{{USER_13_ADDRESS}}",
       "mint": "{{MINT}}",
-      "amount": 50,
-      "createAccount": false
+      "amount": 50
     }
   },
   {
@@ -43,8 +40,7 @@
     "params": {
       "recipient": "{{USER_14_ADDRESS}}",
       "mint": "{{MINT}}",
-      "amount": 50,
-      "createAccount": false
+      "amount": 50
     }
   },
   {
@@ -55,8 +51,7 @@
     "params": {
       "recipient": "{{USER_15_ADDRESS}}",
       "mint": "{{MINT}}",
-      "amount": 50,
-      "createAccount": false
+      "amount": 50
     }
   }
 ]

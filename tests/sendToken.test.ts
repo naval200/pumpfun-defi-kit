@@ -110,8 +110,7 @@ describe('sendToken', () => {
         mockWallet,
         mockRecipient,
         mockMint,
-        BigInt(100),
-        false, // allowOwnerOffCurve
+        100,
         false  // createRecipientAccount
       );
 
@@ -132,8 +131,7 @@ describe('sendToken', () => {
         mockWallet,
         mockRecipient,
         mockMint,
-        BigInt(100),
-        false, // allowOwnerOffCurve
+        100,
         true   // createRecipientAccount
       );
 
@@ -154,8 +152,7 @@ describe('sendToken', () => {
         mockWallet,
         mockRecipient,
         mockMint,
-        BigInt(100),
-        false, // allowOwnerOffCurve
+        100,
         false  // createRecipientAccount
       );
 
@@ -175,8 +172,7 @@ describe('sendToken', () => {
         mockWallet,
         mockRecipient,
         mockMint,
-        BigInt(100),
-        false, // allowOwnerOffCurve
+        100,
         false  // createRecipientAccount
       );
 
@@ -199,7 +195,7 @@ describe('sendToken', () => {
         mockWallet,
         mockRecipient,
         mockMint,
-        BigInt(100)
+        100
       );
 
       expect(result.success).toBe(true);
@@ -222,8 +218,7 @@ describe('sendToken', () => {
         mockWallet,
         mockRecipient,
         mockMint,
-        BigInt(100),
-        false, // allowOwnerOffCurve
+        100,
         false  // createRecipientAccount
       );
 

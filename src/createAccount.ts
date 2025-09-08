@@ -12,12 +12,9 @@ import { debugLog, logSuccess, logSignature } from './utils/debug';
  */
 export function getAssociatedTokenAccountAddress(
   owner: PublicKey,
-  mint: PublicKey,
-  allowOwnerOffCurve: boolean = false
+  mint: PublicKey
 ): PublicKey {
-  return allowOwnerOffCurve
-    ? getAssociatedTokenAddressSync(mint, owner, allowOwnerOffCurve)
-    : getAssociatedTokenAddressSync(mint, owner);
+  return getAssociatedTokenAddressSync(mint, owner);
 }
 
 /**
@@ -27,10 +24,9 @@ export function getAssociatedTokenAccountAddress(
 export function createAssociatedTokenAccountInstruction(
   payer: PublicKey,
   owner: PublicKey,
-  mint: PublicKey,
-  allowOwnerOffCurve: boolean = false
+  mint: PublicKey
 ): { instruction: any; account: PublicKey } {
-  const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
+  const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
   const instruction = createAssociatedTokenAccountInstructionSPL(
     payer, // payer
     userTokenAccount, // associated token account
@@ -47,17 +43,33 @@ export function createAssociatedTokenAccountInstruction(
 }
 
 /**
+ * Create the instruction for creating an Associated Token Account (ATA) for WSOL
+ * This is a convenience function that calls createAssociatedTokenAccountInstruction
+ * with the WSOL mint address (So111...12)
+ */
+export function createAssociatedWSOLAccountInstruction(
+  payer: PublicKey,
+  owner: PublicKey
+): { instruction: any; account: PublicKey } {
+  const WSOL_MINT = new PublicKey('So11111111111111111111111111111111111111112');
+  return createAssociatedTokenAccountInstruction(
+    payer,
+    owner,
+    WSOL_MINT
+  );
+}
+
+/**
  * Create an Associated Token Account (ATA) for a user and mint
  */
 export async function createAssociatedTokenAccount(
   connection: Connection,
   payer: Keypair,
   owner: PublicKey,
-  mint: PublicKey,
-  allowOwnerOffCurve: boolean = false
+  mint: PublicKey
 ): Promise<{ success: boolean; signature?: string; error?: string; account?: PublicKey }> {
   try {
-    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
+    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
 
     debugLog(`🏗️ Creating ATA: ${userTokenAccount.toString()}`);
 
@@ -77,8 +89,7 @@ export async function createAssociatedTokenAccount(
     const { instruction } = createAssociatedTokenAccountInstruction(
       payer.publicKey,
       owner,
-      mint,
-      allowOwnerOffCurve
+      mint
     );
 
     const createAtaTx = new Transaction();
@@ -132,11 +143,10 @@ export async function getOrCreateAssociatedTokenAccount(
   connection: Connection,
   payer: Keypair,
   owner: PublicKey,
-  mint: PublicKey,
-  allowOwnerOffCurve: boolean = false
+  mint: PublicKey
 ): Promise<{ success: boolean; account: PublicKey; error?: string }> {
   try {
-    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
+    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
 
     // Check if ATA exists
     try {
@@ -150,7 +160,6 @@ export async function getOrCreateAssociatedTokenAccount(
         payer,
         owner,
         mint,
-        allowOwnerOffCurve
       );
       if (createResult.success && createResult.account) {
         return { success: true, account: createResult.account };

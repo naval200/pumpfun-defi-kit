@@ -42,7 +42,7 @@ export async function createBatchInstructions(
   connection: Connection,
   operations: BatchOperation[],
   feePayer?: Keypair,
-  options: Partial<BatchExecutionOptions & { dynamicBatching?: boolean }> = {}
+  options: BatchExecutionOptions = {}
 ): Promise<BatchInstructionResult[]> {
   const { maxParallel = 3, dynamicBatching = false } = options;
 

@@ -8,7 +8,6 @@
       "poolKey": "{{POOL_KEY}}",
       "amount": 5000000,
       "slippage": 100,
-      "createAccount": false,
       "tokenMint": "{{MINT}}"
     }
   },
@@ -21,7 +20,6 @@
       "poolKey": "{{POOL_KEY}}",
       "amount": 7500000,
       "slippage": 100,
-      "createAccount": false,
       "tokenMint": "{{MINT}}"
     }
   },
@@ -34,7 +32,6 @@
       "poolKey": "{{POOL_KEY}}",
       "amount": 10000000,
       "slippage": 100,
-      "createAccount": false,
       "tokenMint": "{{MINT}}"
     }
   },
@@ -47,7 +44,6 @@
       "poolKey": "{{POOL_KEY}}",
       "amount": 12500000,
       "slippage": 100,
-      "createAccount": false,
       "tokenMint": "{{MINT}}"
     }
   },
@@ -60,7 +56,6 @@
       "poolKey": "{{POOL_KEY}}",
       "amount": 15000000,
       "slippage": 100,
-      "createAccount": false,
       "tokenMint": "{{MINT}}"
     }
   }

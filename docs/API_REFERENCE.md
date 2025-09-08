@@ -22,7 +22,7 @@ function batchTransactions(
   connection: Connection,
   operations: BatchOperation[],
   feePayer?: Keypair,
-  options?: Partial<BatchExecutionOptions>
+  options?: BatchExecutionOptions
 ): Promise<BatchResult[]>
 ```
 

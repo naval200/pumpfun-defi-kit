@@ -1,7 +1,7 @@
 import { Connection, Keypair, Transaction } from '@solana/web3.js';
 import { PumpAmmSdk } from '@pump-fun/pump-swap-sdk';
 
-import { debugLog, logError, DEBUG_MODE } from '../utils/debug';
+import { debugLog, logError } from '../utils/debug';
 import { createBatchInstructions, BatchInstructionResult } from './instructions';
 import { buildInstructionsForOperation } from './batch-helper';
 import type {
@@ -21,11 +21,12 @@ import type {
  * - Fee payer signs last (if provided)
  * - Accounts are always assumed to exist (users must check beforehand)
  */
+
 export async function batchTransactions(
   connection: Connection,
   operations: BatchOperation[],
   feePayer?: Keypair,
-  options: Partial<BatchExecutionOptions & { dynamicBatching?: boolean }> = {}
+  options: BatchExecutionOptions = {}
 ): Promise<BatchResult[]> {
   const { delayBetween = 1000, retryFailed = false, disableFallbackRetry = false } = options;
 

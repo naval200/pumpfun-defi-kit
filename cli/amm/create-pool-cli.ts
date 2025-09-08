@@ -141,7 +141,7 @@ async function main() {
     // Define pool parameters
     const quoteMint = new PublicKey(
       args.quoteMint || 'So11111111111111111111111111111111111111112'
-    ); // SOL (wrapped SOL)
+    ); // SOL SPL mint (no manual wrapping required)
 
     // Pool amounts (use provided values or defaults)
     const baseIn = args.baseAmount ?? 1_000_000; // tokens (assuming 6 decimals)

@@ -91,29 +91,14 @@ OPERATIONS_JSON=$(echo "$OPERATIONS_JSON" | sed "s|{{POOL_KEY}}|$POOL_KEY|g")
 echo "$OPERATIONS_JSON" > "$OPERATIONS_FILE"
 echo "📝 Generated operations file: $OPERATIONS_FILE"
 
-# 5) Execute buy operations individually (AMM transactions are too large for batching)
-echo "🚀 Executing AMM buy operations individually..."
-echo "💡 Note: AMM transactions are too large for batch processing, executing individually"
-
-# Execute buy operations for each user
-for i in $(seq 1 5); do
-  WALLET_FILE="$USER_DIR/user-wallet-$i.json"
-  USER_PUB=$(solana-keygen pubkey "$WALLET_FILE")
-  
-  # Calculate amount based on user (0.005, 0.0075, 0.01, 0.0125, 0.015 SOL)
-  AMOUNT=$(echo "scale=4; 0.005 + ($i - 1) * 0.0025" | bc)
-  
-  echo "🛒 User-$i ($USER_PUB): Buying $AMOUNT SOL worth of tokens..."
-  
-  npm run cli:amm:buy -- \
-    --wallet "$WALLET_FILE" \
-    --amount "$AMOUNT" \
-    --input-token "$DEBUG_DIR/amm-token-info.json" \
-    --slippage 100 || echo "⚠️ Buy failed for user-$i"
-  
-  # Small delay between operations
-  sleep 2
-done
+# 5) Execute batch buy operations
+echo "🚀 Executing AMM batch buy operations..."
+npm run cli:batch-transactions -- \
+  --operations "$OPERATIONS_FILE" \
+  --fee-payer "$TREASURY_WALLET" \
+  --max-parallel 1 \
+  --delay-between 2000 \
+  --retry-failed
 
 echo "✅ AMM-04 batch buy operations completed!"
 echo "🎯 Users 1-5 have purchased tokens via AMM"

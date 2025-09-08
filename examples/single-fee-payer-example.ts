@@ -28,7 +28,6 @@ const exampleOperations: BatchOperation[] = [
       recipient: '11111111111111111111111111111111',
       mint: '22222222222222222222222222222222',
       amount: '100000000',
-      createAccount: true,
     },
   },
   {

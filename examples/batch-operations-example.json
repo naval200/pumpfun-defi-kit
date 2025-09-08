@@ -1,13 +1,21 @@
 [
   {
+    "type": "create-account",
+    "id": "create-ata-user-a",
+    "description": "Create ATA for user A",
+    "params": {
+      "mint": "22222222222222222222222222222222",
+      "owner": "11111111111111111111111111111111"
+    }
+  },
+  {
     "type": "transfer",
     "id": "transfer-1",
     "description": "Send 100 tokens to user A",
     "params": {
       "recipient": "11111111111111111111111111111111",
       "mint": "22222222222222222222222222222222",
-      "amount": "100000000",
-      "createAccount": true
+      "amount": "100000000"
     }
   },
   {
@@ -17,8 +25,7 @@
     "params": {
       "recipient": "33333333333333333333333333333333",
       "mint": "22222222222222222222222222222222",
-      "amount": "50000000",
-      "createAccount": false
+      "amount": "50000000"
     }
   },
   {

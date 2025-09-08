@@ -25,7 +25,6 @@ import { createAssociatedTokenAccount } from './createAccount';
  * @param recipient - PublicKey of the recipient
  * @param mint - PublicKey of the token mint
  * @param amount - Amount of tokens to send
- * @param allowOwnerOffCurve - Whether to allow owner off curve (default: false)
  * @param createRecipientAccount - Whether to create recipient account if needed (default: true)
  * @param feePayer - Optional Keypair for the fee payer (if different from sender)
  * @returns Promise resolving to transfer result object
@@ -36,7 +35,6 @@ export async function sendToken(
   recipient: PublicKey,
   mint: PublicKey,
   amount: number,
-  allowOwnerOffCurve: boolean = false,
   createRecipientAccount: boolean = true,
   feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
@@ -72,7 +70,6 @@ export async function sendToken(
         recipientTokenAccount = await getAssociatedTokenAddress(
           mint,
           recipient,
-          allowOwnerOffCurve
         );
       } catch (error) {
         return {
@@ -88,7 +85,6 @@ export async function sendToken(
         sender,
         recipient,
         mint,
-        allowOwnerOffCurve
       );
       if (result.success && result.account) {
         recipientTokenAccount = result.account;
@@ -186,12 +182,11 @@ export async function sendTokenAssumingExistingAccounts(
   recipient: PublicKey,
   mint: PublicKey,
   amount: number,
-  allowOwnerOffCurve: boolean = false,
   feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
   try {
     const senderTokenAccount = await getAssociatedTokenAddress(mint, sender.publicKey);
-    const recipientTokenAccount = await getAssociatedTokenAddress(mint, recipient, allowOwnerOffCurve);
+    const recipientTokenAccount = await getAssociatedTokenAddress(mint, recipient);
 
     const tx = new Transaction().add(
       createTransferInstruction(
@@ -237,7 +232,6 @@ export async function sendTokenWithAccountCreation(
   recipient: PublicKey,
   mint: PublicKey,
   amount: number,
-  allowOwnerOffCurve: boolean = false,
   feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
   return sendToken(
@@ -246,7 +240,6 @@ export async function sendTokenWithAccountCreation(
     recipient,
     mint,
     amount,
-    allowOwnerOffCurve,
     true,
     feePayer
   );
@@ -262,7 +255,6 @@ export async function sendTokenToExistingAccount(
   recipient: PublicKey,
   mint: PublicKey,
   amount: number,
-  allowOwnerOffCurve: boolean = false,
   feePayer?: Keypair
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }> {
   return sendToken(
@@ -271,7 +263,6 @@ export async function sendTokenToExistingAccount(
     recipient,
     mint,
     amount,
-    allowOwnerOffCurve,
     false,
     feePayer
   );
@@ -284,7 +275,6 @@ export async function sendTokenToExistingAccount(
  * @param recipient - Recipient's public key  
  * @param mint - Token mint public key
  * @param amount - Amount to transfer (as number)
- * @param allowOwnerOffCurve - Whether to allow owner off curve (default: false)
  * @returns TransactionInstruction ready for batching
  */
 export function createTokenTransferInstruction(
@@ -292,10 +282,9 @@ export function createTokenTransferInstruction(
   recipient: PublicKey,
   mint: PublicKey,
   amount: number,
-  allowOwnerOffCurve: boolean = false
 ): TransactionInstruction {
   const sourceAta = getAssociatedTokenAddressSync(mint, sender, false);
-  const destAta = getAssociatedTokenAddressSync(mint, recipient, allowOwnerOffCurve);
+  const destAta = getAssociatedTokenAddressSync(mint, recipient);
   
   return createTransferInstruction(
     sourceAta,
@@ -314,10 +303,9 @@ export async function canReceiveTokens(
   connection: Connection,
   recipient: PublicKey,
   mint: PublicKey,
-  allowOwnerOffCurve: boolean = false
 ): Promise<{ canReceive: boolean; hasAccount: boolean; accountAddress?: PublicKey }> {
   try {
-    const tokenAccount = await getAssociatedTokenAddress(mint, recipient, allowOwnerOffCurve);
+    const tokenAccount = await getAssociatedTokenAddress(mint, recipient);
 
     try {
       await getAccount(connection, tokenAccount);

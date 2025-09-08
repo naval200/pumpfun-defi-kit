@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { debugLog, logSuccess, logError } from '../src/utils/debug';
@@ -15,7 +15,6 @@ interface Args {
   wallet: string;
   mint: string;
   owner: string;
-  allowOwnerOffCurve?: boolean;
   checkOnly?: boolean;
   force?: boolean;
 }
@@ -34,9 +33,6 @@ function parseArgs(): Args {
         break;
       case '--owner':
         parsed.owner = args[++i];
-        break;
-      case '--allow-owner-off-curve':
-        parsed.allowOwnerOffCurve = true;
         break;
       case '--check-only':
         parsed.checkOnly = true;
@@ -95,7 +91,6 @@ async function main() {
   debugLog(`Wallet: ${args.wallet}`);
   debugLog(`Mint: ${args.mint}`);
   debugLog(`Owner: ${args.owner}`);
-  debugLog(`Allow Owner Off Curve: ${args.allowOwnerOffCurve || false}`);
   debugLog(`Mode: ${args.checkOnly ? 'Check Only' : 'Create/Get'}`);
 
   try {
@@ -140,7 +135,6 @@ async function main() {
         wallet,
         owner,
         mint,
-        args.allowOwnerOffCurve || false
       );
       
       if (result.success) {
@@ -163,7 +157,6 @@ async function main() {
         wallet,
         owner,
         mint,
-        args.allowOwnerOffCurve || false
       );
       
       if (result.success) {

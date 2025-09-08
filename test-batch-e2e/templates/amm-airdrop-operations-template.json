@@ -8,7 +8,6 @@
       "recipient": "{{USER_1_ADDRESS}}",
       "mint": "{{MINT}}",
       "amount": 300,
-      "createAccount": false
     }
   },
   {
@@ -20,7 +19,6 @@
       "recipient": "{{USER_2_ADDRESS}}",
       "mint": "{{MINT}}",
       "amount": 300,
-      "createAccount": false
     }
   },
   {
@@ -32,7 +30,6 @@
       "recipient": "{{USER_3_ADDRESS}}",
       "mint": "{{MINT}}",
       "amount": 300,
-      "createAccount": false
     }
   },
   {
@@ -44,7 +41,6 @@
       "recipient": "{{USER_4_ADDRESS}}",
       "mint": "{{MINT}}",
       "amount": 300,
-      "createAccount": false
     }
   },
   {
@@ -56,7 +52,6 @@
       "recipient": "{{USER_5_ADDRESS}}",
       "mint": "{{MINT}}",
       "amount": 300,
-      "createAccount": false
     }
   }
 ]

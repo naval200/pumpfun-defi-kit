@@ -72,8 +72,7 @@ async function sendTokenCli() {
       wallet,
       recipientAddress,
       mintAddress,
-      BigInt(args.amount),
-      false, // allowOwnerOffCurve
+      args.amount,
       feePayer || wallet
     );
 
@@ -97,9 +96,8 @@ async function sendTokenCli() {
       wallet,
       recipientAddress,
       mintAddress,
-      BigInt(args.amount),
-      false, // allowOwnerOffCurve
-      args.createAccount !== false, // createRecipientAccount
+      args.amount,
+      args.createAccount, // createRecipientAccount
       feePayer || wallet
     );
 

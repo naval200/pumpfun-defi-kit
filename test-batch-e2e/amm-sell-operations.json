@@ -1,0 +1,57 @@
+[
+  {
+    "type": "sell-amm",
+    "id": "amm-sell-1",
+    "description": "Sell tokens via AMM for user-1",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-1.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 20000,
+      "slippage": 100
+    }
+  },
+  {
+    "type": "sell-amm",
+    "id": "amm-sell-2",
+    "description": "Sell tokens via AMM for user-2",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-2.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 30000,
+      "slippage": 100
+    }
+  },
+  {
+    "type": "sell-amm",
+    "id": "amm-sell-3",
+    "description": "Sell tokens via AMM for user-3",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-3.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 40000,
+      "slippage": 100
+    }
+  },
+  {
+    "type": "sell-amm",
+    "id": "amm-sell-4",
+    "description": "Sell tokens via AMM for user-4",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-4.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 50000,
+      "slippage": 100
+    }
+  },
+  {
+    "type": "sell-amm",
+    "id": "amm-sell-5",
+    "description": "Sell tokens via AMM for user-5",
+    "sender": "/Users/navalsaini/hf/pumpfun-defikit/fixtures/user-wallets/user-wallet-5.json",
+    "params": {
+      "poolKey": "BfrhT9wdYNhvVKnFk7uR4fkJwWQfS85kAnCMockodjWD",
+      "amount": 60000,
+      "slippage": 100
+    }
+  }
+]

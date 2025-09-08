@@ -136,9 +136,14 @@ async function main() {
 
     // Check source wallet balance
     const balance = await connection.getBalance(fromWallet.publicKey);
-    if (balance < amountLamports) {
-      console.log(`❌ Insufficient balance. Need at least ${formatLamportsAsSol(amountLamports)} SOL`);
+    const minRentExemptBalance = 890000; // Minimum rent-exempt balance
+    const estimatedFee = 5000; // Conservative estimate for transaction fee
+    const requiredBalance = amountLamports + estimatedFee + minRentExemptBalance;
+    
+    if (balance < requiredBalance) {
+      console.log(`❌ Insufficient balance. Need at least ${formatLamportsAsSol(requiredBalance)} SOL`);
       console.log(`💰 Available: ${formatLamportsAsSol(balance)} SOL`);
+      console.log(`💡 Required includes: ${formatLamportsAsSol(amountLamports)} SOL + ${formatLamportsAsSol(estimatedFee)} fee + ${formatLamportsAsSol(minRentExemptBalance)} rent exemption`);
       process.exit(1);
     }
 

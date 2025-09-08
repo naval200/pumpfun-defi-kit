@@ -8,7 +8,6 @@
       "recipient": "84qLVzHmoUASCXQXZ5JSo1xZF9gR5P6nTsTARjecHr1w",
       "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
       "amount": 50,
-      "createAccount": false
     }
   },
   {
@@ -20,7 +19,6 @@
       "recipient": "GzjGrdRNZtEebik9XyeqjS4o29zu77sUWJzLV2eZymox",
       "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
       "amount": 50,
-      "createAccount": false
     }
   },
   {
@@ -32,7 +30,6 @@
       "recipient": "ArWctUuHD6PmmNeWNT8ym29Xccpq1tEFMCJJCmqZiCrR",
       "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
       "amount": 50,
-      "createAccount": false
     }
   },
   {
@@ -44,7 +41,6 @@
       "recipient": "5mKCaJAFEFuswVmsPrZtvuogWu1sGEUXedRYyiCfJ8uS",
       "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
       "amount": 50,
-      "createAccount": false
     }
   },
   {
@@ -56,7 +52,6 @@
       "recipient": "6ggwXNkmfE7Y6pGBWmAiJU1mUB2Q3u5RDTVYdZ9Aos15",
       "mint": "7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8",
       "amount": 50,
-      "createAccount": false
     }
   }
 ]
