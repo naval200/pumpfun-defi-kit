@@ -26,13 +26,13 @@ This document outlines performance optimization opportunities identified in the 
 **Before**:
 ```typescript
 const senderTokenAccount = await getAssociatedTokenAddress(mint, sender.publicKey);
-const recipientTokenAccount = await getAssociatedTokenAddress(mint, recipient, allowOwnerOffCurve);
+const recipientTokenAccount = await getAssociatedTokenAddress(mint, recipient);
 ```
 
 **After**:
 ```typescript
 const senderTokenAccount = getAssociatedTokenAddressSync(mint, sender.publicKey);
-const recipientTokenAccount = getAssociatedTokenAddressSync(mint, recipient, allowOwnerOffCurve);
+const recipientTokenAccount = getAssociatedTokenAddressSync(mint, recipients);
 ```
 
 #### 1.2 PDA Derivation Optimization

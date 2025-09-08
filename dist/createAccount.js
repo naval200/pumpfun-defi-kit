@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAssociatedTokenAccountAddress = getAssociatedTokenAccountAddress;
 exports.createAssociatedTokenAccountInstruction = createAssociatedTokenAccountInstruction;
+exports.createAssociatedWSOLAccountInstruction = createAssociatedWSOLAccountInstruction;
 exports.createAssociatedTokenAccount = createAssociatedTokenAccount;
 exports.getOrCreateAssociatedTokenAccount = getOrCreateAssociatedTokenAccount;
 exports.checkAssociatedTokenAccountExists = checkAssociatedTokenAccountExists;
@@ -13,17 +14,15 @@ const debug_1 = require("./utils/debug");
 /**
  * Get the Associated Token Account address for a user and mint
  */
-function getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve = false) {
-    return allowOwnerOffCurve
-        ? (0, spl_token_1.getAssociatedTokenAddressSync)(mint, owner, allowOwnerOffCurve)
-        : (0, spl_token_1.getAssociatedTokenAddressSync)(mint, owner);
+function getAssociatedTokenAccountAddress(owner, mint) {
+    return (0, spl_token_1.getAssociatedTokenAddressSync)(mint, owner);
 }
 /**
  * Create the instruction for creating an Associated Token Account (ATA)
  * This function only creates the instruction without executing it
  */
-function createAssociatedTokenAccountInstruction(payer, owner, mint, allowOwnerOffCurve = false) {
-    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
+function createAssociatedTokenAccountInstruction(payer, owner, mint) {
+    const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
     const instruction = (0, spl_token_1.createAssociatedTokenAccountInstruction)(payer, // payer
     userTokenAccount, // associated token account
     owner, // owner
@@ -35,11 +34,20 @@ function createAssociatedTokenAccountInstruction(payer, owner, mint, allowOwnerO
     };
 }
 /**
+ * Create the instruction for creating an Associated Token Account (ATA) for WSOL
+ * This is a convenience function that calls createAssociatedTokenAccountInstruction
+ * with the WSOL mint address (So111...12)
+ */
+function createAssociatedWSOLAccountInstruction(payer, owner) {
+    const WSOL_MINT = new web3_js_1.PublicKey('So11111111111111111111111111111111111111112');
+    return createAssociatedTokenAccountInstruction(payer, owner, WSOL_MINT);
+}
+/**
  * Create an Associated Token Account (ATA) for a user and mint
  */
-async function createAssociatedTokenAccount(connection, payer, owner, mint, allowOwnerOffCurve = false) {
+async function createAssociatedTokenAccount(connection, payer, owner, mint) {
     try {
-        const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
+        const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
         (0, debug_1.debugLog)(`🏗️ Creating ATA: ${userTokenAccount.toString()}`);
         // Check if ATA already exists
         try {
@@ -54,7 +62,7 @@ async function createAssociatedTokenAccount(connection, payer, owner, mint, allo
             // ATA doesn't exist, create it
             (0, debug_1.debugLog)('🏗️ Creating new associated token account...');
         }
-        const { instruction } = createAssociatedTokenAccountInstruction(payer.publicKey, owner, mint, allowOwnerOffCurve);
+        const { instruction } = createAssociatedTokenAccountInstruction(payer.publicKey, owner, mint);
         const createAtaTx = new web3_js_1.Transaction();
         createAtaTx.add(instruction);
         // Get recent blockhash and set fee payer
@@ -96,9 +104,9 @@ async function createAssociatedTokenAccount(connection, payer, owner, mint, allo
 /**
  * Get or create an Associated Token Account (ATA) for a user and mint
  */
-async function getOrCreateAssociatedTokenAccount(connection, payer, owner, mint, allowOwnerOffCurve = false) {
+async function getOrCreateAssociatedTokenAccount(connection, payer, owner, mint) {
     try {
-        const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint, allowOwnerOffCurve);
+        const userTokenAccount = getAssociatedTokenAccountAddress(owner, mint);
         // Check if ATA exists
         try {
             await (0, spl_token_1.getAccount)(connection, userTokenAccount);
@@ -107,7 +115,7 @@ async function getOrCreateAssociatedTokenAccount(connection, payer, owner, mint,
         }
         catch (error) {
             // ATA doesn't exist, create it
-            const createResult = await createAssociatedTokenAccount(connection, payer, owner, mint, allowOwnerOffCurve);
+            const createResult = await createAssociatedTokenAccount(connection, payer, owner, mint);
             if (createResult.success && createResult.account) {
                 return { success: true, account: createResult.account };
             }

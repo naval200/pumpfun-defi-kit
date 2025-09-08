@@ -176,6 +176,87 @@ interface BatchInstructionResult {
 }
 ```
 
+### Operation Type Reference
+
+#### `create-account` Operation
+
+Creates Associated Token Accounts (ATAs) for SPL tokens and WSOL.
+
+**Parameters:**
+- `mint` (string): The token mint public key
+- `owner` (string): The owner of the token account
+
+**Example:**
+```typescript
+{
+  id: 'create-ata-user1',
+  type: 'create-account',
+  description: 'Create ATA for user 1',
+  sender: senderKeypair,
+  params: {
+    mint: 'TokenMintPublicKey',
+    owner: 'User1PublicKey',
+  },
+}
+```
+
+**What it creates:**
+- SPL token ATA for the specified mint and owner
+- WSOL ATA for the owner (needed for AMM operations)
+
+#### `transfer` Operation
+
+Transfers SPL tokens between accounts.
+
+**Parameters:**
+- `recipient` (string): Recipient's public key
+- `mint` (string): Token mint public key
+- `amount` (number): Amount to transfer in token units
+
+#### `sol-transfer` Operation
+
+Transfers SOL between accounts.
+
+**Parameters:**
+- `recipient` (string): Recipient's public key
+- `amount` (number): Amount to transfer in lamports
+
+#### `buy-bonding-curve` Operation
+
+Buys tokens from the bonding curve.
+
+**Parameters:**
+- `mint` (string): Token mint public key
+- `amount` (number): SOL amount in lamports
+- `slippage` (number): Slippage tolerance (0-100)
+
+#### `sell-bonding-curve` Operation
+
+Sells tokens to the bonding curve.
+
+**Parameters:**
+- `mint` (string): Token mint public key
+- `amount` (number): Token amount to sell
+- `slippage` (number): Slippage tolerance (0-100)
+
+#### `buy-amm` Operation
+
+Buys tokens via AMM.
+
+**Parameters:**
+- `poolKey` (string): AMM pool public key
+- `amount` (number): SOL amount in lamports
+- `slippage` (number): Slippage tolerance (0-100)
+
+#### `sell-amm` Operation
+
+Sells tokens via AMM.
+
+**Parameters:**
+- `poolKey` (string): AMM pool public key
+- `amount` (number): Token amount to sell
+- `slippage` (number): Slippage tolerance (0-100)
+
 ## Use Cases for Separated Approach
 
 ### 1. Create Instructions Once, Execute Multiple Times
@@ -245,81 +326,255 @@ const results = await Promise.all(executionPromises);
 
 ## Supported Operation Types
 
-- `transfer`: Transfer tokens between accounts
+- `create-account`: Create associated token accounts (ATAs) for SPL tokens and WSOL
+- `transfer`: Transfer SPL tokens between accounts
 - `sol-transfer`: Transfer SOL between accounts
 - `buy-bonding-curve`: Buy tokens via bonding curve
 - `sell-bonding-curve`: Sell tokens via bonding curve
 - `buy-amm`: Buy tokens via AMM
 - `sell-amm`: Sell tokens via AMM
 
-## Automatic Account Creation
+## Account Creation with `create-account` Operations
 
-The batch system supports automatic Associated Token Account (ATA) creation for operations that require it. This eliminates the need to manually create token accounts before executing batch operations.
+The `create-account` operation allows you to explicitly create Associated Token Accounts (ATAs) within batch transactions. This is essential for operations that require specific token accounts to exist.
 
-### Supported Operations with Account Creation
+### What `create-account` Does
 
-- **Transfer operations**: Creates ATA for the recipient if it doesn't exist
-- **Buy operations**: Creates ATA for the buyer if it doesn't exist
+When you use a `create-account` operation, it automatically creates **two** token accounts:
 
-### Usage
+1. **SPL Token ATA**: For the specified mint and owner
+2. **WSOL ATA**: For wrapped SOL operations (needed for AMM trading)
 
-Add the `createAccount: true` flag to operation parameters:
+This ensures that all subsequent operations in the batch will have the required accounts available.
+
+### Supported Scenarios
+
+- **Transfer operations**: Create recipient ATA before transferring tokens
+- **Buy operations (bonding curve or AMM)**: Create buyer ATA before purchasing tokens
+- **AMM trading**: Create both token and WSOL ATAs for trading operations
+- **First-time users**: Ensure new users have required accounts before operations
+
+### Basic Usage
 
 ```typescript
 const operations: BatchOperation[] = [
+  // 1) Create ATA for recipient before transfer
+  {
+    id: 'create-ata-recipient',
+    type: 'create-account',
+    description: 'Create ATA for token recipient',
+    sender: senderKeypair,
+    params: {
+      mint: 'TokenMintPublicKey',
+      owner: 'RecipientPublicKey',
+    },
+  },
+  // 2) Transfer tokens to the newly created ATA
   {
     id: 'transfer-1',
     type: 'transfer',
-    description: 'Transfer tokens to user, create ATA if needed',
+    description: 'Transfer tokens to user',
     sender: senderKeypair,
     params: {
       recipient: 'RecipientPublicKey',
       mint: 'TokenMintPublicKey',
       amount: 1000,
-      createAccount: true, // ✅ Creates ATA for recipient
-    },
-  },
-  {
-    id: 'buy-bc-1',
-    type: 'buy-bonding-curve',
-    description: 'Buy tokens, create ATA if needed',
-    sender: buyerKeypair,
-    params: {
-      mint: 'TokenMintPublicKey',
-      amount: 1000000, // SOL amount in lamports
-      slippage: 1,
-      createAccount: true, // ✅ Creates ATA for buyer
-    },
-  },
-  {
-    id: 'buy-amm-1',
-    type: 'buy-amm',
-    description: 'Buy tokens via AMM, create ATA if needed',
-    sender: buyerKeypair,
-    params: {
-      poolKey: 'PoolPublicKey',
-      amount: 1000000, // SOL amount in lamports
-      slippage: 1,
-      createAccount: true, // ✅ Creates ATA for buyer
-      tokenMint: 'TokenMintPublicKey', // Required when createAccount is true
     },
   },
 ];
 ```
 
-### How It Works
+### Advanced Usage Examples
 
-1. **Automatic Detection**: When `createAccount: true` is set, the batch helper automatically detects this
-2. **Instruction Prepending**: ATA creation instruction is added **BEFORE** the main operation instruction
-3. **Proper Payer**: Uses `feePayer` (if provided) or `sender` as the payer for ATA creation
-4. **Atomic Transactions**: All instructions are batched together in a single transaction
-5. **Error Handling**: Validates required parameters (e.g., `tokenMint` for AMM operations)
+#### Example 1: AMM Trading with Account Creation
 
-### Special Requirements
+```typescript
+const operations: BatchOperation[] = [
+  // Create ATAs for buyer before AMM operations
+  {
+    id: 'create-ata-buyer',
+    type: 'create-account',
+    description: 'Create ATAs for AMM buyer',
+    sender: buyerKeypair,
+    params: {
+      mint: 'TokenMintPublicKey',
+      owner: buyerKeypair.publicKey.toString(),
+    },
+  },
+  // AMM buy operation
+  {
+    id: 'buy-amm-1',
+    type: 'buy-amm',
+    description: 'Buy tokens via AMM',
+    sender: buyerKeypair,
+    params: {
+      poolKey: 'PoolPublicKey',
+      amount: 1000000, // 0.001 SOL in lamports
+      slippage: 1,
+    },
+  },
+  // AMM sell operation (uses same ATAs)
+  {
+    id: 'sell-amm-1',
+    type: 'sell-amm',
+    description: 'Sell tokens via AMM',
+    sender: buyerKeypair,
+    params: {
+      poolKey: 'PoolPublicKey',
+      amount: 500, // Token amount
+      slippage: 1,
+    },
+  },
+];
+```
 
-- **AMM Buy Operations**: When `createAccount: true` is set for AMM buy operations, you must also provide the `tokenMint` parameter
-- **Fee Payer**: The fee payer (or sender if no fee payer) will pay for the ATA creation
-- **Account Ownership**: The ATA is created for the appropriate owner (recipient for transfers, buyer for purchases)
+#### Example 2: Multi-User Token Distribution
+
+```typescript
+const operations: BatchOperation[] = [
+  // Create ATAs for multiple recipients
+  {
+    id: 'create-ata-user1',
+    type: 'create-account',
+    description: 'Create ATA for user 1',
+    sender: distributorKeypair,
+    params: {
+      mint: 'TokenMintPublicKey',
+      owner: 'User1PublicKey',
+    },
+  },
+  {
+    id: 'create-ata-user2',
+    type: 'create-account',
+    description: 'Create ATA for user 2',
+    sender: distributorKeypair,
+    params: {
+      mint: 'TokenMintPublicKey',
+      owner: 'User2PublicKey',
+    },
+  },
+  // Transfer tokens to each user
+  {
+    id: 'transfer-user1',
+    type: 'transfer',
+    description: 'Transfer tokens to user 1',
+    sender: distributorKeypair,
+    params: {
+      recipient: 'User1PublicKey',
+      mint: 'TokenMintPublicKey',
+      amount: 1000,
+    },
+  },
+  {
+    id: 'transfer-user2',
+    type: 'transfer',
+    description: 'Transfer tokens to user 2',
+    sender: distributorKeypair,
+    params: {
+      recipient: 'User2PublicKey',
+      mint: 'TokenMintPublicKey',
+      amount: 2000,
+    },
+  },
+];
+```
+
+#### Example 3: Bonding Curve Trading
+
+```typescript
+const operations: BatchOperation[] = [
+  // Create ATA for bonding curve buyer
+  {
+    id: 'create-ata-bc-buyer',
+    type: 'create-account',
+    description: 'Create ATA for bonding curve buyer',
+    sender: buyerKeypair,
+    params: {
+      mint: 'TokenMintPublicKey',
+      owner: buyerKeypair.publicKey.toString(),
+    },
+  },
+  // Buy from bonding curve
+  {
+    id: 'buy-bonding-curve',
+    type: 'buy-bonding-curve',
+    description: 'Buy tokens from bonding curve',
+    sender: buyerKeypair,
+    params: {
+      mint: 'TokenMintPublicKey',
+      amount: 1000000, // 0.001 SOL in lamports
+      slippage: 1,
+    },
+  },
+  // Sell back to bonding curve
+  {
+    id: 'sell-bonding-curve',
+    type: 'sell-bonding-curve',
+    description: 'Sell tokens to bonding curve',
+    sender: buyerKeypair,
+    params: {
+      mint: 'TokenMintPublicKey',
+      amount: 500, // Token amount
+      slippage: 1,
+    },
+  },
+];
+```
+
+### Fee Payer Integration
+
+When using a fee payer, the `create-account` operation will use the fee payer to pay for account creation costs:
+
+```typescript
+const operations: BatchOperation[] = [
+  {
+    id: 'create-ata-with-fee-payer',
+    type: 'create-account',
+    description: 'Create ATA using fee payer',
+    sender: userKeypair, // User who will own the account
+    params: {
+      mint: 'TokenMintPublicKey',
+      owner: userKeypair.publicKey.toString(),
+    },
+  },
+];
+
+// Execute with fee payer
+const results = await batchTransactions(
+  connection,
+  operations,
+  feePayerKeypair, // Fee payer pays for account creation
+  { maxParallel: 1 }
+);
+```
+
+### Important Notes
+
+1. **Automatic WSOL Creation**: `create-account` automatically creates both the specified token ATA and a WSOL ATA, which is required for AMM operations.
+
+2. **Fee Payer Priority**: If a fee payer is provided, it will pay for account creation costs. Otherwise, the sender pays.
+
+3. **Atomic Operations**: Place `create-account` operations in the same batch as the operations that need them for atomicity.
+
+4. **Idempotent**: If the ATA already exists, the operation will succeed without creating duplicates.
+
+5. **Order Matters**: Always place `create-account` operations before the operations that require the accounts.
+
+### Error Handling
+
+The `create-account` operation handles common scenarios gracefully:
+
+- **Account already exists**: Operation succeeds without error
+- **Insufficient funds**: Will fail if neither sender nor fee payer has enough SOL
+- **Invalid parameters**: Will fail with clear error messages
+
+### Best Practices
+
+1. **Batch Account Creation**: Create multiple ATAs in a single batch for efficiency
+2. **Use Fee Payers**: Use fee payers for account creation to reduce user friction
+3. **Validate First**: Check if accounts exist before creating them (optional optimization)
+4. **Order Operations**: Always place `create-account` before dependent operations
+5. **Handle Errors**: Implement proper error handling for account creation failures
 
 ## Configuration Options
 

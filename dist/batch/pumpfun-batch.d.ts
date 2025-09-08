@@ -11,9 +11,7 @@ import type { BatchOperation, BatchResult, BatchExecutionOptions } from '../@typ
  * - Fee payer signs last (if provided)
  * - Accounts are always assumed to exist (users must check beforehand)
  */
-export declare function batchTransactions(connection: Connection, operations: BatchOperation[], feePayer?: Keypair, options?: Partial<BatchExecutionOptions & {
-    dynamicBatching?: boolean;
-}>): Promise<BatchResult[]>;
+export declare function batchTransactions(connection: Connection, operations: BatchOperation[], feePayer?: Keypair, options?: BatchExecutionOptions): Promise<BatchResult[]>;
 /**
  * Execute prepared batch instructions
  *

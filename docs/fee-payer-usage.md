@@ -132,7 +132,6 @@ const result = await sendToken(
   recipient,
   mint,
   amount,
-  false,           // allowOwnerOffCurve
   true,            // createRecipientAccount
   treasuryWallet   // Treasury wallet (pays fees)
 );

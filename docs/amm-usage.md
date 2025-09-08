@@ -39,7 +39,7 @@ const amm = new PumpAMM(connection, wallet);
 ```typescript
 const poolResult = await amm.createPool(
   tokenMint, // Your token's mint address
-  wrappedSolMint, // Wrapped SOL mint (So11111111111111111111111111111111111111112)
+  wrappedSolMint, // SOL SPL mint (SDK handles ATA creation as needed)
   1000000, // Initial token amount
   0.1, // Initial SOL amount
   0 // Pool index

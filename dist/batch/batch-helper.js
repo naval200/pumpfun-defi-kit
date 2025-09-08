@@ -13,26 +13,32 @@ const amm_1 = require("../amm");
 const createAccount_1 = require("../createAccount");
 const amounts_1 = require("../utils/amounts");
 const debug_1 = require("../utils/debug");
+// (Version/build logging moved to batch runner to avoid noisy imports)
+function addCreateAccountInstructions(instructions, mint, owner, feePayer) {
+    const { instruction: createAtaIx } = (0, createAccount_1.createAssociatedTokenAccountInstruction)(feePayer, // payer
+    owner, // owner
+    mint // mint
+    );
+    instructions.push(createAtaIx);
+    const { instruction: createWsolAtaIx } = (0, createAccount_1.createAssociatedWSOLAccountInstruction)(feePayer, // payer
+    owner // owner
+    );
+    instructions.push(createWsolAtaIx);
+}
 /**
  * Build instructions for a single batch operation
  */
 async function buildInstructionsForOperation(connection, ammSdk, operation, senderKeypair, feePayer) {
     const instructions = [];
     switch (operation.type) {
+        case 'create-account': {
+            const { mint, owner } = operation.params;
+            addCreateAccountInstructions(instructions, new web3_js_1.PublicKey(mint), new web3_js_1.PublicKey(owner), feePayer?.publicKey || senderKeypair.publicKey);
+            break;
+        }
         case 'transfer': {
-            const { recipient, mint, amount, createAccount = false } = operation.params;
-            // If createAccount is true, add the ATA creation instruction first
-            if (createAccount) {
-                const { instruction: createAtaIx } = (0, createAccount_1.createAssociatedTokenAccountInstruction)(feePayer?.publicKey || senderKeypair.publicKey, // payer
-                new web3_js_1.PublicKey(recipient), // owner
-                new web3_js_1.PublicKey(mint), // mint
-                false // allowOwnerOffCurve
-                );
-                instructions.push(createAtaIx);
-                (0, debug_1.debugLog)(`🏗️ Added ATA creation instruction for transfer operation ${operation.id}`);
-            }
-            const ix = (0, sendToken_1.createTokenTransferInstruction)(senderKeypair.publicKey, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), amount, false // allowOwnerOffCurve
-            );
+            const { recipient, mint, amount } = operation.params;
+            const ix = (0, sendToken_1.createTokenTransferInstruction)(senderKeypair.publicKey, new web3_js_1.PublicKey(recipient), new web3_js_1.PublicKey(mint), amount);
             instructions.push(ix);
             break;
         }
@@ -43,17 +49,7 @@ async function buildInstructionsForOperation(connection, ammSdk, operation, send
             break;
         }
         case 'buy-bonding-curve': {
-            const { mint, amount, createAccount = false } = operation.params;
-            // If createAccount is true, add the ATA creation instruction first
-            if (createAccount) {
-                const { instruction: createAtaIx } = (0, createAccount_1.createAssociatedTokenAccountInstruction)(feePayer?.publicKey || senderKeypair.publicKey, // payer
-                senderKeypair.publicKey, // owner (buyer)
-                new web3_js_1.PublicKey(mint), // mint
-                false // allowOwnerOffCurve
-                );
-                instructions.push(createAtaIx);
-                (0, debug_1.debugLog)(`🏗️ Added ATA creation instruction for bonding curve buy operation ${operation.id}`);
-            }
+            const { mint, amount } = operation.params;
             const pdas = await (0, bonding_curve_1.getBondingCurvePDAs)(connection, new web3_js_1.PublicKey(mint), senderKeypair.publicKey);
             const ix = (0, bonding_curve_1.createBondingCurveBuyInstruction)(senderKeypair.publicKey, new web3_js_1.PublicKey(mint), amount, pdas, 1000);
             instructions.push(ix);
@@ -68,57 +64,18 @@ async function buildInstructionsForOperation(connection, ammSdk, operation, send
             break;
         }
         case 'buy-amm': {
-            const { poolKey, amount, slippage = 1, createAccount = false, tokenMint } = operation.params;
-            // Get pool information to determine base and quote mints
-            const pool = await ammSdk.fetchPool(new web3_js_1.PublicKey(poolKey));
-            const baseMint = pool.baseMint;
-            const quoteMint = pool.quoteMint; // This should be SOL
-            // Get the user's token accounts
-            const userBaseTokenAccount = (0, createAccount_1.getAssociatedTokenAccountAddress)(senderKeypair.publicKey, baseMint, false);
-            // For SOL, use the wallet's main account (no separate token account needed)
-            const userQuoteTokenAccount = senderKeypair.publicKey;
-            // If createAccount is true, we need the tokenMint parameter
-            if (createAccount) {
-                if (!tokenMint) {
-                    throw new Error(`tokenMint is required when createAccount is true for AMM buy operation ${operation.id}`);
-                }
-                const { instruction: createAtaIx } = (0, createAccount_1.createAssociatedTokenAccountInstruction)(feePayer?.publicKey || senderKeypair.publicKey, // payer
-                senderKeypair.publicKey, // owner (buyer)
-                new web3_js_1.PublicKey(tokenMint), // mint from params
-                false // allowOwnerOffCurve
-                );
-                instructions.push(createAtaIx);
-                (0, debug_1.debugLog)(`🏗️ Added ATA creation instruction for AMM buy operation ${operation.id}`);
-            }
-            (0, debug_1.debugLog)(`🔍 Using explicit token accounts for buy-amm:`);
-            (0, debug_1.debugLog)(`   Base token account: ${userBaseTokenAccount.toString()}`);
-            (0, debug_1.debugLog)(`   Quote token account (SOL): ${userQuoteTokenAccount.toString()}`);
-            // For buy-amm operations, we need to pass the HUE token account but NOT the SOL token account
-            // SOL is native currency and doesn't need a token account
-            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey, userBaseTokenAccount, // HUE token account
-            undefined // No SOL token account needed
-            );
+            const { poolKey, amount, slippage = 1 } = operation.params;
+            (0, debug_1.debugLog)(`🔍 Using native SOL for buy-amm operation`);
+            // For buy-amm operations, use the SDK's default method that handles native SOL
+            // This avoids the complexity of wrapped SOL token accounts
+            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey);
             const ixs = await (0, amm_1.createAmmBuyInstructionsAssuming)(ammSdk, state, amount, slippage);
             instructions.push(...ixs);
             break;
         }
         case 'sell-amm': {
             const { poolKey, amount, slippage = 1 } = operation.params;
-            // Get pool information to determine base and quote mints
-            const pool = await ammSdk.fetchPool(new web3_js_1.PublicKey(poolKey));
-            const baseMint = pool.baseMint;
-            // Get the user's token accounts
-            const userBaseTokenAccount = (0, createAccount_1.getAssociatedTokenAccountAddress)(senderKeypair.publicKey, baseMint, false);
-            // For SOL, use the wallet's main account (no separate token account needed)
-            const userQuoteTokenAccount = senderKeypair.publicKey;
-            (0, debug_1.debugLog)(`🔍 Using explicit token accounts for sell-amm:`);
-            (0, debug_1.debugLog)(`   Base token account: ${userBaseTokenAccount.toString()}`);
-            (0, debug_1.debugLog)(`   Quote token account (SOL): ${userQuoteTokenAccount.toString()}`);
-            // For sell-amm operations, we need to pass the HUE token account but NOT the SOL token account
-            // SOL is native currency and doesn't need a token account
-            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey, userBaseTokenAccount, // HUE token account
-            undefined // No SOL token account needed
-            );
+            const state = await ammSdk.swapSolanaState(new web3_js_1.PublicKey(poolKey), senderKeypair.publicKey);
             const ixs = await (0, amm_1.createAmmSellInstructionsAssuming)(ammSdk, state, amount, slippage);
             instructions.push(...ixs);
             break;

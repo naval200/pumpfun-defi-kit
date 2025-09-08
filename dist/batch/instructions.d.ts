@@ -22,7 +22,5 @@ export interface BatchInstructionResult {
  * - Creates a single transaction with all instructions
  * - Returns transaction details needed for signing and execution
  */
-export declare function createBatchInstructions(connection: Connection, operations: BatchOperation[], feePayer?: Keypair, options?: Partial<BatchExecutionOptions & {
-    dynamicBatching?: boolean;
-}>): Promise<BatchInstructionResult[]>;
+export declare function createBatchInstructions(connection: Connection, operations: BatchOperation[], feePayer?: Keypair, options?: BatchExecutionOptions): Promise<BatchInstructionResult[]>;
 //# sourceMappingURL=instructions.d.ts.map

@@ -29,10 +29,15 @@ async function sendSol(connection, fromWallet, toAddress, amountLamports, feePay
         }
         // Check source wallet balance
         const balance = await connection.getBalance(fromWallet.publicKey);
-        if (balance < amountLamports) {
+        // Calculate minimum rent-exempt balance (approximately 890,000 lamports for basic account)
+        const minRentExemptBalance = 890000;
+        // Calculate required balance (amount + transaction fee + rent exemption)
+        const estimatedFee = 5000; // Conservative estimate for transaction fee
+        const requiredBalance = amountLamports + estimatedFee + minRentExemptBalance;
+        if (balance < requiredBalance) {
             return {
                 success: false,
-                error: `Insufficient balance. Available: ${balance.toLocaleString()} lamports, Required: ${amountLamports.toLocaleString()} lamports`,
+                error: `Insufficient balance. Available: ${balance.toLocaleString()} lamports, Required: ${requiredBalance.toLocaleString()} lamports (including ${minRentExemptBalance.toLocaleString()} for rent exemption)`,
             };
         }
         // Create transfer instruction

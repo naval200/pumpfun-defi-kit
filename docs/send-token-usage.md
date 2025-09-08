@@ -13,7 +13,7 @@ Since both bonding curve and AMM tokens are standard SPL tokens, the `sendToken`
 
 ## Core Functions
 
-### 1. `sendToken(connection, sender, recipient, mint, amount, allowOwnerOffCurve?, createRecipientAccount?)`
+### 1. `sendToken(connection, sender, recipient, mint, amount, createRecipientAccount?)`
 
 The main function that handles token transfers with configurable options.
 
@@ -24,7 +24,6 @@ async function sendToken(
   recipient: PublicKey,
   mint: PublicKey,
   amount: bigint,
-  allowOwnerOffCurve?: boolean,
   createRecipientAccount?: boolean
 ): Promise<{ success: boolean; signature?: string; error?: string; recipientAccount?: PublicKey }>
 ```
@@ -35,7 +34,6 @@ async function sendToken(
 - `recipient`: Public key of the recipient
 - `mint`: Public key of the token mint
 - `amount`: Amount of tokens to send (in smallest unit)
-- `allowOwnerOffCurve`: Whether to allow off-curve owners (default: false)
 - `createRecipientAccount`: Whether to create recipient account if needed (default: true)
 
 **Returns:**
@@ -48,7 +46,7 @@ async function sendToken(
 }
 ```
 
-### 2. `sendTokenWithAccountCreation(connection, sender, recipient, mint, amount, allowOwnerOffCurve?)`
+### 2. `sendTokenWithAccountCreation(connection, sender, recipient, mint, amount)`
 
 Convenience function that always creates recipient accounts when needed.
 
@@ -62,7 +60,7 @@ const result = await sendTokenWithAccountCreation(
 );
 ```
 
-### 3. `sendTokenToExistingAccount(connection, sender, recipient, mint, amount, allowOwnerOffCurve?)`
+### 3. `sendTokenToExistingAccount(connection, sender, recipient, mint, amount)`
 
 Function that only sends to existing recipient accounts (fails if account doesn't exist).
 
@@ -76,7 +74,7 @@ const result = await sendTokenToExistingAccount(
 );
 ```
 
-### 4. `canReceiveTokens(connection, recipient, mint, allowOwnerOffCurve?)`
+### 4. `canReceiveTokens(connection, recipient, mint)`
 
 Utility function to check if a recipient can receive tokens.
 
@@ -118,7 +116,6 @@ async function transferTokens() {
     recipient,
     mint,
     amount,
-    false, // allowOwnerOffCurve
     true   // createRecipientAccount
   );
 
@@ -141,7 +138,6 @@ async function transferToExistingAccount() {
     recipient,
     mint,
     amount,
-    false, // allowOwnerOffCurve
     false  // createRecipientAccount - Will fail if account doesn't exist
   );
 
@@ -161,7 +157,6 @@ async function transferToProgramAccount() {
     recipient,
     mint,
     amount,
-    true,  // allowOwnerOffCurve - For program-owned accounts
     true   // createRecipientAccount
   );
 }
@@ -301,8 +296,7 @@ if (!result.success) {
 1. **Always check the result**: Verify `result.success` before proceeding
 2. **Handle insufficient balance**: Check sender balance before attempting transfer
 3. **Use appropriate account creation**: Enable `createRecipientAccount` for user wallets, disable for program accounts
-4. **Consider off-curve owners**: Use `allowOwnerOffCurve: true` for program-owned accounts
-5. **Monitor transaction status**: Use the returned signature to track transaction progress
+4. **Monitor transaction status**: Use the returned signature to track transaction progress
 
 ## Network Considerations
 

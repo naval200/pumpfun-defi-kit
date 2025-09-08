@@ -20,12 +20,11 @@ const createAccount_1 = require("./createAccount");
  * @param recipient - PublicKey of the recipient
  * @param mint - PublicKey of the token mint
  * @param amount - Amount of tokens to send
- * @param allowOwnerOffCurve - Whether to allow owner off curve (default: false)
  * @param createRecipientAccount - Whether to create recipient account if needed (default: true)
  * @param feePayer - Optional Keypair for the fee payer (if different from sender)
  * @returns Promise resolving to transfer result object
  */
-async function sendToken(connection, sender, recipient, mint, amount, allowOwnerOffCurve = false, createRecipientAccount = true, feePayer) {
+async function sendToken(connection, sender, recipient, mint, amount, createRecipientAccount = true, feePayer) {
     try {
         (0, debug_1.debugLog)(`🚀 Starting token transfer: ${amount} tokens from ${sender.publicKey.toString()} to ${recipient.toString()}`);
         // Get sender's token account
@@ -50,7 +49,7 @@ async function sendToken(connection, sender, recipient, mint, amount, allowOwner
         let recipientTokenAccount = undefined;
         if (!createRecipientAccount) {
             try {
-                recipientTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, recipient, allowOwnerOffCurve);
+                recipientTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, recipient);
             }
             catch (error) {
                 return {
@@ -60,7 +59,7 @@ async function sendToken(connection, sender, recipient, mint, amount, allowOwner
             }
         }
         if (!recipientTokenAccount) {
-            const result = await (0, createAccount_1.createAssociatedTokenAccount)(connection, sender, recipient, mint, allowOwnerOffCurve);
+            const result = await (0, createAccount_1.createAssociatedTokenAccount)(connection, sender, recipient, mint);
             if (result.success && result.account) {
                 recipientTokenAccount = result.account;
             }
@@ -134,10 +133,10 @@ async function sendToken(connection, sender, recipient, mint, amount, allowOwner
  * - No ATA creation
  * - Fails if accounts are missing or balance insufficient
  */
-async function sendTokenAssumingExistingAccounts(connection, sender, recipient, mint, amount, allowOwnerOffCurve = false, feePayer) {
+async function sendTokenAssumingExistingAccounts(connection, sender, recipient, mint, amount, feePayer) {
     try {
         const senderTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, sender.publicKey);
-        const recipientTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, recipient, allowOwnerOffCurve);
+        const recipientTokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, recipient);
         const tx = new web3_js_1.Transaction().add((0, spl_token_1.createTransferInstruction)(senderTokenAccount, recipientTokenAccount, sender.publicKey, amount, [], spl_token_1.TOKEN_PROGRAM_ID));
         const result = feePayer
             ? await (0, transaction_1.sendAndConfirmTransactionWithFeePayer)(connection, tx, [sender], feePayer, {
@@ -163,15 +162,15 @@ async function sendTokenAssumingExistingAccounts(connection, sender, recipient, 
  * Send tokens with automatic recipient account creation
  * This is a convenience function that always creates the recipient account if needed
  */
-async function sendTokenWithAccountCreation(connection, sender, recipient, mint, amount, allowOwnerOffCurve = false, feePayer) {
-    return sendToken(connection, sender, recipient, mint, amount, allowOwnerOffCurve, true, feePayer);
+async function sendTokenWithAccountCreation(connection, sender, recipient, mint, amount, feePayer) {
+    return sendToken(connection, sender, recipient, mint, amount, true, feePayer);
 }
 /**
  * Send tokens without creating recipient account
  * This function will fail if the recipient doesn't have a token account
  */
-async function sendTokenToExistingAccount(connection, sender, recipient, mint, amount, allowOwnerOffCurve = false, feePayer) {
-    return sendToken(connection, sender, recipient, mint, amount, allowOwnerOffCurve, false, feePayer);
+async function sendTokenToExistingAccount(connection, sender, recipient, mint, amount, feePayer) {
+    return sendToken(connection, sender, recipient, mint, amount, false, feePayer);
 }
 /**
  * Create a token transfer instruction for batching
@@ -180,20 +179,19 @@ async function sendTokenToExistingAccount(connection, sender, recipient, mint, a
  * @param recipient - Recipient's public key
  * @param mint - Token mint public key
  * @param amount - Amount to transfer (as number)
- * @param allowOwnerOffCurve - Whether to allow owner off curve (default: false)
  * @returns TransactionInstruction ready for batching
  */
-function createTokenTransferInstruction(sender, recipient, mint, amount, allowOwnerOffCurve = false) {
+function createTokenTransferInstruction(sender, recipient, mint, amount) {
     const sourceAta = (0, spl_token_1.getAssociatedTokenAddressSync)(mint, sender, false);
-    const destAta = (0, spl_token_1.getAssociatedTokenAddressSync)(mint, recipient, allowOwnerOffCurve);
+    const destAta = (0, spl_token_1.getAssociatedTokenAddressSync)(mint, recipient);
     return (0, spl_token_1.createTransferInstruction)(sourceAta, destAta, sender, amount, [], spl_token_1.TOKEN_PROGRAM_ID);
 }
 /**
  * Check if a recipient can receive tokens (has token account or can create one)
  */
-async function canReceiveTokens(connection, recipient, mint, allowOwnerOffCurve = false) {
+async function canReceiveTokens(connection, recipient, mint) {
     try {
-        const tokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, recipient, allowOwnerOffCurve);
+        const tokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mint, recipient);
         try {
             await (0, spl_token_1.getAccount)(connection, tokenAccount);
             return {

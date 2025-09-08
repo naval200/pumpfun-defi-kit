@@ -19,7 +19,7 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 💸 **Fee Payer Support**: Optional separate fee payer wallets for treasury operations, batch transactions, and individual trades
 - 🔢 **User-Friendly Amounts**: CLI accepts SOL amounts, automatically converted to lamports internally for precision
 - 📦 **Batch Transactions**: Execute multiple operations efficiently with automatic account creation
-- 🏗️ **Automatic ATA Creation**: Seamlessly create token accounts during batch operations
+- 🏗️ **Explicit ATA Creation**: Create token accounts via dedicated `create-account` operations
 
 ## Project Structure
 
@@ -263,12 +263,22 @@ For detailed fee payer documentation, see [docs/fee-payer-usage.md](docs/fee-pay
 
 ### Batch Transactions
 
-Execute multiple operations efficiently in single transactions with automatic account creation:
+Execute multiple operations efficiently in single transactions with explicit account creation:
 
 ```typescript
 import { createBatchInstructions, executeBatchInstructions } from './src/batch';
 
 const operations = [
+  // Create recipient's ATA before transfer
+  {
+    type: 'create-account',
+    id: 'create-ata-recipient',
+    params: {
+      mint: 'TokenMintPublicKey',
+      owner: 'RecipientPublicKey',
+    },
+  },
+  // Then transfer tokens
   {
     type: 'transfer',
     id: 'transfer-1',
@@ -276,7 +286,15 @@ const operations = [
       recipient: 'RecipientPublicKey',
       mint: 'TokenMintPublicKey',
       amount: 1000,
-      createAccount: true, // ✅ Automatically creates ATA for recipient
+    },
+  },
+  // Create buyer's ATA before bonding curve buy (owner is the buyer/sender)
+  {
+    type: 'create-account',
+    id: 'create-ata-buyer',
+    params: {
+      mint: 'TokenMintPublicKey',
+      owner: 'BuyerPublicKey',
     },
   },
   {
@@ -286,7 +304,6 @@ const operations = [
       mint: 'TokenMintPublicKey',
       amount: 1000000, // SOL amount in lamports
       slippage: 1,
-      createAccount: true, // ✅ Automatically creates ATA for buyer
     },
   },
 ];
@@ -297,7 +314,7 @@ const results = await executeBatchInstructions(connection, batchInstructions, op
 ```
 
 **Key Features:**
-- **Automatic ATA Creation**: Set `createAccount: true` to automatically create token accounts
+- **Explicit ATA Creation**: Use `create-account` operations to create token accounts as needed
 - **Atomic Operations**: All operations in a batch succeed or fail together
 - **Fee Optimization**: Single fee payer covers all operations
 - **Dynamic Batching**: Automatically optimizes batch sizes based on network conditions

@@ -96,7 +96,8 @@
     "cli:check-wallet-balances": "tsx cli/check-wallet-balances.ts",
     "example:send-sol": "tsx examples/send-sol-example.ts",
     "example:batch-separated": "tsx examples/batch-separated-example.ts",
-    "example:batch-cli": "tsx examples/batch-cli-example.ts"
+    "example:batch-cli": "tsx examples/batch-cli-example.ts",
+    "docs:sync:pump": "rm -rf docs/pump-public-docs && npx --yes degit pump-fun/pump-public-docs docs/pump-public-docs"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",

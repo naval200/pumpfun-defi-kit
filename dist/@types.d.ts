@@ -75,11 +75,14 @@ export type BatchOperationBase<T, P> = {
     params: P;
     sender?: Keypair;
 };
+export type BatchOperationCreateAccount = BatchOperationBase<'create-account', {
+    mint: string;
+    owner: string;
+}>;
 export type BatchOperationTransfer = BatchOperationBase<'transfer', {
     recipient: string;
     mint: string;
     amount: number;
-    createAccount?: boolean;
 }>;
 export type BatchOperationSolTransfer = BatchOperationBase<'sol-transfer', {
     recipient: string;
@@ -89,8 +92,6 @@ export type BatchOperationBuyAmm = BatchOperationBase<'buy-amm', {
     poolKey: string;
     amount: number;
     slippage: number;
-    createAccount?: boolean;
-    tokenMint?: string;
 }>;
 export type BatchOperationSellAmm = BatchOperationBase<'sell-amm', {
     poolKey: string;
@@ -101,14 +102,13 @@ export type BatchOperationBuyBondingCurve = BatchOperationBase<'buy-bonding-curv
     mint: string;
     amount: number;
     slippage: number;
-    createAccount?: boolean;
 }>;
 export type BatchOperationSellBondingCurve = BatchOperationBase<'sell-bonding-curve', {
     mint: string;
     amount: number;
     slippage: number;
 }>;
-export type BatchOperation = BatchOperationTransfer | BatchOperationSolTransfer | BatchOperationBuyAmm | BatchOperationSellAmm | BatchOperationBuyBondingCurve | BatchOperationSellBondingCurve;
+export type BatchOperation = BatchOperationCreateAccount | BatchOperationTransfer | BatchOperationSolTransfer | BatchOperationBuyAmm | BatchOperationSellAmm | BatchOperationBuyBondingCurve | BatchOperationSellBondingCurve;
 export interface BatchResult {
     operationId: string;
     type: string;
@@ -123,6 +123,7 @@ export interface BatchExecutionOptions {
     disableFallbackRetry?: boolean;
     maxTransferInstructionsPerTx?: number;
     combinePerBatch?: boolean;
+    dynamicBatching?: boolean;
 }
 /**
  * Multi-sender batch for true batching across different senders

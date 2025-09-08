@@ -3,7 +3,7 @@ import { createBatchInstructions, executeBatchInstructions } from '../src/batch'
 import type { BatchOperation } from '../src/@types';
 
 /**
- * Complete example showing how to use batch operations with createAccount functionality
+ * Complete example showing how to use batch operations with explicit create-account functionality
  * This demonstrates the full workflow from creating operations to executing them
  */
 
@@ -14,43 +14,65 @@ export const createExampleBatchOperations = (): BatchOperation[] => {
   const buyerKeypair = Keypair.generate();
 
   return [
+    // Explicitly create ATA for the recipient
+    {
+      type: 'create-account',
+      id: 'create-ata-for-recipient',
+      description: 'Create ATA for recipient before transfer',
+      sender: senderKeypair,
+      params: {
+        mint: 'TokenMintPublicKeyHere',
+        owner: 'RecipientPublicKeyHere',
+      },
+    },
+    // Then transfer tokens
     {
       type: 'transfer',
-      id: 'transfer-with-ata-creation',
-      description: 'Transfer tokens to new user (creates ATA automatically)',
+      id: 'transfer-with-ata',
+      description: 'Transfer tokens to new user',
       sender: senderKeypair,
       params: {
         recipient: 'RecipientPublicKeyHere', // Replace with actual recipient
         mint: 'TokenMintPublicKeyHere', // Replace with actual token mint
         amount: 1000,
-        createAccount: true, // ✅ Automatically creates ATA for recipient
       },
     },
+    // Create ATA for buyer before bonding curve buy
+    {
+      type: 'create-account',
+      id: 'create-ata-for-buyer',
+      description: 'Create ATA for buyer',
+      sender: buyerKeypair,
+      params: {
+        mint: 'TokenMintPublicKeyHere',
+        owner: buyerKeypair.publicKey.toString(),
+      },
+    },
+    // Bonding curve buy
     {
       type: 'buy-bonding-curve',
-      id: 'buy-bc-with-ata-creation',
-      description: 'Buy tokens from bonding curve (creates ATA automatically)',
+      id: 'buy-bc',
+      description: 'Buy tokens from bonding curve',
       sender: buyerKeypair,
       params: {
         mint: 'TokenMintPublicKeyHere', // Replace with actual token mint
         amount: 1000000, // 0.001 SOL in lamports
         slippage: 1,
-        createAccount: true, // ✅ Automatically creates ATA for buyer
       },
     },
+    // AMM buy
     {
       type: 'buy-amm',
-      id: 'buy-amm-with-ata-creation',
-      description: 'Buy tokens via AMM (creates ATA automatically)',
+      id: 'buy-amm',
+      description: 'Buy tokens via AMM',
       sender: buyerKeypair,
       params: {
         poolKey: 'PoolPublicKeyHere', // Replace with actual pool key
         amount: 2000000, // 0.002 SOL in lamports
         slippage: 1,
-        createAccount: true, // ✅ Automatically creates ATA for buyer
-        tokenMint: 'TokenMintPublicKeyHere', // Required when createAccount is true
       },
     },
+    // Transfer to an existing ATA
     {
       type: 'transfer',
       id: 'transfer-existing-ata',
@@ -60,9 +82,9 @@ export const createExampleBatchOperations = (): BatchOperation[] => {
         recipient: 'ExistingRecipientPublicKeyHere', // Replace with actual recipient
         mint: 'TokenMintPublicKeyHere', // Replace with actual token mint
         amount: 500,
-        createAccount: false, // ❌ Assumes ATA already exists
       },
     },
+    // SOL transfer (no ATA)
     {
       type: 'sol-transfer',
       id: 'sol-transfer-example',
@@ -153,13 +175,6 @@ export function validateBatchOperations(operations: BatchOperation[]): {
   const errors: string[] = [];
 
   operations.forEach(op => {
-    // Check for required createAccount parameters
-    if (op.type === 'buy-amm' && op.params.createAccount && !op.params.tokenMint) {
-      errors.push(
-        `Operation ${op.id}: tokenMint is required when createAccount is true for AMM buy operations`
-      );
-    }
-
     // Check for valid amounts
     if ('amount' in op.params && op.params.amount <= 0) {
       errors.push(`Operation ${op.id}: amount must be positive`);
@@ -207,7 +222,7 @@ export function demonstrateCreateAccountScenarios(): void {
 
   console.log('\n5. SOL Transfers:');
   console.log('   - No ATA creation needed (SOL uses native accounts)');
-  console.log('   - Always works regardless of createAccount flag');
+  console.log('   - Independent of SPL token account existence');
   console.log('   - Use case: SOL payments and fees');
 }
 

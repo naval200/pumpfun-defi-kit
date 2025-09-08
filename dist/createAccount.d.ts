@@ -2,19 +2,28 @@ import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 /**
  * Get the Associated Token Account address for a user and mint
  */
-export declare function getAssociatedTokenAccountAddress(owner: PublicKey, mint: PublicKey, allowOwnerOffCurve?: boolean): PublicKey;
+export declare function getAssociatedTokenAccountAddress(owner: PublicKey, mint: PublicKey): PublicKey;
 /**
  * Create the instruction for creating an Associated Token Account (ATA)
  * This function only creates the instruction without executing it
  */
-export declare function createAssociatedTokenAccountInstruction(payer: PublicKey, owner: PublicKey, mint: PublicKey, allowOwnerOffCurve?: boolean): {
+export declare function createAssociatedTokenAccountInstruction(payer: PublicKey, owner: PublicKey, mint: PublicKey): {
+    instruction: any;
+    account: PublicKey;
+};
+/**
+ * Create the instruction for creating an Associated Token Account (ATA) for WSOL
+ * This is a convenience function that calls createAssociatedTokenAccountInstruction
+ * with the WSOL mint address (So111...12)
+ */
+export declare function createAssociatedWSOLAccountInstruction(payer: PublicKey, owner: PublicKey): {
     instruction: any;
     account: PublicKey;
 };
 /**
  * Create an Associated Token Account (ATA) for a user and mint
  */
-export declare function createAssociatedTokenAccount(connection: Connection, payer: Keypair, owner: PublicKey, mint: PublicKey, allowOwnerOffCurve?: boolean): Promise<{
+export declare function createAssociatedTokenAccount(connection: Connection, payer: Keypair, owner: PublicKey, mint: PublicKey): Promise<{
     success: boolean;
     signature?: string;
     error?: string;
@@ -23,7 +32,7 @@ export declare function createAssociatedTokenAccount(connection: Connection, pay
 /**
  * Get or create an Associated Token Account (ATA) for a user and mint
  */
-export declare function getOrCreateAssociatedTokenAccount(connection: Connection, payer: Keypair, owner: PublicKey, mint: PublicKey, allowOwnerOffCurve?: boolean): Promise<{
+export declare function getOrCreateAssociatedTokenAccount(connection: Connection, payer: Keypair, owner: PublicKey, mint: PublicKey): Promise<{
     success: boolean;
     account: PublicKey;
     error?: string;

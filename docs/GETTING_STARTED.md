@@ -154,7 +154,6 @@ async function transferTokens() {
     new PublicKey('recipient-public-key'),
     new PublicKey('token-mint-address'),
     BigInt(1000000), // 1 token with 6 decimals
-    false, // allowOwnerOffCurve
     true,  // createRecipientAccount
     undefined // no fee payer
   );
@@ -265,6 +264,16 @@ async function batchOperations() {
   const feePayer = Keypair.fromSecretKey(/* fee payer wallet */);
   
   const operations = [
+    // Explicitly create ATA for recipient before transfer
+    {
+      type: 'create-account',
+      id: 'create-ata-user-a',
+      description: 'Create recipient ATA',
+      params: {
+        mint: 'TokenMintAddress',
+        owner: 'UserAPublicKey'
+      }
+    },
     {
       type: 'transfer',
       id: 'transfer-1',
@@ -272,8 +281,7 @@ async function batchOperations() {
       params: {
         recipient: 'UserAPublicKey',
         mint: 'TokenMintAddress',
-        amount: '1000000',
-        createAccount: true
+        amount: '1000000'
       }
     },
     {
