@@ -96,11 +96,11 @@ export async function sellTokensAMM() {
     console.error(`❌ Error: ${error}`);
 
     // Provide helpful debugging information
-    if (error.message?.includes('AccountNotFound')) {
+    if (error instanceof Error && error.message?.includes('AccountNotFound')) {
       console.log('💡 The pool account may not exist or be accessible');
-    } else if (error.message?.includes('InvalidAccountData')) {
+    } else if (error instanceof Error && error.message?.includes('InvalidAccountData')) {
       console.log('💡 The pool account data may be corrupted or in wrong format');
-    } else if (error.message?.includes('InsufficientFunds')) {
+    } else if (error instanceof Error && error.message?.includes('InsufficientFunds')) {
       console.log('💡 Check wallet balance and pool liquidity');
     }
   }

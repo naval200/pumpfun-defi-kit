@@ -6,7 +6,7 @@
  */
 
 import {
-  executeBatch as batchTransactions,
+  batchTransactions,
   validatePumpFunBatchOperations as validateBatchOperations,
 } from '../src/batch';
 import { Connection, Keypair } from '@solana/web3.js';
@@ -19,21 +19,24 @@ import type { BatchOperation } from '../src/@types';
  * - AMM sell operations
  * - Bonding curve operations
  */
+// Note: In a real application, you would use actual keypairs
 const exampleOperations: BatchOperation[] = [
   {
     type: 'transfer',
     id: 'transfer-1',
     description: 'Transfer tokens to user A',
+    sender: Keypair.generate(), // In real usage, this would be the actual sender keypair
     params: {
       recipient: '11111111111111111111111111111111',
       mint: '22222222222222222222222222222222',
-      amount: '100000000',
+      amount: 100000000,
     },
   },
   {
     type: 'sell-amm',
     id: 'sell-amm-1',
     description: 'Sell tokens to AMM pool',
+    sender: Keypair.generate(), // In real usage, this would be the actual sender keypair
     params: {
       poolKey: '44444444444444444444444444444444',
       amount: 1000,
@@ -56,6 +59,11 @@ async function main() {
     // In a real scenario, you would load these from wallet files
     const wallet = Keypair.generate(); // Main wallet with tokens
     const feePayer = Keypair.generate(); // Dedicated fee payer wallet
+
+    // Update operations to use the same sender wallet
+    exampleOperations.forEach(op => {
+      op.sender = wallet;
+    });
 
     console.log(`👛 Main wallet: ${wallet.publicKey.toString()}`);
     console.log(`💸 Fee payer wallet: ${feePayer.publicKey.toString()}`);
@@ -114,7 +122,6 @@ async function main() {
 
     const results = await batchTransactions(
       connection,
-      wallet, // Main wallet (has tokens for operations)
       exampleOperations,
       feePayer, // Single fee payer for ALL transactions
       {
@@ -191,7 +198,7 @@ function explainWalletConfigurations() {
 }
 
 // Run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   main().catch(console.error);
   explainWalletConfigurations();
 }

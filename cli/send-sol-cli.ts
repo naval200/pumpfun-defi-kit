@@ -1,9 +1,9 @@
 #!/usr/bin/env tsx
 
 import { Connection, PublicKey } from '@solana/web3.js';
-import { sendSol, validateSendSolParams } from '../src/sendSol';
-import { loadWallet, printUsage } from './cli-args';
-import { formatLamportsAsSol, solToLamports } from '../src/utils/amounts';
+import { sendSol, validateSendSolParams } from '../src/sendSol.js';
+import { loadWallet, printUsage } from './cli-args.js';
+import { formatLamportsAsSol, solToLamports } from '../src/utils/amounts.js';
  
 
 function showHelp() {

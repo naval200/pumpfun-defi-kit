@@ -118,6 +118,6 @@ async function sendTokenCli() {
 }
 
 // Run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   sendTokenCli().catch(logError);
 }
