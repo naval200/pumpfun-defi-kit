@@ -34,7 +34,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "pumpfun-cli": "./cli/index.js"
+    "pumpfun-cli": "./dist/cli/index.js"
   },
   "files": [
     "dist",
@@ -60,7 +60,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "build:clean": "rm -rf dist && npm run build",
     "dev": "tsx src/index.ts",
     "test": "jest",
