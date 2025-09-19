@@ -16,6 +16,9 @@ export * from './sendToken';
 // SOL transfer exports
 export * from './sendSol';
 
+// Transaction fetching exports
+export * from './getTransactions';
+
 // Type exports
 export * from './@types';
 

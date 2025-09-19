@@ -2,15 +2,13 @@
 
 /**
  * Fee Payer Example
- * 
+ *
  * This example demonstrates how to use the fee payer functionality
  * where a separate wallet pays transaction fees for another wallet's operations.
  */
-
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { sellPumpFunToken, buyPumpFunToken } from '../src/bonding-curve/sell';
+import { sellPumpFunToken } from '../src/bonding-curve/sell';
 import { buyPumpFunToken as buyToken } from '../src/bonding-curve/buy';
-import { formatLamportsAsSol } from '../src/utils/amounts';
 
 // Example: User has tokens but no SOL for fees
 // Treasury wallet pays the fees for the user's sell operation
@@ -25,7 +23,7 @@ async function feePayerExample() {
   // In a real scenario, these would be loaded from wallet files
   const userWallet = Keypair.generate(); // User who owns tokens
   const treasuryWallet = Keypair.generate(); // Treasury that pays fees
-  
+
   console.log(`👤 User Wallet: ${userWallet.publicKey.toString()}`);
   console.log(`🏦 Treasury Wallet: ${treasuryWallet.publicKey.toString()}`);
   console.log(`🔗 Network: ${connection.rpcEndpoint}\n`);
@@ -37,13 +35,13 @@ async function feePayerExample() {
     // Example 1: User sells tokens, treasury pays fees
     console.log('📤 Example 1: User sells tokens, treasury pays fees');
     console.log('--------------------------------------------------');
-    
+
     const sellResult = await sellPumpFunToken(
       connection,
-      userWallet,        // User who owns the tokens
-      tokenMint,         // Token to sell
-      1000,              // Amount of tokens to sell
-      treasuryWallet     // Treasury pays the fees
+      userWallet, // User who owns the tokens
+      tokenMint, // Token to sell
+      1000, // Amount of tokens to sell
+      treasuryWallet // Treasury pays the fees
     );
 
     if (sellResult.success) {
@@ -58,19 +56,18 @@ async function feePayerExample() {
     // Example 2: User buys tokens, treasury pays fees
     console.log('📥 Example 2: User buys tokens, treasury pays fees');
     console.log('-------------------------------------------------');
-    
+
     const buySignature = await buyToken(
       connection,
-      userWallet,        // User who receives the tokens
-      tokenMint,         // Token to buy
-      100000000,         // 0.1 SOL in lamports
-      1000,              // 10% slippage
-      treasuryWallet     // Treasury pays the fees
+      userWallet, // User who receives the tokens
+      tokenMint, // Token to buy
+      100000000, // 0.1 SOL in lamports
+      1000, // 10% slippage
+      treasuryWallet // Treasury pays the fees
     );
 
     console.log(`✅ Buy successful! Signature: ${buySignature}`);
     console.log('💡 User bought tokens but treasury paid the transaction fees');
-
   } catch (error) {
     console.error('❌ Example failed:', error);
   }

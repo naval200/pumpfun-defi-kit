@@ -1,10 +1,6 @@
 import { Connection, Keypair, PublicKey, clusterApiUrl } from '@solana/web3.js';
-import { config } from 'dotenv';
 import { log, logWarning } from './debug';
 import type { ConnectionConfig } from '../@types';
-
-// Load environment variables
-config();
 
 // ConnectionConfig moved to src/@types.ts
 

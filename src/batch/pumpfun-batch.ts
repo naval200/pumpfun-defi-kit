@@ -78,7 +78,7 @@ export async function executeBatchInstructions(
   } = {}
 ): Promise<BatchResult[]> {
   debugLog(`🚀 Executing ${batchInstructions.length} batch instructions`);
-  
+
   const { delayBetween = 1000, retryFailed = false, disableFallbackRetry = false } = options;
 
   const results: BatchResult[] = [];
@@ -109,9 +109,11 @@ export async function executeBatchInstructions(
       // Validate all required signers have signatures
       const requiredSigners = new Set<string>();
       transaction.instructions.forEach(ix => {
-        ix.keys.filter(k => k.isSigner).forEach(key => {
-          requiredSigners.add(key.pubkey.toString());
-        });
+        ix.keys
+          .filter(k => k.isSigner)
+          .forEach(key => {
+            requiredSigners.add(key.pubkey.toString());
+          });
       });
       if (transaction.feePayer) {
         requiredSigners.add(transaction.feePayer.toString());
@@ -119,7 +121,7 @@ export async function executeBatchInstructions(
 
       const signedKeys = new Set(transaction.signatures.map(s => s.publicKey.toString()));
       const missingSignatures = Array.from(requiredSigners).filter(key => !signedKeys.has(key));
-      
+
       if (missingSignatures.length > 0) {
         debugLog(`❌ Missing signatures: ${missingSignatures.join(', ')}`);
         throw new Error(`Missing signatures for required signers: ${missingSignatures.join(', ')}`);
@@ -138,7 +140,7 @@ export async function executeBatchInstructions(
         skipPreflight: false,
         preflightCommitment: 'confirmed',
       });
-      
+
       debugLog(`📝 Signature: ${signature}`);
 
       const confirmation = await connection.confirmTransaction(
@@ -233,7 +235,10 @@ export async function executeBatchInstructions(
 /**
  * Validate transaction before sending
  */
-function validateTransaction(transaction: Transaction, signers: Keypair[]): { valid: boolean; errors: string[] } {
+function validateTransaction(
+  transaction: Transaction,
+  signers: Keypair[]
+): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   // Check if transaction has fee payer
@@ -253,10 +258,12 @@ function validateTransaction(transaction: Transaction, signers: Keypair[]): { va
 
   // Collect all required signers from instructions
   const requiredSigners = new Set<string>();
-  transaction.instructions.forEach((ix, index) => {
-    ix.keys.filter(k => k.isSigner).forEach(key => {
-      requiredSigners.add(key.pubkey.toString());
-    });
+  transaction.instructions.forEach(ix => {
+    ix.keys
+      .filter(k => k.isSigner)
+      .forEach(key => {
+        requiredSigners.add(key.pubkey.toString());
+      });
   });
 
   // Add fee payer to required signers
@@ -267,7 +274,7 @@ function validateTransaction(transaction: Transaction, signers: Keypair[]): { va
   // Check if all required signers are in the signers array
   const signerKeys = new Set(signers.map(s => s.publicKey.toString()));
   const missingSigners = Array.from(requiredSigners).filter(key => !signerKeys.has(key));
-  
+
   if (missingSigners.length > 0) {
     errors.push(`Missing signers in signers array: ${missingSigners.join(', ')}`);
   }
@@ -290,7 +297,7 @@ function validateTransaction(transaction: Transaction, signers: Keypair[]): { va
       return total + ix.data.length + 4; // instruction data + overhead
     }, 0);
     const estimatedSize = signatureSize + accountKeysSize + instructionDataSize + 100; // +100 for overhead
-    
+
     if (estimatedSize > 1232) {
       errors.push(`Estimated transaction size too large: ${estimatedSize} bytes (limit: 1232)`);
     }
@@ -300,7 +307,7 @@ function validateTransaction(transaction: Transaction, signers: Keypair[]): { va
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 

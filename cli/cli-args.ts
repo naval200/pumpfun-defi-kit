@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Keypair } from '@solana/web3.js';
 import { debugLog, logError } from '../src/utils/debug';
 
@@ -22,7 +22,6 @@ export interface CliArgs {
   recipient?: string;
   mint?: string;
   createAccount?: boolean;
-  operations?: string;
   maxParallel?: number;
   retryFailed?: boolean;
   disableFallbackRetry?: boolean;
@@ -31,6 +30,15 @@ export interface CliArgs {
   dryRun?: boolean;
   help?: boolean;
   action?: string;
+  address?: string;
+  limit?: number;
+  output?: string;
+  network?: string;
+  format?: string;
+  signature?: string;
+  operations?: string;
+  type?: string;
+  batchAnalysis?: boolean;
 }
 
 export function parseArgs(): CliArgs {
@@ -129,6 +137,33 @@ export function parseArgs(): CliArgs {
       case '--dry-run':
         args.dryRun = true;
         break;
+      case '--address':
+        args.address = argv[++i];
+        break;
+      case '--limit':
+        args.limit = parseInt(argv[++i]);
+        break;
+      case '--output':
+        args.output = argv[++i];
+        break;
+      case '--network':
+        args.network = argv[++i];
+        break;
+      case "--signature":
+        args.signature = argv[++i];
+        break;
+      case "--operations":
+        args.operations = argv[++i];
+        break;
+      case '--format':
+        args.format = argv[++i];
+        break;
+      case '--type':
+        args.type = argv[++i];
+        break;
+      case '--batch-analysis':
+        args.batchAnalysis = true;
+        break;
       case '--help':
       case '-h':
         args.help = true;
@@ -210,6 +245,11 @@ export function printUsage(scriptName: string, options: string[] = []): void {
   console.log('  --delay-between <ms>          Delay between transaction batches in milliseconds');
   console.log('  --dynamic-batching            Enable dynamic batch size determination');
   console.log('  --dry-run                     Show what would be executed without running');
+  console.log('  --address <public-key>        Public key to get transactions for');
+  console.log('  --limit <number>              Number of transactions to fetch (default: 50)');
+  console.log('  --output <file>               Save results to JSON file');
+  console.log('  --network <network>           Network to use (devnet/mainnet, default: devnet)');
+  console.log('  --format <format>             Output format (table/json, default: table)');
   console.log('  -h, --help                    Show this help message');
 
   if (options.length > 0) {

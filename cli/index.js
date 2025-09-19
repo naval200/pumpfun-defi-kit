@@ -24,6 +24,7 @@ const commands = {
   'send-token': 'send-token-cli.ts',
   'check-balances': 'check-wallet-balances.ts',
   'create-ata': 'create-ata-cli.ts',
+  'list-transactions': 'list-transactions-cli.ts',
   'batch': 'batch-transactions-cli.ts'
 };
 
@@ -50,7 +51,8 @@ function showHelp() {
   console.log('  pumpfun-cli send-sol --help');
   console.log('  pumpfun-cli send-token --help');
   console.log('  pumpfun-cli check-balances --help');
-  console.log('  pumpfun-cli create-ata --help\n');
+  console.log('  pumpfun-cli create-ata --help');
+  console.log('  pumpfun-cli list-transactions --help\n');
   
   console.log('📦 Batch Operations:');
   console.log('  pumpfun-cli batch --help\n');

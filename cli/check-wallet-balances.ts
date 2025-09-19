@@ -19,29 +19,46 @@ async function checkWalletBalances() {
 
     if (args.help) {
       console.log(
-        'Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path> [--mint <token-mint>] [--input-token <token-info-file>]'
+        'Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path> OR --address <public-key> [--mint <token-mint>] [--input-token <token-info-file>]'
       );
-      console.log('  --wallet <path>        Path to wallet JSON file (required)');
+      console.log('  --wallet <path>        Path to wallet JSON file (optional)');
+      console.log('  --address <public-key> Public key to check balance for (optional)');
       console.log('  --mint <mint>          Specific token mint to check (optional)');
       console.log('  --input-token <file>   Path to token info JSON file (optional)');
       console.log('  --help                 Show this help message');
+      console.log('');
+      console.log('Note: Either --wallet or --address must be provided');
       return;
     }
 
-    if (!args.wallet) {
-      logError('❌ Error: --wallet parameter is required');
-      console.log('Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path>');
+    if (!args.wallet && !args.address) {
+      logError('❌ Error: Either --wallet or --address parameter is required');
+      console.log('Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path> OR --address <public-key>');
       return;
     }
 
-    // Load wallet from CLI args
-    let walletKeypair: Keypair;
-    try {
-      const walletData = fs.readFileSync(args.wallet, 'utf8');
-      walletKeypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(walletData)));
-    } catch (error) {
-      logError('❌ Failed to load wallet:', error);
-      return;
+    // Get public key from either wallet file or direct address
+    let publicKey: PublicKey;
+    let walletKeypair: Keypair | null = null;
+
+    if (args.wallet) {
+      // Load wallet from file
+      try {
+        const walletData = fs.readFileSync(args.wallet, 'utf8');
+        walletKeypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(walletData)));
+        publicKey = walletKeypair.publicKey;
+      } catch (error) {
+        logError('❌ Failed to load wallet:', error);
+        return;
+      }
+    } else {
+      // Use provided public key
+      try {
+        publicKey = new PublicKey(args.address!);
+      } catch (error) {
+        logError('❌ Invalid public key:', error);
+        return;
+      }
     }
 
     console.log('🔍 Checking Wallet Balances...\n');
@@ -49,12 +66,12 @@ async function checkWalletBalances() {
     // Connect to devnet
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-    console.log(`👤 Wallet: ${walletKeypair.publicKey.toString()}`);
+    console.log(`👤 Address: ${publicKey.toString()}`);
     console.log(`🔗 Network: ${connection.rpcEndpoint}\n`);
 
     // Check SOL balance
     console.log('🔍 Getting SOL balance...');
-    const balance = await connection.getBalance(walletKeypair.publicKey);
+    const balance = await connection.getBalance(publicKey);
     console.log(`💰 SOL Balance: ${formatLamportsAsSol(balance)} SOL\n`);
 
     // Check token from input file if provided
@@ -74,7 +91,7 @@ async function checkWalletBalances() {
         const mintPublicKey = new PublicKey(tokenInfo.mint);
         const tokenAccount = await getAssociatedTokenAddress(
           mintPublicKey,
-          walletKeypair.publicKey
+          publicKey
         );
         
         try {
@@ -101,7 +118,7 @@ async function checkWalletBalances() {
         const mintPublicKey = new PublicKey(args.mint);
         const tokenAccount = await getAssociatedTokenAddress(
           mintPublicKey,
-          walletKeypair.publicKey
+          publicKey
         );
 
         console.log(`🪙 Checking specific token: ${args.mint}`);
@@ -132,7 +149,7 @@ async function checkWalletBalances() {
       console.log('🔍 Checking for SPL tokens (limited to first 10)...');
       try {
         // Add timeout to prevent hanging
-        const tokenCheckPromise = connection.getTokenAccountsByOwner(walletKeypair.publicKey, {
+        const tokenCheckPromise = connection.getTokenAccountsByOwner(publicKey, {
           programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
         });
         

@@ -54,7 +54,8 @@
     "docs/send-token-usage.md",
     "docs/fee-payer-usage.md",
     "docs/debug-scripts-guide.md",
-    "docs/pumpswap-documentation.md"
+    "docs/pumpswap-documentation.md",
+    "docs/how-to-get-transactions.md"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -74,7 +75,7 @@
     "format": "prettier --write src/**/*.ts",
     "check-format": "prettier --check src/**/*.ts",
     "deploy:dist": "bash scripts/deploy-dist.sh",
-    "help": "echo 'Available CLI commands:' && echo '  Bonding Curve:' && echo '    npm run cli:bond-create-token -- --help' && echo '    npm run cli:bond-buy -- --help' && echo '    npm run cli:bond-sell -- --help' && echo '    npm run cli:bond-check-accounts -- --help' && echo '    npm run cli:bond-create-account -- --help' && echo '  Account Management:' && echo '    npm run cli:create-ata -- --help' && echo '    npm run cli:create-pdas -- --help' && echo '    npm run cli:token-diagnostic -- --help' && echo '  AMM:' && echo '    npm run cli:amm:buy -- --help' && echo '    npm run cli:amm:sell -- --help' && echo '    npm run cli:amm:create-pool -- --help' && echo '    npm run cli:amm:info -- --help' && echo '    npm run cli:amm:liquidity -- --help' && echo '  Utilities:' && echo '    npm run cli:send-sol -- --help' && echo '    npm run cli:send-token -- --help' && echo '    npm run cli:check-wallet-balances -- --help' && echo '    npm run cli:graduation-check -- --help' && echo '  Batch Operations:' && echo '    npm run cli:batch-transactions -- --help' && echo '  Examples:' && echo '    npm run example:send-sol' && echo '    npm run example:batch-separated' && echo '    npm run example:batch-cli'",
+    "help": "echo 'Available CLI commands:' && echo '  Bonding Curve:' && echo '    npm run cli:bond-create-token -- --help' && echo '    npm run cli:bond-buy -- --help' && echo '    npm run cli:bond-sell -- --help' && echo '    npm run cli:bond-check-accounts -- --help' && echo '    npm run cli:bond-create-account -- --help' && echo '  Account Management:' && echo '    npm run cli:create-ata -- --help' && echo '    npm run cli:create-pdas -- --help' && echo '    npm run cli:token-diagnostic -- --help' && echo '  AMM:' && echo '    npm run cli:amm:buy -- --help' && echo '    npm run cli:amm:sell -- --help' && echo '    npm run cli:amm:create-pool -- --help' && echo '    npm run cli:amm:info -- --help' && echo '    npm run cli:amm:liquidity -- --help' && echo '  Utilities:' && echo '    npm run cli:send-sol -- --help' && echo '    npm run cli:send-token -- --help' && echo '    npm run cli:check-wallet-balances -- --help' && echo '    npm run cli:list-transactions -- --help' && echo '    npm run cli:graduation-check -- --help' && echo '  Batch Operations:' && echo '    npm run cli:batch-transactions -- --help' && echo '  Examples:' && echo '    npm run example:send-sol' && echo '    npm run example:batch-separated' && echo '    npm run example:batch-cli'",
     "cli:bond-create-token": "tsx cli/bonding-curve/create-token-cli.ts",
     "cli:bond-buy": "tsx cli/bonding-curve/buy-cli.ts",
     "cli:bond-sell": "tsx cli/bonding-curve/sell-cli.ts",
@@ -92,6 +93,7 @@
     "cli:graduation-check": "tsx cli/graduation-check-cli.ts",
     "cli:send-token": "tsx cli/send-token-cli.ts",
     "cli:send-sol": "tsx cli/send-sol-cli.ts",
+    "cli:list-transactions": "tsx cli/list-transactions-cli.ts",
     "cli:batch-transactions": "tsx cli/batch-transactions-cli.ts",
     "cli:check-wallet-balances": "tsx cli/check-wallet-balances.ts",
     "example:send-sol": "tsx examples/send-sol-example.ts",
@@ -106,7 +108,6 @@
     "@solana/web3.js": "^1.95.4",
     "@types/bignumber.js": "^4.0.3",
     "bignumber.js": "^9.3.1",
-    "dotenv": "^16.4.5",
     "fetch-blob": "^4.0.0",
     "undici": "^7.14.0"
   },

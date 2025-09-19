@@ -1,4 +1,4 @@
-import type { PublicKey, Keypair, Commitment } from '@solana/web3.js';
+import type { PublicKey, Keypair, Commitment, ParsedTransactionWithMeta } from '@solana/web3.js';
 
 /**
  * PumpFun token configuration - only the essential fields
@@ -206,3 +206,86 @@ export interface SendSolResult {
 
 // Using any type because the SDK's SwapSolanaState type is not accessible in the current version
 export type AmmSwapState = any;
+
+/**
+ * Transaction fetching types
+ */
+
+/**
+ * Transaction type (send/receive)
+ */
+export type TransactionType = 'send' | 'receive';
+
+/**
+ * SOL transaction result
+ */
+export interface SolTransaction {
+  type: TransactionType;
+  tx: ParsedTransactionWithMeta;
+  change: number;
+  preBalance: number;
+  postBalance: number;
+}
+
+/**
+ * SPL token transaction result
+ */
+export interface SplTokenTransaction {
+  type: TransactionType;
+  tx: ParsedTransactionWithMeta;
+  change: number;
+  preBalance: number;
+  postBalance: number;
+  mint: string;
+  owner: string;
+}
+
+/**
+ * Token transfer data
+ */
+export interface TokenTransfer {
+  mint: string;
+  owner: string;
+  change: number;
+  decimals: number;
+  amount: string;
+  uiAmount: number;
+}
+
+/**
+ * SOL transfer data
+ */
+export interface SolTransfer {
+  accountIndex: number;
+  change: number;
+  postBalance: number;
+  preBalance: number;
+}
+
+/**
+ * Transaction data
+ */
+export interface TransactionData {
+  signature: string;
+  slot: number;
+  blockTime: number | null;
+  fee: number;
+  success: boolean;
+  error: any;
+  tokenTransfers: TokenTransfer[];
+  solTransfers: SolTransfer[];
+  explorerUrl: string;
+  isBatchTransaction: boolean;
+  instructionCount: number;
+  accountCount: number;
+}
+
+/**
+ * Options for fetching transactions
+ */
+export interface GetTransactionsOptions {
+  network?: 'devnet' | 'mainnet';
+  limit?: number;
+  mintFilter?: string;
+  includeBatchAnalysis?: boolean;
+}

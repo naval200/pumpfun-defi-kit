@@ -67,6 +67,27 @@ tsx cli/send-token-cli.ts <recipient_address> <mint_address> 1000
 tsx cli/send-token-cli.ts <recipient_address> <mint_address> 1000 false
 ```
 
+### 6. List Transaction History
+```bash
+# List all transactions for a wallet
+npm run cli:list-transactions -- --address <wallet-public-key>
+
+# Filter by specific token mint
+npm run cli:list-transactions -- --address <wallet-public-key> --mint <token-mint-address>
+
+# Save results to JSON file
+npm run cli:list-transactions -- --address <wallet-public-key> --output transactions.json
+
+# Use mainnet instead of devnet
+npm run cli:list-transactions -- --address <wallet-public-key> --network mainnet
+
+# Get JSON output format
+npm run cli:list-transactions -- --address <wallet-public-key> --format json
+
+# Limit number of transactions
+npm run cli:list-transactions -- --address <wallet-public-key> --limit 10
+```
+
 ## Common Options
 
 All CLI commands support these common options:
@@ -221,3 +242,29 @@ npm run help
 - Wallet files should contain the private key as an array of numbers
 - Token info files are automatically created and updated by the CLI commands
 - The send-token CLI works with both bonding curve and AMM tokens since they are standard SPL tokens
+
+### 7. Analyze Batch Transactions
+```bash
+# Analyze a specific transaction for batch characteristics
+npm run cli:analyze-batch -- --signature <transaction-signature>
+
+# Analyze with batch operations context
+npm run cli:analyze-batch -- --signature <tx-signature> --operations <batch-operations.json>
+
+# Get JSON output format
+npm run cli:analyze-batch -- --signature <tx-signature> --format json
+
+# Save analysis to file
+npm run cli:analyze-batch -- --signature <tx-signature> --output analysis.json
+
+# Use mainnet
+npm run cli:analyze-batch -- --signature <tx-signature> --network mainnet
+```
+
+This command provides detailed analysis of batch transactions including:
+- Fee payer identification
+- Participant analysis
+- Token operation categorization
+- SOL transfer breakdown
+- Batch size estimation
+- Success/failure status

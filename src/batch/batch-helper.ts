@@ -8,7 +8,10 @@ import {
   createBondingCurveSellInstruction,
 } from '../bonding-curve';
 import { createAmmBuyInstructionsAssuming, createAmmSellInstructionsAssuming } from '../amm';
-import { createAssociatedTokenAccountInstruction, createAssociatedWSOLAccountInstruction } from '../createAccount';
+import {
+  createAssociatedTokenAccountInstruction,
+  createAssociatedWSOLAccountInstruction,
+} from '../createAccount';
 import { minSolLamports } from '../utils/amounts';
 import { debugLog } from '../utils/debug';
 import type { BatchOperation } from '../@types';
@@ -19,7 +22,7 @@ function addCreateAccountInstructions(
   instructions: TransactionInstruction[],
   mint: PublicKey,
   owner: PublicKey,
-  feePayer: PublicKey,
+  feePayer: PublicKey
 ) {
   const { instruction: createAtaIx } = createAssociatedTokenAccountInstruction(
     feePayer, // payer
@@ -54,9 +57,9 @@ export async function buildInstructionsForOperation(
         instructions,
         new PublicKey(mint),
         new PublicKey(owner),
-        feePayer?.publicKey || senderKeypair.publicKey,
-      )
-      break;      
+        feePayer?.publicKey || senderKeypair.publicKey
+      );
+      break;
     }
     case 'transfer': {
       const { recipient, mint, amount } = operation.params;
@@ -64,7 +67,7 @@ export async function buildInstructionsForOperation(
         senderKeypair.publicKey,
         new PublicKey(recipient),
         new PublicKey(mint),
-        amount,
+        amount
       );
       instructions.push(ix);
       break;
@@ -122,20 +125,14 @@ export async function buildInstructionsForOperation(
 
       // For buy-amm operations, use the SDK's default method that handles native SOL
       // This avoids the complexity of wrapped SOL token accounts
-      const state = await ammSdk.swapSolanaState(
-        new PublicKey(poolKey), 
-        senderKeypair.publicKey
-      );
+      const state = await ammSdk.swapSolanaState(new PublicKey(poolKey), senderKeypair.publicKey);
       const ixs = await createAmmBuyInstructionsAssuming(ammSdk, state, amount, slippage);
       instructions.push(...ixs);
       break;
     }
     case 'sell-amm': {
       const { poolKey, amount, slippage = 1 } = operation.params;
-      const state = await ammSdk.swapSolanaState(
-        new PublicKey(poolKey),
-        senderKeypair.publicKey
-      );
+      const state = await ammSdk.swapSolanaState(new PublicKey(poolKey), senderKeypair.publicKey);
       const ixs = await createAmmSellInstructionsAssuming(ammSdk, state, amount, slippage);
       instructions.push(...ixs);
       break;
