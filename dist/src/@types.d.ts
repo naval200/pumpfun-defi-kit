@@ -183,9 +183,9 @@ export type AmmSwapState = any;
  * Transaction fetching types
  */
 /**
- * Transaction type (debit/credit)
+ * Transaction type (send/receive)
  */
-export type TransactionType = 'debit' | 'credit';
+export type TransactionType = 'send' | 'receive';
 /**
  * SOL transaction result
  */

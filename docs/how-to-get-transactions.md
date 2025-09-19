@@ -278,7 +278,7 @@ const solTransactions = await getSolanaTransactions(connection, walletAddress, 2
 
 solTransactions.forEach(tx => {
   console.log(`SOL Transaction: ${tx.tx.transaction.signatures[0]}`);
-  console.log(`  Type: ${tx.type}`); // 'debit' or 'credit'
+  console.log(`  Type: ${tx.type}`); // 'send' or 'receive'
   console.log(`  Change: ${tx.change > 0 ? '+' : ''}${(tx.change / 1e9).toFixed(9)} SOL`);
   console.log(`  Balance: ${(tx.preBalance / 1e9).toFixed(9)} → ${(tx.postBalance / 1e9).toFixed(9)} SOL`);
   console.log(`  Success: ${!tx.tx.meta?.err}`);
@@ -293,7 +293,7 @@ const tokenTransactions = await getSplTokenTransactions(connection, walletAddres
 
 tokenTransactions.forEach(tx => {
   console.log(`Token Transaction: ${tx.tx.transaction.signatures[0]}`);
-  console.log(`  Type: ${tx.type}`); // 'debit' or 'credit'
+  console.log(`  Type: ${tx.type}`); // 'send' or 'receive'
   console.log(`  Mint: ${tx.mint}`);
   console.log(`  Owner: ${tx.owner}`);
   console.log(`  Change: ${tx.change > 0 ? '+' : ''}${tx.change.toFixed(6)} tokens`);

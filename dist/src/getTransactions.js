@@ -43,7 +43,7 @@ async function getSolanaTransactions(connection, owner, limit = 50) {
         const change = postBalance - preBalance;
         if (preBalance > postBalance) {
             results.push({
-                type: 'debit',
+                type: 'send',
                 tx,
                 change: -change,
                 preBalance,
@@ -52,7 +52,7 @@ async function getSolanaTransactions(connection, owner, limit = 50) {
         }
         else if (postBalance > preBalance) {
             results.push({
-                type: 'credit',
+                type: 'receive',
                 tx,
                 change,
                 preBalance,
@@ -81,7 +81,7 @@ async function getSplTokenTransactions(connection, owner, tokenMint, limit = 50)
         const change = postBalance - preBalance;
         if (preBalance > postBalance) {
             results.push({
-                type: 'debit',
+                type: 'send',
                 tx,
                 change: -change,
                 preBalance,
@@ -92,7 +92,7 @@ async function getSplTokenTransactions(connection, owner, tokenMint, limit = 50)
         }
         else if (postBalance > preBalance) {
             results.push({
-                type: 'credit',
+                type: 'receive',
                 tx,
                 change,
                 preBalance,
