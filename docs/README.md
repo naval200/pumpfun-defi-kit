@@ -30,6 +30,7 @@ Welcome to the PumpFun Solana Development documentation! This folder contains co
 ### Development Tools
 
 - **[Debug Scripts Guide](./debug-scripts-guide.md)** - Debug mode, logging configuration, and testing scripts
+- **[How to Get Transactions](./how-to-get-transactions.md)** - Complete guide for fetching and analyzing Solana transactions
 
 ### AMM (Automated Market Maker)
 

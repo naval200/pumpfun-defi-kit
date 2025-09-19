@@ -5,6 +5,7 @@ This document provides a comprehensive reference for the PumpFun DeFi Kit API.
 ## Table of Contents
 
 - [Core Functions](#core-functions)
+- [Transaction Analysis](#transaction-analysis)
 - [Batch Transactions](#batch-transactions)
 - [Bonding Curve Operations](#bonding-curve-operations)
 - [AMM Operations](#amm-operations)
@@ -83,6 +84,366 @@ function sendToken(
   amount: number,
   feePayer?: Keypair
 ): Promise<TransactionResult>
+```
+
+## Transaction Analysis
+
+The transaction analysis module provides comprehensive tools for fetching, processing, and analyzing Solana transactions, including SPL token transfers, SOL transfers, and batch transaction detection.
+
+### Core Functions
+
+#### `getTransactions`
+
+Fetches and processes all transactions for a given wallet address.
+
+```typescript
+function getTransactions(
+  address: string,
+  options?: GetTransactionsOptions
+): Promise<TransactionData[]>
+```
+
+**Parameters:**
+- `address`: Wallet public key as string
+- `options?`: Optional configuration object
+
+**Returns:** Promise<TransactionData[]>
+
+**Example:**
+```typescript
+import { getTransactions } from '@pump-fun/defikit';
+
+// Get all transactions for a wallet
+const transactions = await getTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+  network: 'devnet',
+  limit: 50,
+  includeBatchAnalysis: true
+});
+
+console.log(`Found ${transactions.length} transactions`);
+```
+
+#### `getSolTransactions`
+
+Fetches only SOL transfer transactions (no token transfers).
+
+```typescript
+function getSolTransactions(
+  address: string,
+  options?: Omit<GetTransactionsOptions, 'mintFilter'>
+): Promise<TransactionData[]>
+```
+
+**Example:**
+```typescript
+// Get only SOL transactions
+const solTransactions = await getSolTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+  network: 'devnet',
+  limit: 20
+});
+```
+
+#### `getTokenTransactions`
+
+Fetches only SPL token transfer transactions.
+
+```typescript
+function getTokenTransactions(
+  address: string,
+  options?: GetTransactionsOptions
+): Promise<TransactionData[]>
+```
+
+**Example:**
+```typescript
+// Get only token transactions
+const tokenTransactions = await getTokenTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+  network: 'devnet',
+  limit: 20,
+  mintFilter: 'So11111111111111111111111111111111111111112' // Filter by specific token
+});
+```
+
+#### `getBatchTransactions`
+
+Fetches only batch transactions (transactions with multiple instructions).
+
+```typescript
+function getBatchTransactions(
+  address: string,
+  options?: Omit<GetTransactionsOptions, 'includeBatchAnalysis'>
+): Promise<TransactionData[]>
+```
+
+**Example:**
+```typescript
+// Get only batch transactions
+const batchTransactions = await getBatchTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+  network: 'devnet',
+  limit: 10
+});
+```
+
+#### `getTransactionBySignature`
+
+Fetches a single transaction by its signature.
+
+```typescript
+function getTransactionBySignature(
+  signature: string,
+  options?: Omit<GetTransactionsOptions, 'limit' | 'mintFilter'>
+): Promise<TransactionData | null>
+```
+
+**Example:**
+```typescript
+// Get specific transaction
+const tx = await getTransactionBySignature('5J7X8...', {
+  network: 'devnet',
+  includeBatchAnalysis: true
+});
+
+if (tx) {
+  console.log(`Transaction fee: ${tx.fee} lamports`);
+  console.log(`Success: ${tx.success}`);
+}
+```
+
+#### `getTransactionSummary`
+
+Generates summary statistics for a collection of transactions.
+
+```typescript
+function getTransactionSummary(transactions: TransactionData[]): TransactionSummary
+```
+
+**Example:**
+```typescript
+const transactions = await getTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh');
+const summary = getTransactionSummary(transactions);
+
+console.log(`Total transactions: ${summary.totalTransactions}`);
+console.log(`Success rate: ${summary.successRate.toFixed(2)}%`);
+console.log(`Total fees: ${summary.totalFeesInSol.toFixed(9)} SOL`);
+```
+
+### Utility Functions
+
+#### `extractTokenTransfers`
+
+Extracts SPL token transfers from raw transaction data.
+
+```typescript
+function extractTokenTransfers(tx: any): TokenTransfer[]
+```
+
+#### `extractSolTransfers`
+
+Extracts SOL transfers from raw transaction data.
+
+```typescript
+function extractSolTransfers(tx: any): SolTransfer[]
+```
+
+#### `isBatchTransaction`
+
+Determines if a transaction is a batch transaction based on heuristics.
+
+```typescript
+function isBatchTransaction(tx: any): boolean
+```
+
+### Types and Interfaces
+
+#### `GetTransactionsOptions`
+
+Configuration options for fetching transactions.
+
+```typescript
+interface GetTransactionsOptions {
+  network?: 'devnet' | 'mainnet';
+  limit?: number;
+  mintFilter?: string;
+  includeBatchAnalysis?: boolean;
+}
+```
+
+**Properties:**
+- `network`: Solana network to query (default: 'devnet')
+- `limit`: Maximum number of transactions to fetch (default: 50)
+- `mintFilter`: Filter transactions by specific token mint address
+- `includeBatchAnalysis`: Enable batch transaction detection (default: false)
+
+#### `TransactionData`
+
+Complete transaction information.
+
+```typescript
+interface TransactionData {
+  signature: string;
+  slot: number;
+  blockTime: number | null;
+  fee: number;
+  success: boolean;
+  error: any;
+  tokenTransfers: TokenTransfer[];
+  solTransfers: SolTransfer[];
+  explorerUrl: string;
+  isBatchTransaction: boolean;
+  instructionCount: number;
+  accountCount: number;
+}
+```
+
+**Properties:**
+- `signature`: Transaction signature
+- `slot`: Solana slot number
+- `blockTime`: Unix timestamp of block time
+- `fee`: Transaction fee in lamports
+- `success`: Whether transaction succeeded
+- `error`: Error details if transaction failed
+- `tokenTransfers`: Array of SPL token transfers
+- `solTransfers`: Array of SOL transfers
+- `explorerUrl`: Solana Explorer URL
+- `isBatchTransaction`: Whether this is a batch transaction
+- `instructionCount`: Number of instructions in transaction
+- `accountCount`: Number of accounts involved
+
+#### `TokenTransfer`
+
+SPL token transfer information.
+
+```typescript
+interface TokenTransfer {
+  mint: string;
+  owner: string;
+  change: number;
+  decimals: number;
+  amount: string;
+  uiAmount: number;
+}
+```
+
+**Properties:**
+- `mint`: Token mint address
+- `owner`: Token account owner
+- `change`: Balance change (positive for received, negative for sent)
+- `decimals`: Token decimals
+- `amount`: Raw amount as string
+- `uiAmount`: User-friendly amount
+
+#### `SolTransfer`
+
+SOL transfer information.
+
+```typescript
+interface SolTransfer {
+  accountIndex: number;
+  change: number;
+  postBalance: number;
+  preBalance: number;
+}
+```
+
+**Properties:**
+- `accountIndex`: Account index in transaction
+- `change`: SOL balance change
+- `postBalance`: Balance after transaction
+- `preBalance`: Balance before transaction
+
+#### `TransactionSummary`
+
+Summary statistics for transaction collection.
+
+```typescript
+interface TransactionSummary {
+  totalTransactions: number;
+  successfulTransactions: number;
+  failedTransactions: number;
+  successRate: number;
+  totalFees: number;
+  totalFeesInSol: number;
+  totalSolTransfers: number;
+  totalTokenTransfers: number;
+  batchTransactions: number;
+  uniqueTokens: number;
+  uniqueTokenMints: string[];
+}
+```
+
+### Usage Examples
+
+#### Basic Transaction Fetching
+
+```typescript
+import { getTransactions, getTransactionSummary } from '@pump-fun/defikit';
+
+// Fetch recent transactions
+const transactions = await getTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+  network: 'devnet',
+  limit: 20,
+  includeBatchAnalysis: true
+});
+
+// Get summary statistics
+const summary = getTransactionSummary(transactions);
+console.log(`Success rate: ${summary.successRate.toFixed(2)}%`);
+```
+
+#### Filtering by Token
+
+```typescript
+// Get transactions for a specific token
+const tokenTransactions = await getTokenTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+  network: 'devnet',
+  mintFilter: 'So11111111111111111111111111111111111111112', // SOL
+  limit: 10
+});
+```
+
+#### Batch Transaction Analysis
+
+```typescript
+// Get only batch transactions
+const batchTransactions = await getBatchTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+  network: 'devnet',
+  limit: 5
+});
+
+// Analyze each batch transaction
+batchTransactions.forEach(tx => {
+  console.log(`Batch transaction: ${tx.signature}`);
+  console.log(`Instructions: ${tx.instructionCount}`);
+  console.log(`Accounts: ${tx.accountCount}`);
+  console.log(`Token transfers: ${tx.tokenTransfers.length}`);
+  console.log(`SOL transfers: ${tx.solTransfers.length}`);
+});
+```
+
+#### Single Transaction Analysis
+
+```typescript
+// Get specific transaction
+const tx = await getTransactionBySignature('5J7X8...', {
+  network: 'devnet',
+  includeBatchAnalysis: true
+});
+
+if (tx) {
+  console.log(`Transaction: ${tx.signature}`);
+  console.log(`Success: ${tx.success}`);
+  console.log(`Fee: ${tx.fee} lamports`);
+  
+  // Display token transfers
+  tx.tokenTransfers.forEach(transfer => {
+    console.log(`Token ${transfer.mint}: ${transfer.change > 0 ? '+' : ''}${transfer.change}`);
+  });
+  
+  // Display SOL transfers
+  tx.solTransfers.forEach(transfer => {
+    console.log(`Account ${transfer.accountIndex}: ${transfer.change > 0 ? '+' : ''}${transfer.change} SOL`);
+  });
+}
 ```
 
 ## Batch Transactions

@@ -30,6 +30,10 @@ npm run cli:amm-create-pool -- --base-amount 1000000 --quote-amount 0.1
 npm run cli:check-balances -- --wallet ./wallet.json --input-token ./token-info.json
 npm run cli:send-sol -- --from-wallet ./wallet.json --to-address <address> --amount 0.1
 npm run cli:send-token -- --recipient <address> --mint <mint> --amount 1000
+
+# Transaction Analysis
+npm run cli:list-transactions -- --address <public-key> --limit 50 --network devnet
+npm run cli:analyze-batch -- --signature <tx-signature> --network devnet
 ```
 
 ### Using tsx directly
@@ -65,6 +69,10 @@ pumpfun-cli amm-create-pool --base-amount 1000000 --quote-amount 0.1
 pumpfun-cli check-balances --wallet ./wallet.json --input-token ./token-info.json
 pumpfun-cli send-sol --from-wallet ./wallet.json --to-address <address> --amount 0.1
 pumpfun-cli send-token --recipient <address> --mint <mint> --amount 1000
+
+# Transaction Analysis
+pumpfun-cli list-transactions --address <public-key> --limit 50 --network devnet
+pumpfun-cli analyze-batch --signature <tx-signature> --network devnet
 ```
 
 ### Method 2: Using npx (Recommended)
@@ -84,6 +92,10 @@ npx pumpfun-cli send-sol --from-wallet ./wallet.json --to-address <address> --am
 npx pumpfun-cli send-token --recipient <address> --mint <mint> --amount 1000
 npx pumpfun-cli create-ata --wallet ./wallet.json --mint <mint> --owner <owner>
 npx pumpfun-cli batch --operations ./batch-operations.json
+
+# Transaction Analysis
+npx pumpfun-cli list-transactions --address <public-key> --limit 50 --network devnet
+npx pumpfun-cli analyze-batch --signature <tx-signature> --network devnet
 ```
 
 ### Method 3: Custom npm Scripts
@@ -136,6 +148,8 @@ These commands are available globally when the package is installed:
 - `pumpfun-cli check-balances` - Check wallet balances
 - `pumpfun-cli create-ata` - Create Associated Token Account
 - `pumpfun-cli batch` - Execute batch transactions
+- `pumpfun-cli list-transactions` - List SPL token and SOL transactions for a wallet
+- `pumpfun-cli analyze-batch` - Analyze batch transactions with detailed breakdown
 
 ### Local Development Commands
 
@@ -160,6 +174,10 @@ When working with the source code directly:
 - `send-token` - Send tokens between wallets
 - `check-balances` - Check wallet balances
 - `create-ata` - Create Associated Token Account
+
+#### Transaction Analysis
+- `list-transactions` - List SPL token and SOL transactions for a wallet
+- `analyze-batch` - Analyze batch transactions with detailed breakdown
 
 #### Batch Operations
 - `batch` - Execute batch transactions
