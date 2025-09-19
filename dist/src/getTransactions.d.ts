@@ -1,55 +1,19 @@
-import { TokenTransfer, SolTransfer, TransactionData, GetTransactionsOptions } from './@types';
-export type { TokenTransfer, SolTransfer, TransactionData, GetTransactionsOptions };
+import { Connection, PublicKey, ParsedTransactionWithMeta } from '@solana/web3.js';
+import { SolTransaction, SplTokenTransaction } from './@types';
 /**
- * Extract token transfers from transaction data
+ * Fetch all confirmed transactions for an address
  */
-export declare function extractTokenTransfers(tx: any): TokenTransfer[];
+export declare function getTransactions(connection: Connection, address: PublicKey, limit?: number): Promise<ParsedTransactionWithMeta[]>;
 /**
- * Extract SOL transfers from transaction data
+ * Get SOL transactions
  */
-export declare function extractSolTransfers(tx: any): SolTransfer[];
+export declare function getSolanaTransactions(connection: Connection, owner: PublicKey, limit?: number): Promise<SolTransaction[]>;
 /**
- * Determine if a transaction is a batch transaction
+ * Get SPL token transactions for a specific token mint
  */
-export declare function isBatchTransaction(tx: any): boolean;
-/**
- * Process a single transaction into our format
- */
-export declare function processTransaction(tx: any, signature: string, network?: 'devnet' | 'mainnet', includeBatchAnalysis?: boolean): TransactionData;
-/**
- * Main function to fetch transactions for a wallet
- */
-export declare function getTransactions(address: string, options?: GetTransactionsOptions): Promise<TransactionData[]>;
-/**
- * Get only SOL transactions (no token transfers)
- */
-export declare function getSolTransactions(address: string, options?: Omit<GetTransactionsOptions, 'mintFilter'>): Promise<TransactionData[]>;
-/**
- * Get only SPL token transactions
- */
-export declare function getTokenTransactions(address: string, options?: GetTransactionsOptions): Promise<TransactionData[]>;
-/**
- * Get only batch transactions
- */
-export declare function getBatchTransactions(address: string, options?: Omit<GetTransactionsOptions, 'includeBatchAnalysis'>): Promise<TransactionData[]>;
+export declare function getSplTokenTransactions(connection: Connection, owner: PublicKey, tokenMint: PublicKey, limit?: number): Promise<SplTokenTransaction[]>;
 /**
  * Get a single transaction by signature
  */
-export declare function getTransactionBySignature(signature: string, options?: Omit<GetTransactionsOptions, 'limit' | 'mintFilter'>): Promise<TransactionData | null>;
-/**
- * Get transaction summary statistics
- */
-export declare function getTransactionSummary(transactions: TransactionData[]): {
-    totalTransactions: number;
-    successfulTransactions: number;
-    failedTransactions: number;
-    successRate: number;
-    totalFees: number;
-    totalFeesInSol: number;
-    totalSolTransfers: number;
-    totalTokenTransfers: number;
-    batchTransactions: number;
-    uniqueTokens: number;
-    uniqueTokenMints: unknown[];
-};
+export declare function getTransactionBySignature(connection: Connection, signature: string): Promise<ParsedTransactionWithMeta | null>;
 //# sourceMappingURL=getTransactions.d.ts.map

@@ -18,36 +18,54 @@ async function checkWalletBalances() {
         const args = (0, cli_args_1.parseArgs)();
         console.log('📋 Parsed args:', args);
         if (args.help) {
-            console.log('Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path> [--mint <token-mint>] [--input-token <token-info-file>]');
-            console.log('  --wallet <path>        Path to wallet JSON file (required)');
+            console.log('Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path> OR --address <public-key> [--mint <token-mint>] [--input-token <token-info-file>]');
+            console.log('  --wallet <path>        Path to wallet JSON file (optional)');
+            console.log('  --address <public-key> Public key to check balance for (optional)');
             console.log('  --mint <mint>          Specific token mint to check (optional)');
             console.log('  --input-token <file>   Path to token info JSON file (optional)');
             console.log('  --help                 Show this help message');
+            console.log('');
+            console.log('Note: Either --wallet or --address must be provided');
             return;
         }
-        if (!args.wallet) {
-            (0, debug_1.logError)('❌ Error: --wallet parameter is required');
-            console.log('Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path>');
+        if (!args.wallet && !args.address) {
+            (0, debug_1.logError)('❌ Error: Either --wallet or --address parameter is required');
+            console.log('Usage: npm run cli:check-wallet-balances -- --wallet <wallet-path> OR --address <public-key>');
             return;
         }
-        // Load wallet from CLI args
-        let walletKeypair;
-        try {
-            const walletData = fs_1.default.readFileSync(args.wallet, 'utf8');
-            walletKeypair = web3_js_1.Keypair.fromSecretKey(new Uint8Array(JSON.parse(walletData)));
+        // Get public key from either wallet file or direct address
+        let publicKey;
+        let walletKeypair = null;
+        if (args.wallet) {
+            // Load wallet from file
+            try {
+                const walletData = fs_1.default.readFileSync(args.wallet, 'utf8');
+                walletKeypair = web3_js_1.Keypair.fromSecretKey(new Uint8Array(JSON.parse(walletData)));
+                publicKey = walletKeypair.publicKey;
+            }
+            catch (error) {
+                (0, debug_1.logError)('❌ Failed to load wallet:', error);
+                return;
+            }
         }
-        catch (error) {
-            (0, debug_1.logError)('❌ Failed to load wallet:', error);
-            return;
+        else {
+            // Use provided public key
+            try {
+                publicKey = new web3_js_1.PublicKey(args.address);
+            }
+            catch (error) {
+                (0, debug_1.logError)('❌ Invalid public key:', error);
+                return;
+            }
         }
         console.log('🔍 Checking Wallet Balances...\n');
         // Connect to devnet
         const connection = new web3_js_1.Connection('https://api.devnet.solana.com', 'confirmed');
-        console.log(`👤 Wallet: ${walletKeypair.publicKey.toString()}`);
+        console.log(`👤 Address: ${publicKey.toString()}`);
         console.log(`🔗 Network: ${connection.rpcEndpoint}\n`);
         // Check SOL balance
         console.log('🔍 Getting SOL balance...');
-        const balance = await connection.getBalance(walletKeypair.publicKey);
+        const balance = await connection.getBalance(publicKey);
         console.log(`💰 SOL Balance: ${(0, amounts_1.formatLamportsAsSol)(balance)} SOL\n`);
         // Check token from input file if provided
         if (args.inputToken) {
@@ -62,7 +80,7 @@ async function checkWalletBalances() {
                 console.log(`🪙 Token: ${tokenInfo.name || 'Unknown'} (${tokenInfo.symbol || 'Unknown'})`);
                 console.log(`📍 Mint: ${tokenInfo.mint}`);
                 const mintPublicKey = new web3_js_1.PublicKey(tokenInfo.mint);
-                const tokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mintPublicKey, walletKeypair.publicKey);
+                const tokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mintPublicKey, publicKey);
                 try {
                     const accountInfo = await (0, spl_token_1.getAccount)(connection, tokenAccount);
                     const mintInfo = await (0, spl_token_1.getMint)(connection, mintPublicKey);
@@ -85,7 +103,7 @@ async function checkWalletBalances() {
             console.log('🔍 Checking specific token balance...');
             try {
                 const mintPublicKey = new web3_js_1.PublicKey(args.mint);
-                const tokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mintPublicKey, walletKeypair.publicKey);
+                const tokenAccount = await (0, spl_token_1.getAssociatedTokenAddress)(mintPublicKey, publicKey);
                 console.log(`🪙 Checking specific token: ${args.mint}`);
                 console.log(`   Token Account: ${tokenAccount.toString()}`);
                 try {
@@ -115,7 +133,7 @@ async function checkWalletBalances() {
             console.log('🔍 Checking for SPL tokens (limited to first 10)...');
             try {
                 // Add timeout to prevent hanging
-                const tokenCheckPromise = connection.getTokenAccountsByOwner(walletKeypair.publicKey, {
+                const tokenCheckPromise = connection.getTokenAccountsByOwner(publicKey, {
                     programId: new web3_js_1.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
                 });
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after 10 seconds')), 10000));

@@ -94,7 +94,6 @@
     "cli:send-token": "tsx cli/send-token-cli.ts",
     "cli:send-sol": "tsx cli/send-sol-cli.ts",
     "cli:list-transactions": "tsx cli/list-transactions-cli.ts",
-    "cli:analyze-batch": "tsx cli/analyze-batch-cli.ts",
     "cli:batch-transactions": "tsx cli/batch-transactions-cli.ts",
     "cli:check-wallet-balances": "tsx cli/check-wallet-balances.ts",
     "example:send-sol": "tsx examples/send-sol-example.ts",

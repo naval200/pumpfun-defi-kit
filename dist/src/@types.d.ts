@@ -1,4 +1,4 @@
-import type { PublicKey, Keypair, Commitment } from '@solana/web3.js';
+import type { PublicKey, Keypair, Commitment, ParsedTransactionWithMeta } from '@solana/web3.js';
 /**
  * PumpFun token configuration - only the essential fields
  */
@@ -182,6 +182,32 @@ export type AmmSwapState = any;
 /**
  * Transaction fetching types
  */
+/**
+ * Transaction type (debit/credit)
+ */
+export type TransactionType = 'debit' | 'credit';
+/**
+ * SOL transaction result
+ */
+export interface SolTransaction {
+    type: TransactionType;
+    tx: ParsedTransactionWithMeta;
+    change: number;
+    preBalance: number;
+    postBalance: number;
+}
+/**
+ * SPL token transaction result
+ */
+export interface SplTokenTransaction {
+    type: TransactionType;
+    tx: ParsedTransactionWithMeta;
+    change: number;
+    preBalance: number;
+    postBalance: number;
+    mint: string;
+    owner: string;
+}
 /**
  * Token transfer data
  */

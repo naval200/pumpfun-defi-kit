@@ -33,7 +33,8 @@ npm run cli:send-token -- --recipient <address> --mint <mint> --amount 1000
 
 # Transaction Analysis
 npm run cli:list-transactions -- --address <public-key> --limit 50 --network devnet
-npm run cli:analyze-batch -- --signature <tx-signature> --network devnet
+npm run cli:list-transactions -- --address <public-key> --mint <mint-address> --type token
+npm run cli:list-transactions -- --address <public-key> --type sol --format json
 ```
 
 ### Using tsx directly
@@ -72,7 +73,8 @@ pumpfun-cli send-token --recipient <address> --mint <mint> --amount 1000
 
 # Transaction Analysis
 pumpfun-cli list-transactions --address <public-key> --limit 50 --network devnet
-pumpfun-cli analyze-batch --signature <tx-signature> --network devnet
+pumpfun-cli list-transactions --address <public-key> --mint <mint-address> --type token
+pumpfun-cli list-transactions --address <public-key> --type sol --format json
 ```
 
 ### Method 2: Using npx (Recommended)
@@ -95,6 +97,8 @@ npx pumpfun-cli batch --operations ./batch-operations.json
 
 # Transaction Analysis
 npx pumpfun-cli list-transactions --address <public-key> --limit 50 --network devnet
+npx pumpfun-cli list-transactions --address <public-key> --mint <mint-address> --type token
+npx pumpfun-cli list-transactions --address <public-key> --type sol --format json
 npx pumpfun-cli analyze-batch --signature <tx-signature> --network devnet
 ```
 
@@ -177,6 +181,13 @@ When working with the source code directly:
 
 #### Transaction Analysis
 - `list-transactions` - List SPL token and SOL transactions for a wallet
+  - `--address <public-key>` - Wallet address to analyze (required)
+  - `--type <type>` - Transaction type: `all`, `sol`, or `token` (default: all)
+  - `--mint <mint-address>` - Filter by specific token mint (required for token type)
+  - `--limit <number>` - Number of transactions to fetch (default: 50)
+  - `--network <network>` - Network: `devnet` or `mainnet` (default: devnet)
+  - `--format <format>` - Output format: `table` or `json` (default: table)
+  - `--output <file>` - Save results to JSON file (optional)
 - `analyze-batch` - Analyze batch transactions with detailed breakdown
 
 #### Batch Operations
@@ -248,6 +259,49 @@ pumpfun-cli check-balances \
 npx pumpfun-cli check-balances \
   --wallet ./user-wallet.json \
   --input-token ./token-info.json
+```
+
+### Transaction Analysis
+```bash
+# List all transactions (SOL + Token)
+npm run cli:list-transactions -- \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --limit 20 \
+  --network devnet
+
+# List only SOL transactions
+npm run cli:list-transactions -- \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --type sol \
+  --limit 10
+
+# List token transactions for specific mint
+npm run cli:list-transactions -- \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --mint 7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8 \
+  --type token \
+  --limit 10
+
+# Export to JSON file
+npm run cli:list-transactions -- \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --mint 7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8 \
+  --format json \
+  --output transactions.json
+
+# From parent repository - Method 1: Main CLI
+pumpfun-cli list-transactions \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --mint 7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8 \
+  --type token \
+  --limit 10
+
+# From parent repository - Method 2: Using npx with main CLI (Recommended)
+npx pumpfun-cli list-transactions \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --type sol \
+  --format json \
+  --output sol-transactions.json
 ```
 
 ### Create AMM Pool
