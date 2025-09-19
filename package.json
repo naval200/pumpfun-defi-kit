@@ -54,7 +54,8 @@
     "docs/send-token-usage.md",
     "docs/fee-payer-usage.md",
     "docs/debug-scripts-guide.md",
-    "docs/pumpswap-documentation.md"
+    "docs/pumpswap-documentation.md",
+    "docs/how-to-get-transactions.md"
   ],
   "engines": {
     "node": ">=18.0.0"
