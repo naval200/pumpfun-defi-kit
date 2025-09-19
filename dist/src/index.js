@@ -13,6 +13,8 @@ tslib_1.__exportStar(require("./createAccount"), exports);
 tslib_1.__exportStar(require("./sendToken"), exports);
 // SOL transfer exports
 tslib_1.__exportStar(require("./sendSol"), exports);
+// Transaction fetching exports
+tslib_1.__exportStar(require("./getTransactions"), exports);
 // Type exports
 tslib_1.__exportStar(require("./@types"), exports);
 // Utility exports

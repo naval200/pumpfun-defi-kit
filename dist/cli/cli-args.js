@@ -127,6 +127,12 @@ function parseArgs() {
             case '--format':
                 args.format = argv[++i];
                 break;
+            case '--type':
+                args.type = argv[++i];
+                break;
+            case '--batch-analysis':
+                args.batchAnalysis = true;
+                break;
             case '--help':
             case '-h':
                 args.help = true;

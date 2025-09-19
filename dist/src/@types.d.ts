@@ -179,4 +179,53 @@ export interface SendSolResult {
     error?: string;
 }
 export type AmmSwapState = any;
+/**
+ * Transaction fetching types
+ */
+/**
+ * Token transfer data
+ */
+export interface TokenTransfer {
+    mint: string;
+    owner: string;
+    change: number;
+    decimals: number;
+    amount: string;
+    uiAmount: number;
+}
+/**
+ * SOL transfer data
+ */
+export interface SolTransfer {
+    accountIndex: number;
+    change: number;
+    postBalance: number;
+    preBalance: number;
+}
+/**
+ * Transaction data
+ */
+export interface TransactionData {
+    signature: string;
+    slot: number;
+    blockTime: number | null;
+    fee: number;
+    success: boolean;
+    error: any;
+    tokenTransfers: TokenTransfer[];
+    solTransfers: SolTransfer[];
+    explorerUrl: string;
+    isBatchTransaction: boolean;
+    instructionCount: number;
+    accountCount: number;
+}
+/**
+ * Options for fetching transactions
+ */
+export interface GetTransactionsOptions {
+    network?: 'devnet' | 'mainnet';
+    limit?: number;
+    mintFilter?: string;
+    includeBatchAnalysis?: boolean;
+}
 //# sourceMappingURL=@types.d.ts.map

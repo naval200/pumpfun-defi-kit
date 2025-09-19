@@ -2,12 +2,48 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const tslib_1 = require("tslib");
-const web3_js_1 = require("@solana/web3.js");
 const cli_args_1 = require("./cli-args");
 const debug_1 = require("../src/utils/debug");
-const fs_1 = tslib_1.__importDefault(require("fs"));
+const getTransactions_1 = require("../src/getTransactions");
+const fs = tslib_1.__importStar(require("fs"));
 /**
- * CLI for listing SPL token transactions for a public key
+ * Format transaction data for display
+ */
+function formatTransactionForDisplay(tx, index = 0) {
+    const formatDate = (blockTime) => {
+        if (!blockTime)
+            return 'Unknown';
+        return new Date(blockTime * 1000).toLocaleString();
+    };
+    const formatAmount = (amount, decimals = 9) => {
+        return amount.toFixed(decimals);
+    };
+    console.log(`\n${index + 1}. ${tx.signature}`);
+    console.log(`   📅 Time: ${formatDate(tx.blockTime)}`);
+    console.log(`   💰 Fee: ${tx.fee} lamports`);
+    console.log(`   ✅ Success: ${tx.success}`);
+    if (tx.isBatchTransaction) {
+        console.log(`   🔄 Batch: YES (${tx.instructionCount} instructions, ${tx.accountCount} accounts)`);
+    }
+    if (tx.error) {
+        console.log(`   ❌ Error: ${JSON.stringify(tx.error)}`);
+    }
+    if (tx.solTransfers.length > 0) {
+        console.log(`   💎 SOL Transfers:`);
+        tx.solTransfers.forEach(transfer => {
+            console.log(`      Account ${transfer.accountIndex}: ${transfer.change > 0 ? '+' : ''}${formatAmount(transfer.change)} SOL`);
+        });
+    }
+    if (tx.tokenTransfers.length > 0) {
+        console.log(`   🪙 Token Transfers:`);
+        tx.tokenTransfers.forEach(transfer => {
+            console.log(`      ${transfer.mint}: ${transfer.change > 0 ? '+' : ''}${formatAmount(transfer.change, transfer.decimals)} (${transfer.amount})`);
+        });
+    }
+    console.log(`   🔗 Explorer: ${tx.explorerUrl}`);
+}
+/**
+ * CLI for listing SPL token and SOL transactions for a public key
  */
 async function listTokenTransactions() {
     try {
@@ -24,6 +60,8 @@ async function listTokenTransactions() {
             console.log('  --output <file>          Save results to JSON file (optional)');
             console.log('  --network <network>      Network to use (devnet/mainnet, default: devnet)');
             console.log('  --format <format>        Output format (table/json, default: table)');
+            console.log('  --type <type>            Transaction type (all/sol/token/batch, default: all)');
+            console.log('  --batch-analysis         Include batch transaction analysis');
             return;
         }
         if (!args.address) {
@@ -31,153 +69,87 @@ async function listTokenTransactions() {
             console.log('Usage: npm run cli:list-transactions -- --address <public-key>');
             return;
         }
-        let address;
-        try {
-            address = new web3_js_1.PublicKey(args.address);
-        }
-        catch (error) {
-            (0, debug_1.logError)('❌ Error: Invalid public key format');
-            return;
-        }
         const limit = args.limit || 50;
-        const network = args.network || 'devnet';
+        const network = (args.network || 'devnet');
         const format = args.format || 'table';
-        const rpcUrl = network === 'mainnet'
-            ? 'https://api.mainnet-beta.solana.com'
-            : 'https://api.devnet.solana.com';
-        const connection = new web3_js_1.Connection(rpcUrl, 'confirmed');
-        (0, debug_1.log)(`🔍 Fetching transactions for: ${address.toString()}`);
+        const type = args.type || 'all';
+        const includeBatchAnalysis = args.batchAnalysis || false;
+        (0, debug_1.log)(`🔍 Fetching transactions for: ${args.address}`);
         (0, debug_1.log)(`🌐 Network: ${network}`);
-        (0, debug_1.log)(`📊 Limit: ${limit} transactions\n`);
-        // Get transaction signatures
-        const signatures = await connection.getSignaturesForAddress(address, {
+        (0, debug_1.log)(`📊 Limit: ${limit} transactions`);
+        (0, debug_1.log)(`🎯 Type: ${type}`);
+        (0, debug_1.log)(`🔄 Batch Analysis: ${includeBatchAnalysis ? 'YES' : 'NO'}\n`);
+        const options = {
+            network,
             limit,
-        });
-        (0, debug_1.log)(`📝 Found ${signatures.length} transaction signatures\n`);
-        const transactions = [];
-        const mintFilter = args.mint ? new web3_js_1.PublicKey(args.mint) : null;
-        for (let i = 0; i < signatures.length; i++) {
-            const sig = signatures[i];
-            (0, debug_1.log)(`📄 Processing transaction ${i + 1}/${signatures.length}: ${sig.signature}`);
-            try {
-                const tx = await connection.getTransaction(sig.signature, {
-                    commitment: 'confirmed',
-                    maxSupportedTransactionVersion: 0,
-                });
-                if (!tx) {
-                    (0, debug_1.log)(`⚠️  Transaction not found: ${sig.signature}`);
-                    continue;
-                }
-                // Filter by mint if specified
-                if (mintFilter) {
-                    const hasMint = tx.meta?.postTokenBalances?.some(balance => balance.mint === mintFilter.toString()) || tx.meta?.preTokenBalances?.some(balance => balance.mint === mintFilter.toString());
-                    if (!hasMint)
-                        continue;
-                }
-                // Extract token transfers
-                const tokenTransfers = [];
-                if (tx.meta?.postTokenBalances) {
-                    for (const balance of tx.meta.postTokenBalances) {
-                        const preBalance = tx.meta?.preTokenBalances?.find(pre => pre.accountIndex === balance.accountIndex);
-                        const change = (balance.uiTokenAmount.uiAmount || 0) -
-                            (preBalance?.uiTokenAmount.uiAmount || 0);
-                        if (change !== 0) {
-                            tokenTransfers.push({
-                                mint: balance.mint,
-                                owner: balance.owner,
-                                change: change,
-                                decimals: balance.uiTokenAmount.decimals,
-                                amount: balance.uiTokenAmount.amount,
-                                uiAmount: balance.uiTokenAmount.uiAmount,
-                            });
-                        }
-                    }
-                }
-                // Extract SOL transfers
-                const solTransfers = [];
-                if (tx.meta?.postBalances && tx.meta?.preBalances) {
-                    for (let i = 0; i < tx.meta.postBalances.length; i++) {
-                        const postBalance = tx.meta.postBalances[i];
-                        const preBalance = tx.meta.preBalances[i];
-                        const change = postBalance - preBalance;
-                        if (change !== 0) {
-                            solTransfers.push({
-                                accountIndex: i,
-                                change: change / 1e9, // Convert lamports to SOL
-                                postBalance: postBalance / 1e9,
-                                preBalance: preBalance / 1e9,
-                            });
-                        }
-                    }
-                }
-                transactions.push({
-                    signature: sig.signature,
-                    slot: sig.slot,
-                    blockTime: sig.blockTime,
-                    fee: tx.meta?.fee,
-                    success: !tx.meta?.err,
-                    error: tx.meta?.err,
-                    tokenTransfers,
-                    solTransfers,
-                    explorerUrl: `https://explorer.solana.com/tx/${sig.signature}${network === 'devnet' ? '?cluster=devnet' : ''}`,
-                });
-            }
-            catch (error) {
-                (0, debug_1.logError)(`❌ Error fetching transaction ${sig.signature}:`, error);
-            }
+            mintFilter: args.mint,
+            includeBatchAnalysis
+        };
+        let transactions;
+        // Fetch transactions based on type
+        switch (type) {
+            case 'sol':
+                transactions = await (0, getTransactions_1.getSolTransactions)(args.address, options);
+                break;
+            case 'token':
+                transactions = await (0, getTransactions_1.getTokenTransactions)(args.address, options);
+                break;
+            case 'batch':
+                transactions = await (0, getTransactions_1.getBatchTransactions)(args.address, options);
+                break;
+            case 'all':
+            default:
+                transactions = await (0, getTransactions_1.getTransactions)(args.address, options);
+                break;
         }
-        // Display results based on format
+        // Display results
         if (format === 'json') {
             const outputData = {
-                address: address.toString(),
+                address: args.address,
                 network,
+                type,
                 totalTransactions: transactions.length,
                 transactions,
+                summary: (0, getTransactions_1.getTransactionSummary)(transactions),
                 generatedAt: new Date().toISOString(),
             };
             console.log(JSON.stringify(outputData, null, 2));
         }
         else {
-            // Table format
             console.log('\n📊 Transaction Summary:');
             console.log('========================\n');
             if (transactions.length === 0) {
                 console.log('No transactions found matching criteria.');
                 return;
             }
+            // Display summary
+            const summary = (0, getTransactions_1.getTransactionSummary)(transactions);
+            console.log(`Total Transactions: ${summary.totalTransactions}`);
+            console.log(`Success Rate: ${summary.successRate.toFixed(2)}%`);
+            console.log(`Total Fees: ${summary.totalFeesInSol.toFixed(9)} SOL`);
+            console.log(`SOL Transfers: ${summary.totalSolTransfers}`);
+            console.log(`Token Transfers: ${summary.totalTokenTransfers}`);
+            if (includeBatchAnalysis) {
+                console.log(`Batch Transactions: ${summary.batchTransactions}`);
+            }
+            console.log(`Unique Tokens: ${summary.uniqueTokens}\n`);
+            // Display individual transactions
             transactions.forEach((tx, index) => {
-                console.log(`${index + 1}. ${tx.signature}`);
-                console.log(`   📅 Time: ${tx.blockTime ? new Date(tx.blockTime * 1000).toISOString() : 'Unknown'}`);
-                console.log(`   💰 Fee: ${tx.fee} lamports`);
-                console.log(`   ✅ Success: ${tx.success}`);
-                if (tx.error) {
-                    console.log(`   ❌ Error: ${JSON.stringify(tx.error)}`);
-                }
-                if (tx.solTransfers.length > 0) {
-                    console.log(`   💎 SOL Transfers:`);
-                    tx.solTransfers.forEach((transfer) => {
-                        console.log(`      Account ${transfer.accountIndex}: ${transfer.change > 0 ? '+' : ''}${transfer.change.toFixed(9)} SOL`);
-                    });
-                }
-                if (tx.tokenTransfers.length > 0) {
-                    console.log(`   🪙 Token Transfers:`);
-                    tx.tokenTransfers.forEach((transfer) => {
-                        console.log(`      ${transfer.mint}: ${transfer.change > 0 ? '+' : ''}${transfer.change} (${transfer.amount})`);
-                    });
-                }
-                console.log(`   🔗 Explorer: ${tx.explorerUrl}\n`);
+                formatTransactionForDisplay(tx, index);
             });
         }
         // Save to file if requested
         if (args.output) {
             const outputData = {
-                address: address.toString(),
+                address: args.address,
                 network,
+                type,
                 totalTransactions: transactions.length,
                 transactions,
+                summary: (0, getTransactions_1.getTransactionSummary)(transactions),
                 generatedAt: new Date().toISOString(),
             };
-            fs_1.default.writeFileSync(args.output, JSON.stringify(outputData, null, 2));
+            fs.writeFileSync(args.output, JSON.stringify(outputData, null, 2));
             (0, debug_1.log)(`💾 Results saved to: ${args.output}`);
         }
     }

@@ -4,6 +4,7 @@ export * from './batch';
 export * from './createAccount';
 export * from './sendToken';
 export * from './sendSol';
+export * from './getTransactions';
 export * from './@types';
 export * from './utils/wallet';
 export * from './utils/retry';
