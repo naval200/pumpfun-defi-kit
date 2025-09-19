@@ -8,8 +8,8 @@ exports.loadTokenInfo = loadTokenInfo;
 exports.saveTokenInfo = saveTokenInfo;
 exports.printUsage = printUsage;
 const tslib_1 = require("tslib");
-const fs_1 = tslib_1.__importDefault(require("fs"));
-const path_1 = tslib_1.__importDefault(require("path"));
+const fs = tslib_1.__importStar(require("fs"));
+const path = tslib_1.__importStar(require("path"));
 const web3_js_1 = require("@solana/web3.js");
 const debug_1 = require("../src/utils/debug");
 function parseArgs() {
@@ -106,6 +106,27 @@ function parseArgs() {
             case '--dry-run':
                 args.dryRun = true;
                 break;
+            case '--address':
+                args.address = argv[++i];
+                break;
+            case '--limit':
+                args.limit = parseInt(argv[++i]);
+                break;
+            case '--output':
+                args.output = argv[++i];
+                break;
+            case '--network':
+                args.network = argv[++i];
+                break;
+            case "--signature":
+                args.signature = argv[++i];
+                break;
+            case "--operations":
+                args.operations = argv[++i];
+                break;
+            case '--format':
+                args.format = argv[++i];
+                break;
             case '--help':
             case '-h':
                 args.help = true;
@@ -115,10 +136,10 @@ function parseArgs() {
     return args;
 }
 function loadWallet(walletPath) {
-    const defaultWalletPath = path_1.default.join(process.cwd(), 'wallets', 'creator-wallet.json');
+    const defaultWalletPath = path.join(process.cwd(), 'wallets', 'creator-wallet.json');
     const finalWalletPath = walletPath || defaultWalletPath;
     try {
-        const walletData = JSON.parse(fs_1.default.readFileSync(finalWalletPath, 'utf8'));
+        const walletData = JSON.parse(fs.readFileSync(finalWalletPath, 'utf8'));
         return web3_js_1.Keypair.fromSecretKey(Uint8Array.from(walletData));
     }
     catch (error) {
@@ -129,7 +150,7 @@ function loadFeePayerWallet(feePayerPath) {
     if (!feePayerPath)
         return null;
     try {
-        const walletData = JSON.parse(fs_1.default.readFileSync(feePayerPath, 'utf8'));
+        const walletData = JSON.parse(fs.readFileSync(feePayerPath, 'utf8'));
         return web3_js_1.Keypair.fromSecretKey(Uint8Array.from(walletData));
     }
     catch (error) {
@@ -137,10 +158,10 @@ function loadFeePayerWallet(feePayerPath) {
     }
 }
 function loadTokenInfo(tokenPath) {
-    const defaultTokenPath = path_1.default.join(process.cwd(), 'wallets', 'token-info.json');
+    const defaultTokenPath = path.join(process.cwd(), 'wallets', 'token-info.json');
     const finalTokenPath = tokenPath || defaultTokenPath;
     try {
-        return JSON.parse(fs_1.default.readFileSync(finalTokenPath, 'utf8'));
+        return JSON.parse(fs.readFileSync(finalTokenPath, 'utf8'));
     }
     catch (error) {
         throw new Error(`Failed to load token info from ${finalTokenPath}: ${error}`);
@@ -183,6 +204,11 @@ function printUsage(scriptName, options = []) {
     console.log('  --delay-between <ms>          Delay between transaction batches in milliseconds');
     console.log('  --dynamic-batching            Enable dynamic batch size determination');
     console.log('  --dry-run                     Show what would be executed without running');
+    console.log('  --address <public-key>        Public key to get transactions for');
+    console.log('  --limit <number>              Number of transactions to fetch (default: 50)');
+    console.log('  --output <file>               Save results to JSON file');
+    console.log('  --network <network>           Network to use (devnet/mainnet, default: devnet)');
+    console.log('  --format <format>             Output format (table/json, default: table)');
     console.log('  -h, --help                    Show this help message');
     if (options.length > 0) {
         console.log('');

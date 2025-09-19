@@ -17,7 +17,6 @@ export interface CliArgs {
     recipient?: string;
     mint?: string;
     createAccount?: boolean;
-    operations?: string;
     maxParallel?: number;
     retryFailed?: boolean;
     disableFallbackRetry?: boolean;
@@ -26,6 +25,13 @@ export interface CliArgs {
     dryRun?: boolean;
     help?: boolean;
     action?: string;
+    address?: string;
+    limit?: number;
+    output?: string;
+    network?: string;
+    format?: string;
+    signature?: string;
+    operations?: string;
 }
 export declare function parseArgs(): CliArgs;
 export declare function loadWallet(walletPath?: string): Keypair;

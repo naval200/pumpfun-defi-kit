@@ -70,7 +70,9 @@ async function executeBatchInstructions(connection, batchInstructions, operation
             // Validate all required signers have signatures
             const requiredSigners = new Set();
             transaction.instructions.forEach(ix => {
-                ix.keys.filter(k => k.isSigner).forEach(key => {
+                ix.keys
+                    .filter(k => k.isSigner)
+                    .forEach(key => {
                     requiredSigners.add(key.pubkey.toString());
                 });
             });
@@ -184,8 +186,10 @@ function validateTransaction(transaction, signers) {
     }
     // Collect all required signers from instructions
     const requiredSigners = new Set();
-    transaction.instructions.forEach((ix, index) => {
-        ix.keys.filter(k => k.isSigner).forEach(key => {
+    transaction.instructions.forEach(ix => {
+        ix.keys
+            .filter(k => k.isSigner)
+            .forEach(key => {
             requiredSigners.add(key.pubkey.toString());
         });
     });
@@ -225,7 +229,7 @@ function validateTransaction(transaction, signers) {
     }
     return {
         valid: errors.length === 0,
-        errors
+        errors,
     };
 }
 /**
