@@ -1,15 +1,14 @@
 # How to Get Transactions
 
-This guide shows you how to fetch, analyze, and display Solana transactions using the PumpFun DeFi Kit transaction analysis APIs.
+This guide shows you how to fetch, analyze, and display Solana transactions using the PumpFun DeFi Kit's simplified transaction analysis APIs.
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
 - [CLI Usage](#cli-usage)
 - [Programmatic API Usage](#programmatic-api-usage)
+- [Parallel Execution](#parallel-execution)
 - [Transaction Types](#transaction-types)
-- [Chronological Listing](#chronological-listing)
-- [Batch Transaction Analysis](#batch-transaction-analysis)
 - [Advanced Examples](#advanced-examples)
 - [Troubleshooting](#troubleshooting)
 
@@ -20,32 +19,54 @@ This guide shows you how to fetch, analyze, and display Solana transactions usin
 ```bash
 # Get all transactions for a wallet
 npm run cli:list-transactions -- \
-  --address <your-wallet-address> \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
   --limit 50 \
-  --network devnet \
-  --format table
+  --network devnet
 
-# Get only batch transactions
+# Get only SOL transactions
 npm run cli:list-transactions -- \
-  --address <your-wallet-address> \
-  --type batch \
-  --batch-analysis \
-  --format table
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --type sol \
+  --limit 20
+
+# Get token transactions for specific mint
+npm run cli:list-transactions -- \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --mint 7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8 \
+  --type token \
+  --limit 20
+
+# Export to JSON
+npm run cli:list-transactions -- \
+  --address 6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc \
+  --format json \
+  --output transactions.json
 ```
 
 ### Using Programmatic API
 
 ```typescript
-import { getTransactions, getTransactionSummary } from '@pump-fun/defikit';
+import { 
+  getTransactions,
+  getSolanaTransactions,
+  getSplTokenTransactions,
+  getTransactionBySignature
+} from '@pump-fun/defikit';
+import { createConnection } from '@pump-fun/defikit';
+import { PublicKey } from '@solana/web3.js';
 
-// Fetch transactions
-const transactions = await getTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+// Create connection
+const connection = createConnection({ 
   network: 'devnet',
-  limit: 50,
-  includeBatchAnalysis: true
+  rpcUrl: 'https://api.devnet.solana.com',
+  wsUrl: 'wss://api.devnet.solana.com'
 });
 
-console.log(`Found ${transactions.length} transactions`);
+const walletAddress = new PublicKey('6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc');
+
+// Fetch all transactions
+const allTransactions = await getTransactions(connection, walletAddress, 50);
+console.log(`Found ${allTransactions.length} transactions`);
 ```
 
 ## CLI Usage
@@ -53,23 +74,20 @@ console.log(`Found ${transactions.length} transactions`);
 ### Basic Commands
 
 ```bash
-# List all transactions
+# List all transactions (SOL + Token)
 npm run cli:list-transactions -- --address <public-key> --limit 50
 
 # List only SOL transactions
-npm run cli:list-transactions -- --address <public-key> --type sol
+npm run cli:list-transactions -- --address <public-key> --type sol --limit 20
 
-# List only token transactions
-npm run cli:list-transactions -- --address <public-key> --type token
-
-# List only batch transactions
-npm run cli:list-transactions -- --address <public-key> --type batch --batch-analysis
+# List only token transactions for specific mint
+npm run cli:list-transactions -- --address <public-key> --mint <mint-address> --type token --limit 20
 
 # Export to JSON file
-npm run cli:list-transactions -- --address <public-key> --output transactions.json --format json
+npm run cli:list-transactions -- --address <public-key> --format json --output transactions.json
 
-# Analyze specific transaction
-npm run cli:analyze-batch -- --signature <tx-signature> --network devnet
+# Use mainnet
+npm run cli:list-transactions -- --address <public-key> --network mainnet --limit 50
 ```
 
 ### CLI Options
@@ -77,13 +95,12 @@ npm run cli:analyze-batch -- --signature <tx-signature> --network devnet
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--address` | Wallet public key (required) | - |
+| `--type` | Transaction type: `all`, `sol`, or `token` | all |
+| `--mint` | Filter by specific token mint (required for token type) | - |
 | `--limit` | Number of transactions to fetch | 50 |
-| `--network` | Network (devnet/mainnet) | devnet |
-| `--type` | Transaction type (all/sol/token/batch) | all |
-| `--format` | Output format (table/json) | table |
-| `--batch-analysis` | Enable batch transaction analysis | false |
-| `--mint` | Filter by specific token mint | - |
-| `--output` | Save results to file | - |
+| `--network` | Network: `devnet` or `mainnet` | devnet |
+| `--format` | Output format: `table` or `json` | table |
+| `--output` | Save results to JSON file | - |
 
 ## Programmatic API Usage
 
@@ -92,335 +109,340 @@ npm run cli:analyze-batch -- --signature <tx-signature> --network devnet
 ```typescript
 import { 
   getTransactions,
-  getSolTransactions,
-  getTokenTransactions,
-  getBatchTransactions,
-  getTransactionBySignature,
-  getTransactionSummary,
-  TransactionData,
-  GetTransactionsOptions
+  getSolanaTransactions,
+  getSplTokenTransactions,
+  getTransactionBySignature
 } from '@pump-fun/defikit';
+import { 
+  SolTransaction, 
+  SplTokenTransaction 
+} from '@pump-fun/defikit';
+import { createConnection } from '@pump-fun/defikit';
+import { PublicKey } from '@solana/web3.js';
 ```
 
 ### Basic Transaction Fetching
 
 ```typescript
-// Get all transactions
-const allTransactions = await getTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
+// Create connection
+const connection = createConnection({ 
   network: 'devnet',
-  limit: 50,
-  includeBatchAnalysis: true
+  rpcUrl: 'https://api.devnet.solana.com',
+  wsUrl: 'wss://api.devnet.solana.com'
 });
+
+const walletAddress = new PublicKey('6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc');
+
+// Get all transactions
+const allTransactions = await getTransactions(connection, walletAddress, 50);
 
 // Get only SOL transactions
-const solTransactions = await getSolTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
-  network: 'devnet',
-  limit: 20
-});
+const solTransactions = await getSolanaTransactions(connection, walletAddress, 20);
 
-// Get only token transactions
-const tokenTransactions = await getTokenTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
-  network: 'devnet',
-  limit: 20,
-  mintFilter: 'So11111111111111111111111111111111111111112' // Filter by specific token
-});
+// Get token transactions for specific mint
+const mintAddress = new PublicKey('7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8');
+const tokenTransactions = await getSplTokenTransactions(connection, walletAddress, mintAddress, 20);
 
-// Get only batch transactions
-const batchTransactions = await getBatchTransactions('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh', {
-  network: 'devnet',
-  limit: 10
-});
+// Get specific transaction by signature
+const tx = await getTransactionBySignature(connection, 'AX7b5gyYBQ1krK2XTVydHZyg5i3fVnChzA8hurrNzGk1rtfr5FRd6sxJHiboMyunsHMKXTVk8BgWo1Gy2Xbfw2X');
 ```
 
-### Single Transaction Analysis
+## Parallel Execution
+
+### Execute Multiple Queries in Parallel
+
+The new API is designed for efficient parallel execution. You can fetch SOL and token transactions simultaneously:
 
 ```typescript
-// Get specific transaction by signature
-const tx = await getTransactionBySignature('5J7X8...', {
-  network: 'devnet',
-  includeBatchAnalysis: true
-});
+async function getWalletActivity(walletAddress: PublicKey, tokenMints: PublicKey[]) {
+  const connection = createConnection({ 
+    network: 'devnet',
+    rpcUrl: 'https://api.devnet.solana.com',
+    wsUrl: 'wss://api.devnet.solana.com'
+  });
 
-if (tx) {
-  console.log(`Transaction: ${tx.signature}`);
-  console.log(`Success: ${tx.success}`);
-  console.log(`Fee: ${tx.fee} lamports`);
-  console.log(`Batch: ${tx.isBatchTransaction}`);
-  console.log(`Instructions: ${tx.instructionCount}`);
-  console.log(`Accounts: ${tx.accountCount}`);
+  // Execute all queries in parallel
+  const [
+    allTransactions,
+    solTransactions,
+    ...tokenTransactionResults
+  ] = await Promise.all([
+    // Get all transactions
+    getTransactions(connection, walletAddress, 50),
+    
+    // Get SOL transactions
+    getSolanaTransactions(connection, walletAddress, 50),
+    
+    // Get token transactions for each mint in parallel
+    ...tokenMints.map(mint => 
+      getSplTokenTransactions(connection, walletAddress, mint, 50)
+    )
+  ]);
+
+  return {
+    allTransactions,
+    solTransactions,
+    tokenTransactions: tokenTransactionResults.flat()
+  };
 }
+
+// Usage
+const walletAddress = new PublicKey('6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc');
+const tokenMints = [
+  new PublicKey('7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8'),
+  new PublicKey('So11111111111111111111111111111111111111112') // SOL mint
+];
+
+const activity = await getWalletActivity(walletAddress, tokenMints);
+console.log(`Found ${activity.solTransactions.length} SOL transactions`);
+console.log(`Found ${activity.tokenTransactions.length} token transactions`);
+```
+
+### Batch Analysis for Multiple Wallets
+
+```typescript
+async function analyzeMultipleWallets(walletAddresses: string[], tokenMints: string[]) {
+  const connection = createConnection({ 
+    network: 'devnet',
+    rpcUrl: 'https://api.devnet.solana.com',
+    wsUrl: 'wss://api.devnet.solana.com'
+  });
+
+  // Create all queries for parallel execution
+  const queries = walletAddresses.flatMap(walletAddress => {
+    const walletPubkey = new PublicKey(walletAddress);
+    
+    return [
+      // SOL transactions for each wallet
+      getSolanaTransactions(connection, walletPubkey, 20).then(txs => ({
+        wallet: walletAddress,
+        type: 'sol',
+        transactions: txs
+      })),
+      
+      // Token transactions for each wallet and mint combination
+      ...tokenMints.map(mintAddress => 
+        getSplTokenTransactions(connection, walletPubkey, new PublicKey(mintAddress), 20)
+          .then(txs => ({
+            wallet: walletAddress,
+            type: 'token',
+            mint: mintAddress,
+            transactions: txs
+          }))
+      )
+    ];
+  });
+
+  // Execute all queries in parallel
+  const results = await Promise.all(queries);
+  
+  // Group results by wallet
+  const walletResults = results.reduce((acc, result) => {
+    if (!acc[result.wallet]) {
+      acc[result.wallet] = { sol: [], tokens: {} };
+    }
+    
+    if (result.type === 'sol') {
+      acc[result.wallet].sol = result.transactions;
+    } else {
+      acc[result.wallet].tokens[result.mint] = result.transactions;
+    }
+    
+    return acc;
+  }, {} as Record<string, { sol: SolTransaction[], tokens: Record<string, SplTokenTransaction[]> }>);
+
+  return walletResults;
+}
+
+// Usage
+const wallets = [
+  '6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc',
+  'FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh'
+];
+
+const mints = [
+  '7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8',
+  'So11111111111111111111111111111111111111112'
+];
+
+const analysis = await analyzeMultipleWallets(wallets, mints);
+console.log('Analysis complete for all wallets');
 ```
 
 ## Transaction Types
 
-### SOL Transfers
-Transactions that only involve SOL transfers (no token transfers).
+### SOL Transactions
 
 ```typescript
-const solTransactions = await getSolTransactions(address, {
-  network: 'devnet',
-  limit: 20
-});
+const solTransactions = await getSolanaTransactions(connection, walletAddress, 20);
 
 solTransactions.forEach(tx => {
-  console.log(`SOL Transaction: ${tx.signature}`);
-  tx.solTransfers.forEach(transfer => {
-    console.log(`  Account ${transfer.accountIndex}: ${transfer.change > 0 ? '+' : ''}${transfer.change} SOL`);
-  });
+  console.log(`SOL Transaction: ${tx.tx.transaction.signatures[0]}`);
+  console.log(`  Type: ${tx.type}`); // 'debit' or 'credit'
+  console.log(`  Change: ${tx.change > 0 ? '+' : ''}${(tx.change / 1e9).toFixed(9)} SOL`);
+  console.log(`  Balance: ${(tx.preBalance / 1e9).toFixed(9)} → ${(tx.postBalance / 1e9).toFixed(9)} SOL`);
+  console.log(`  Success: ${!tx.tx.meta?.err}`);
 });
 ```
 
-### SPL Token Transfers
-Transactions that involve SPL token transfers.
+### SPL Token Transactions
 
 ```typescript
-const tokenTransactions = await getTokenTransactions(address, {
-  network: 'devnet',
-  limit: 20
-});
+const mintAddress = new PublicKey('7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8');
+const tokenTransactions = await getSplTokenTransactions(connection, walletAddress, mintAddress, 20);
 
 tokenTransactions.forEach(tx => {
-  console.log(`Token Transaction: ${tx.signature}`);
-  tx.tokenTransfers.forEach(transfer => {
-    console.log(`  Token ${transfer.mint}: ${transfer.change > 0 ? '+' : ''}${transfer.change}`);
-  });
+  console.log(`Token Transaction: ${tx.tx.transaction.signatures[0]}`);
+  console.log(`  Type: ${tx.type}`); // 'debit' or 'credit'
+  console.log(`  Mint: ${tx.mint}`);
+  console.log(`  Owner: ${tx.owner}`);
+  console.log(`  Change: ${tx.change > 0 ? '+' : ''}${tx.change.toFixed(6)} tokens`);
+  console.log(`  Balance: ${tx.preBalance.toFixed(6)} → ${tx.postBalance.toFixed(6)} tokens`);
+  console.log(`  Success: ${!tx.tx.meta?.err}`);
 });
-```
-
-### Batch Transactions
-Transactions with multiple instructions (typically >5 instructions or >10 accounts).
-
-```typescript
-const batchTransactions = await getBatchTransactions(address, {
-  network: 'devnet',
-  limit: 10
-});
-
-batchTransactions.forEach(tx => {
-  console.log(`Batch Transaction: ${tx.signature}`);
-  console.log(`  Instructions: ${tx.instructionCount}`);
-  console.log(`  Accounts: ${tx.accountCount}`);
-  console.log(`  SOL Transfers: ${tx.solTransfers.length}`);
-  console.log(`  Token Transfers: ${tx.tokenTransfers.length}`);
-});
-```
-
-## Chronological Listing
-
-### Sort Transactions by Time
-
-```typescript
-async function listTransactionsChronologically(address: string) {
-  const transactions = await getTransactions(address, {
-    network: 'devnet',
-    limit: 100,
-    includeBatchAnalysis: true
-  });
-
-  // Sort chronologically (oldest first)
-  const chronologicalTransactions = transactions.sort((a, b) => {
-    if (!a.blockTime || !b.blockTime) return 0;
-    return a.blockTime - b.blockTime;
-  });
-
-  // Display in table format
-  console.log('\n📊 TRANSACTION HISTORY (Chronological)');
-  console.log('=====================================\n');
-
-  chronologicalTransactions.forEach((tx, index) => {
-    const date = tx.blockTime ? new Date(tx.blockTime * 1000).toLocaleString() : 'Unknown';
-    
-    console.log(`${index + 1}. ${tx.signature}`);
-    console.log(`   📅 Time: ${date}`);
-    console.log(`   💰 Fee: ${tx.fee} lamports`);
-    console.log(`   ✅ Success: ${tx.success}`);
-    console.log(`   🔄 Batch: ${tx.isBatchTransaction ? 'YES' : 'NO'}`);
-    
-    if (tx.isBatchTransaction) {
-      console.log(`   📊 Instructions: ${tx.instructionCount}, Accounts: ${tx.accountCount}`);
-    }
-
-    // SOL Transfers
-    if (tx.solTransfers.length > 0) {
-      console.log(`   💎 SOL Transfers:`);
-      tx.solTransfers.forEach(transfer => {
-        console.log(`      Account ${transfer.accountIndex}: ${transfer.change > 0 ? '+' : ''}${transfer.change.toFixed(9)} SOL`);
-      });
-    }
-
-    // Token Transfers
-    if (tx.tokenTransfers.length > 0) {
-      console.log(`   🪙 Token Transfers:`);
-      tx.tokenTransfers.forEach(transfer => {
-        console.log(`      ${transfer.mint}: ${transfer.change > 0 ? '+' : ''}${transfer.change.toFixed(6)} (${transfer.amount})`);
-      });
-    }
-
-    console.log(`   🔗 Explorer: ${tx.explorerUrl}\n`);
-  });
-}
-```
-
-### Advanced Table Format
-
-```typescript
-function formatTransactionTable(transactions: TransactionData[]) {
-  console.log('\n📊 TRANSACTION HISTORY');
-  console.log('='.repeat(120));
-  console.log('| #  | Signature (first 8) | Time                | Type      | SOL Changes | Token Changes | Success |');
-  console.log('='.repeat(120));
-
-  transactions.forEach((tx, index) => {
-    const signature = tx.signature.substring(0, 8) + '...';
-    const date = tx.blockTime ? new Date(tx.blockTime * 1000).toLocaleString() : 'Unknown';
-    
-    // Determine transaction type
-    let type = 'Unknown';
-    if (tx.solTransfers.length > 0 && tx.tokenTransfers.length === 0) {
-      type = 'SOL Only';
-    } else if (tx.tokenTransfers.length > 0 && tx.solTransfers.length === 0) {
-      type = 'Token Only';
-    } else if (tx.solTransfers.length > 0 && tx.tokenTransfers.length > 0) {
-      type = 'Mixed';
-    }
-
-    const solChanges = tx.solTransfers.length;
-    const tokenChanges = tx.tokenTransfers.length;
-    const success = tx.success ? '✅' : '❌';
-
-    console.log(`| ${(index + 1).toString().padStart(2)} | ${signature.padEnd(20)} | ${date.padEnd(19)} | ${type.padEnd(9)} | ${solChanges.toString().padStart(11)} | ${tokenChanges.toString().padStart(13)} | ${success.padEnd(7)} |`);
-  });
-
-  console.log('='.repeat(120));
-}
-```
-
-## Batch Transaction Analysis
-
-### Identify Batch Transactions
-
-```typescript
-async function analyzeBatchTransactions(address: string) {
-  const transactions = await getTransactions(address, {
-    network: 'devnet',
-    limit: 50,
-    includeBatchAnalysis: true
-  });
-
-  const batchTransactions = transactions.filter(tx => tx.isBatchTransaction);
-  
-  console.log(`Found ${batchTransactions.length} batch transactions out of ${transactions.length} total`);
-
-  batchTransactions.forEach(tx => {
-    console.log(`\n🔄 Batch Transaction: ${tx.signature}`);
-    console.log(`   Instructions: ${tx.instructionCount}`);
-    console.log(`   Accounts: ${tx.accountCount}`);
-    console.log(`   SOL Operations: ${tx.solTransfers.length}`);
-    console.log(`   Token Operations: ${tx.tokenTransfers.length}`);
-    
-    // Analyze participants
-    const participants = new Set();
-    tx.solTransfers.forEach(transfer => participants.add(`Account ${transfer.accountIndex}`));
-    tx.tokenTransfers.forEach(transfer => participants.add(transfer.owner));
-    
-    console.log(`   Participants: ${participants.size}`);
-  });
-}
-```
-
-### Batch Transaction Classification
-
-```typescript
-function classifyBatchTransaction(tx: TransactionData): string {
-  if (tx.solTransfers.length > 0 && tx.tokenTransfers.length === 0) {
-    return 'SOL Batch Transfer';
-  } else if (tx.tokenTransfers.length > 0 && tx.solTransfers.length === 0) {
-    return 'Token Batch Transfer';
-  } else if (tx.solTransfers.length > 0 && tx.tokenTransfers.length > 0) {
-    return 'Mixed Batch Operation';
-  } else {
-    return 'Other Batch Operation';
-  }
-}
 ```
 
 ## Advanced Examples
 
-### Export to JSON
+### Complete Wallet Analysis
 
 ```typescript
-import * as fs from 'fs';
-
-async function exportTransactionsToJSON(address: string) {
-  const transactions = await getTransactions(address, {
+async function completeWalletAnalysis(walletAddress: string, tokenMints: string[]) {
+  const connection = createConnection({ 
     network: 'devnet',
-    limit: 100,
-    includeBatchAnalysis: true
+    rpcUrl: 'https://api.devnet.solana.com',
+    wsUrl: 'wss://api.devnet.solana.com'
   });
 
-  const outputData = {
-    address,
-    network: 'devnet',
-    totalTransactions: transactions.length,
-    batchTransactions: transactions.filter(tx => tx.isBatchTransaction).length,
-    transactions: transactions.sort((a, b) => (a.blockTime || 0) - (b.blockTime || 0)),
-    summary: getTransactionSummary(transactions),
-    generatedAt: new Date().toISOString()
-  };
+  const walletPubkey = new PublicKey(walletAddress);
+  
+  console.log(`🔍 Analyzing wallet: ${walletAddress}\n`);
 
-  fs.writeFileSync('transactions.json', JSON.stringify(outputData, null, 2));
-  console.log('✅ Transactions exported to transactions.json');
-}
-```
+  // Execute all queries in parallel
+  const [
+    allTransactions,
+    solTransactions,
+    ...tokenResults
+  ] = await Promise.all([
+    getTransactions(connection, walletPubkey, 100),
+    getSolanaTransactions(connection, walletPubkey, 100),
+    ...tokenMints.map(mint => 
+      getSplTokenTransactions(connection, walletPubkey, new PublicKey(mint), 100)
+    )
+  ]);
 
-### Filter by Date Range
+  // Display summary
+  console.log('📊 WALLET ANALYSIS SUMMARY');
+  console.log('==========================');
+  console.log(`Total Transactions: ${allTransactions.length}`);
+  console.log(`SOL Transactions: ${solTransactions.length}`);
+  console.log(`Token Transactions: ${tokenResults.flat().length}`);
+  console.log(`Unique Token Mints: ${tokenMints.length}\n`);
 
-```typescript
-function filterTransactionsByDateRange(
-  transactions: TransactionData[], 
-  startDate: Date, 
-  endDate: Date
-): TransactionData[] {
-  return transactions.filter(tx => {
-    if (!tx.blockTime) return false;
-    const txDate = new Date(tx.blockTime * 1000);
-    return txDate >= startDate && txDate <= endDate;
+  // Display SOL transactions
+  if (solTransactions.length > 0) {
+    console.log('💎 SOL TRANSACTIONS:');
+    console.log('====================');
+    solTransactions.forEach((tx, index) => {
+      const date = tx.tx.blockTime ? new Date(tx.tx.blockTime * 1000).toLocaleString() : 'Unknown';
+      console.log(`${index + 1}. ${tx.tx.transaction.signatures[0]}`);
+      console.log(`   Time: ${date}`);
+      console.log(`   Type: ${tx.type.toUpperCase()}`);
+      console.log(`   Change: ${tx.change > 0 ? '+' : ''}${(tx.change / 1e9).toFixed(9)} SOL`);
+      console.log(`   Success: ${!tx.tx.meta?.err}\n`);
+    });
+  }
+
+  // Display token transactions
+  tokenResults.forEach((tokenTxs, mintIndex) => {
+    if (tokenTxs.length > 0) {
+      console.log(`🪙 TOKEN TRANSACTIONS (${tokenMints[mintIndex]}):`);
+      console.log('==========================================');
+      tokenTxs.forEach((tx, index) => {
+        const date = tx.tx.blockTime ? new Date(tx.tx.blockTime * 1000).toLocaleString() : 'Unknown';
+        console.log(`${index + 1}. ${tx.tx.transaction.signatures[0]}`);
+        console.log(`   Time: ${date}`);
+        console.log(`   Type: ${tx.type.toUpperCase()}`);
+        console.log(`   Change: ${tx.change > 0 ? '+' : ''}${tx.change.toFixed(6)} tokens`);
+        console.log(`   Success: ${!tx.tx.meta?.err}\n`);
+      });
+    }
   });
 }
 
 // Usage
-const transactions = await getTransactions(address, { limit: 100 });
-const lastWeek = filterTransactionsByDateRange(
-  transactions, 
-  new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), 
-  new Date()
-);
+const walletAddress = '6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc';
+const tokenMints = [
+  '7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8',
+  'So11111111111111111111111111111111111111112'
+];
+
+await completeWalletAnalysis(walletAddress, tokenMints);
 ```
 
-### Transaction Statistics
+### Export to JSON with Parallel Processing
 
 ```typescript
-async function getTransactionStats(address: string) {
-  const transactions = await getTransactions(address, {
+import * as fs from 'fs';
+
+async function exportWalletData(walletAddress: string, tokenMints: string[], outputFile: string) {
+  const connection = createConnection({ 
     network: 'devnet',
-    limit: 100,
-    includeBatchAnalysis: true
+    rpcUrl: 'https://api.devnet.solana.com',
+    wsUrl: 'wss://api.devnet.solana.com'
   });
 
-  const summary = getTransactionSummary(transactions);
+  const walletPubkey = new PublicKey(walletAddress);
   
-  console.log('📈 TRANSACTION STATISTICS');
-  console.log('========================');
-  console.log(`Total Transactions: ${summary.totalTransactions}`);
-  console.log(`Successful: ${summary.successfulTransactions}`);
-  console.log(`Failed: ${summary.failedTransactions}`);
-  console.log(`Success Rate: ${summary.successRate.toFixed(2)}%`);
-  console.log(`Total Fees: ${summary.totalFeesInSol.toFixed(9)} SOL`);
-  console.log(`SOL Transfers: ${summary.totalSolTransfers}`);
-  console.log(`Token Transfers: ${summary.totalTokenTransfers}`);
-  console.log(`Batch Transactions: ${summary.batchTransactions}`);
-  console.log(`Unique Tokens: ${summary.uniqueTokens}`);
+  console.log(`📊 Exporting data for wallet: ${walletAddress}`);
+
+  // Execute all queries in parallel
+  const [
+    allTransactions,
+    solTransactions,
+    ...tokenResults
+  ] = await Promise.all([
+    getTransactions(connection, walletPubkey, 100),
+    getSolanaTransactions(connection, walletPubkey, 100),
+    ...tokenMints.map(mint => 
+      getSplTokenTransactions(connection, walletPubkey, new PublicKey(mint), 100)
+    )
+  ]);
+
+  // Prepare export data
+  const exportData = {
+    wallet: walletAddress,
+    network: 'devnet',
+    generatedAt: new Date().toISOString(),
+    summary: {
+      totalTransactions: allTransactions.length,
+      solTransactions: solTransactions.length,
+      tokenTransactions: tokenResults.flat().length,
+      uniqueTokenMints: tokenMints.length
+    },
+    data: {
+      allTransactions,
+      solTransactions,
+      tokenTransactions: tokenMints.reduce((acc, mint, index) => {
+        acc[mint] = tokenResults[index];
+        return acc;
+      }, {} as Record<string, SplTokenTransaction[]>)
+    }
+  };
+
+  // Write to file
+  fs.writeFileSync(outputFile, JSON.stringify(exportData, null, 2));
+  console.log(`✅ Data exported to: ${outputFile}`);
 }
+
+// Usage
+const walletAddress = '6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc';
+const tokenMints = [
+  '7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8',
+  'So11111111111111111111111111111111111111112'
+];
+
+await exportWalletData(walletAddress, tokenMints, 'wallet-analysis.json');
 ```
 
 ## Troubleshooting
@@ -436,28 +458,32 @@ try {
   console.error('Invalid public key:', error);
 }
 
-// Check network
-const transactions = await getTransactions(address, {
-  network: 'devnet', // Try 'mainnet' if no devnet transactions
-  limit: 10
+// Try different network
+const connection = createConnection({ 
+  network: 'mainnet', // Try mainnet if no devnet transactions
+  rpcUrl: 'https://api.mainnet-beta.solana.com',
+  wsUrl: 'wss://api.mainnet-beta.solana.com'
 });
 ```
 
 #### 2. Rate Limiting
 ```typescript
-// Add delays between requests
-const transactions = await getTransactions(address, {
-  network: 'devnet',
-  limit: 10 // Start with smaller limit
-});
+// Add delays between parallel requests
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchWithDelay() {
+  const results = await Promise.all([
+    getSolanaTransactions(connection, walletAddress, 10),
+    delay(100), // 100ms delay
+    getSplTokenTransactions(connection, walletAddress, mintAddress, 10)
+  ]);
+}
 ```
 
 #### 3. Transaction Not Found
 ```typescript
 // Check if transaction exists
-const tx = await getTransactionBySignature(signature, {
-  network: 'devnet'
-});
+const tx = await getTransactionBySignature(connection, signature);
 
 if (!tx) {
   console.log('Transaction not found or may be too old');
@@ -466,59 +492,91 @@ if (!tx) {
 
 ### Performance Tips
 
-1. **Use appropriate limits**: Start with small limits (10-20) for testing
-2. **Filter by type**: Use `getSolTransactions` or `getTokenTransactions` for specific needs
-3. **Enable batch analysis only when needed**: `includeBatchAnalysis: true` adds processing overhead
-4. **Use network-appropriate endpoints**: Ensure you're querying the correct network
+1. **Use parallel execution**: Always use `Promise.all()` for multiple queries
+2. **Start with small limits**: Use limits of 10-20 for testing
+3. **Filter by type**: Use specific functions (`getSolanaTransactions`, `getSplTokenTransactions`) instead of filtering all transactions
+4. **Use appropriate network**: Ensure you're querying the correct network
+5. **Handle errors gracefully**: Wrap parallel operations in try-catch blocks
 
 ### Example Complete Workflow
 
 ```typescript
-import { getTransactions, getTransactionSummary } from '@pump-fun/defikit';
+import { 
+  getTransactions,
+  getSolanaTransactions,
+  getSplTokenTransactions,
+  createConnection
+} from '@pump-fun/defikit';
+import { PublicKey } from '@solana/web3.js';
 
-async function completeTransactionAnalysis(address: string) {
+async function analyzeWalletComprehensive(walletAddress: string, tokenMints: string[]) {
   try {
-    console.log(`🔍 Analyzing transactions for: ${address}`);
+    console.log(`🔍 Comprehensive analysis for: ${walletAddress}`);
     
-    // Fetch all transactions
-    const transactions = await getTransactions(address, {
+    const connection = createConnection({ 
       network: 'devnet',
-      limit: 50,
-      includeBatchAnalysis: true
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com'
     });
 
-    if (transactions.length === 0) {
-      console.log('No transactions found for this address');
-      return;
+    const walletPubkey = new PublicKey(walletAddress);
+    
+    // Execute all queries in parallel for maximum efficiency
+    const [
+      allTransactions,
+      solTransactions,
+      ...tokenResults
+    ] = await Promise.all([
+      getTransactions(connection, walletPubkey, 50),
+      getSolanaTransactions(connection, walletPubkey, 50),
+      ...tokenMints.map(mint => 
+        getSplTokenTransactions(connection, walletPubkey, new PublicKey(mint), 50)
+      )
+    ]);
+
+    // Process results
+    const tokenTransactions = tokenResults.flat();
+    
+    console.log(`\n📊 ANALYSIS RESULTS`);
+    console.log(`==================`);
+    console.log(`All Transactions: ${allTransactions.length}`);
+    console.log(`SOL Transactions: ${solTransactions.length}`);
+    console.log(`Token Transactions: ${tokenTransactions.length}`);
+    console.log(`Unique Token Mints: ${tokenMints.length}`);
+
+    // Display recent activity
+    const recentSol = solTransactions.slice(0, 5);
+    const recentTokens = tokenTransactions.slice(0, 5);
+
+    if (recentSol.length > 0) {
+      console.log(`\n💎 Recent SOL Activity:`);
+      recentSol.forEach(tx => {
+        const date = tx.tx.blockTime ? new Date(tx.tx.blockTime * 1000).toLocaleString() : 'Unknown';
+        console.log(`  ${tx.type.toUpperCase()}: ${(tx.change / 1e9).toFixed(9)} SOL (${date})`);
+      });
     }
 
-    // Sort chronologically
-    const sortedTransactions = transactions.sort((a, b) => (a.blockTime || 0) - (b.blockTime || 0));
-
-    // Display summary
-    const summary = getTransactionSummary(transactions);
-    console.log(`\n📊 Found ${summary.totalTransactions} transactions`);
-    console.log(`Success Rate: ${summary.successRate.toFixed(2)}%`);
-    console.log(`Batch Transactions: ${summary.batchTransactions}`);
-
-    // Display each transaction
-    sortedTransactions.forEach((tx, index) => {
-      const date = tx.blockTime ? new Date(tx.blockTime * 1000).toLocaleString() : 'Unknown';
-      console.log(`\n${index + 1}. ${tx.signature}`);
-      console.log(`   Time: ${date}`);
-      console.log(`   Success: ${tx.success}`);
-      console.log(`   Batch: ${tx.isBatchTransaction ? 'YES' : 'NO'}`);
-      console.log(`   SOL Transfers: ${tx.solTransfers.length}`);
-      console.log(`   Token Transfers: ${tx.tokenTransfers.length}`);
-    });
+    if (recentTokens.length > 0) {
+      console.log(`\n🪙 Recent Token Activity:`);
+      recentTokens.forEach(tx => {
+        const date = tx.tx.blockTime ? new Date(tx.tx.blockTime * 1000).toLocaleString() : 'Unknown';
+        console.log(`  ${tx.type.toUpperCase()}: ${tx.change.toFixed(6)} ${tx.mint.substring(0, 8)}... (${date})`);
+      });
+    }
 
   } catch (error) {
-    console.error('Error analyzing transactions:', error);
+    console.error('Error in comprehensive analysis:', error);
   }
 }
 
 // Usage
-completeTransactionAnalysis('FgP6nvgumNYkoVFuqXZBe2Xc5Tj69ef5YnQKSzyKaarh');
+const walletAddress = '6fmnkBBMCZMubMWFwTk9upCoL1iHJzt7xoq2YfxCETbc';
+const tokenMints = [
+  '7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8',
+  'So11111111111111111111111111111111111111112'
+];
+
+analyzeWalletComprehensive(walletAddress, tokenMints);
 ```
 
-This guide provides everything you need to effectively fetch, analyze, and display Solana transactions using the PumpFun DeFi Kit! 🚀
+This updated guide now covers the new simplified API with proper parallel execution examples! 🚀
