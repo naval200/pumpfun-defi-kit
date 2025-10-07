@@ -1,4 +1,4 @@
-export { createPumpFunToken } from './createToken';
+export { createPumpFunToken, createPumpFunTokenInstruction } from './createToken';
 export { buyPumpFunToken } from './buy';
 export { sellPumpFunToken } from './sell';
 export { createBondingCurveBuyInstruction, createBondingCurveSellInstruction, } from './idl/instructions';

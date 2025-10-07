@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.createPumpFunTokenInstruction = createPumpFunTokenInstruction;
 exports.createPumpFunToken = createPumpFunToken;
 const tslib_1 = require("tslib");
 const web3_js_1 = require("@solana/web3.js");
@@ -50,79 +51,90 @@ async function getCreateInstructions(program, creator, name, symbol, uri, mint) 
  * @param isMainnet - Whether to use mainnet (default: false for devnet)
  * @returns Promise resolving to CreateTokenResult
  */
+async function createPumpFunTokenInstruction(connection, wallet, tokenConfig, mint) {
+    (0, debug_1.log)(`📝 Token: ${tokenConfig.name} (${tokenConfig.symbol})`);
+    (0, debug_1.log)(`📄 Description: ${tokenConfig.description}`);
+    // Load image file if provided
+    let imageFile = undefined;
+    if (tokenConfig.imagePath) {
+        try {
+            imageFile = await (0, image_loader_1.loadImageFromPath)(tokenConfig.imagePath);
+            (0, debug_1.log)('✅ Image loaded successfully');
+        }
+        catch (imageError) {
+            (0, debug_1.log)('⚠️ Image loading failed, proceeding without image:', imageError);
+        }
+    }
+    (0, debug_1.log)('🔨 Creating bonding curve token...');
+    // Check and initialize global account if needed
+    (0, debug_1.log)('🌍 Checking global account initialization...');
+    if (!(await (0, bc_helper_1.isGlobalAccountInitialized)(connection, constants_1.PUMP_PROGRAM_ID))) {
+        (0, debug_1.log)('⚠️ Global account not initialized. Attempting to initialize...');
+        const globalInitResult = await (0, bc_helper_1.initializeGlobalAccount)(connection, wallet, constants_1.PUMP_PROGRAM_ID);
+        if (!globalInitResult.success) {
+            (0, debug_1.log)(`❌ Global account initialization failed: ${globalInitResult.error}`);
+            (0, debug_1.log)('💡 The PumpFun program requires a global account to be initialized before creating tokens.');
+            (0, debug_1.log)('💡 This is typically a one-time setup done by the protocol administrators.');
+            throw new Error('Global account not initialized and initialization failed');
+        }
+        (0, debug_1.log)('✅ Global account initialized successfully!');
+    }
+    else {
+        (0, debug_1.log)('✅ Global account already initialized');
+    }
+    // Upload metadata using our custom function
+    let metadataUri;
+    try {
+        if (imageFile) {
+            const metadata = await (0, metadata_1.uploadMetadata)(tokenConfig.name, tokenConfig.symbol, tokenConfig.description, imageFile);
+            metadataUri = metadata.metadataUri;
+            (0, debug_1.log)('✅ Metadata uploaded successfully');
+        }
+        else {
+            // Use fallback metadata URI if no image
+            metadataUri = `data:application/json,${encodeURIComponent(JSON.stringify({
+                name: tokenConfig.name,
+                symbol: tokenConfig.symbol,
+            }))}`;
+            (0, debug_1.log)('📝 Using fallback metadata URI');
+        }
+    }
+    catch (metadataError) {
+        (0, debug_1.log)('⚠️ Metadata upload failed, using fallback URI:', metadataError);
+        // Use a fallback metadata URI if upload fails - keep it extremely short
+        metadataUri = `data:application/json,${encodeURIComponent(JSON.stringify({
+            name: tokenConfig.name,
+            symbol: tokenConfig.symbol,
+        }))}`;
+    }
+    // Create the token using local implementation
+    (0, debug_1.log)('🔧 Creating token with local implementation...');
+    // Setup Anchor provider
+    const provider = new anchor_1.AnchorProvider(connection, new wallet_1.SimpleWallet(wallet), {
+        commitment: 'confirmed',
+    });
+    // Create program instance
+    const program = new anchor_1.Program(pump_program_json_1.default, provider);
+    const createTx = await getCreateInstructions(program, wallet.publicKey, tokenConfig.name, tokenConfig.symbol, metadataUri, mint);
+    return createTx;
+}
+/**
+ * Create a real PumpFun token with bonding curve (appears on pump.fun)
+ * @param connection - Solana connection instance
+ * @param wallet - Keypair for the creator wallet
+ * @param tokenConfig - Configuration for the token to be created
+ * @param isMainnet - Whether to use mainnet (default: false for devnet)
+ * @returns Promise resolving to CreateTokenResult
+ */
 async function createPumpFunToken(connection, wallet, tokenConfig, isMainnet = false) {
     try {
         (0, debug_1.log)('🚀 Creating PumpFun bonding curve token...');
         // Generate new mint keypair for the token
         const mint = web3_js_1.Keypair.generate();
         (0, debug_1.log)(`🪙 Token Mint: ${mint.publicKey.toString()}`);
-        (0, debug_1.log)(`📝 Token: ${tokenConfig.name} (${tokenConfig.symbol})`);
-        (0, debug_1.log)(`📄 Description: ${tokenConfig.description}`);
-        // Load image file if provided
-        let imageFile = undefined;
-        if (tokenConfig.imagePath) {
-            try {
-                imageFile = await (0, image_loader_1.loadImageFromPath)(tokenConfig.imagePath);
-                (0, debug_1.log)('✅ Image loaded successfully');
-            }
-            catch (imageError) {
-                (0, debug_1.log)('⚠️ Image loading failed, proceeding without image:', imageError);
-            }
-        }
-        (0, debug_1.log)('🔨 Creating bonding curve token...');
-        // Check and initialize global account if needed
-        (0, debug_1.log)('🌍 Checking global account initialization...');
-        const programId = constants_1.PUMP_PROGRAM_ID;
-        if (!(await (0, bc_helper_1.isGlobalAccountInitialized)(connection, programId))) {
-            (0, debug_1.log)('⚠️ Global account not initialized. Attempting to initialize...');
-            const globalInitResult = await (0, bc_helper_1.initializeGlobalAccount)(connection, wallet, programId);
-            if (!globalInitResult.success) {
-                (0, debug_1.log)(`❌ Global account initialization failed: ${globalInitResult.error}`);
-                (0, debug_1.log)('💡 The PumpFun program requires a global account to be initialized before creating tokens.');
-                (0, debug_1.log)('💡 This is typically a one-time setup done by the protocol administrators.');
-                throw new Error('Global account not initialized and initialization failed');
-            }
-            (0, debug_1.log)('✅ Global account initialized successfully!');
-        }
-        else {
-            (0, debug_1.log)('✅ Global account already initialized');
-        }
-        let signature;
-        // Upload metadata using our custom function
-        let metadataUri;
-        try {
-            if (imageFile) {
-                const metadata = await (0, metadata_1.uploadMetadata)(tokenConfig.name, tokenConfig.symbol, tokenConfig.description, imageFile);
-                metadataUri = metadata.metadataUri;
-                (0, debug_1.log)('✅ Metadata uploaded successfully');
-            }
-            else {
-                // Use fallback metadata URI if no image
-                metadataUri = `data:application/json,${encodeURIComponent(JSON.stringify({
-                    name: tokenConfig.name,
-                    symbol: tokenConfig.symbol,
-                }))}`;
-                (0, debug_1.log)('📝 Using fallback metadata URI');
-            }
-        }
-        catch (metadataError) {
-            (0, debug_1.log)('⚠️ Metadata upload failed, using fallback URI:', metadataError);
-            // Use a fallback metadata URI if upload fails - keep it extremely short
-            metadataUri = `data:application/json,${encodeURIComponent(JSON.stringify({
-                name: tokenConfig.name,
-                symbol: tokenConfig.symbol,
-            }))}`;
-        }
-        // Create the token using local implementation
-        (0, debug_1.log)('🔧 Creating token with local implementation...');
-        // Setup Anchor provider
-        const provider = new anchor_1.AnchorProvider(connection, new wallet_1.SimpleWallet(wallet), {
-            commitment: 'confirmed',
-        });
-        // Create program instance
-        const program = new anchor_1.Program(pump_program_json_1.default, provider);
-        const createTx = await getCreateInstructions(program, wallet.publicKey, tokenConfig.name, tokenConfig.symbol, metadataUri, mint);
+        const createTx = await createPumpFunTokenInstruction(connection, wallet, tokenConfig, mint);
         (0, debug_1.log)('✅ Create instructions generated!');
+        let signature;
         // First, create the token
         (0, debug_1.log)('📝 Preparing and signing create transaction...');
         // Set recent blockhash and fee payer before signing
@@ -196,7 +208,7 @@ async function createPumpFunToken(connection, wallet, tokenConfig, isMainnet = f
             (0, debug_1.log)('   Complete: false');
             // Show global account info
             (0, debug_1.log)('🌍 Global Account Info:');
-            (0, debug_1.log)(`   Global PDA: ${(0, bc_helper_1.getGlobalPDA)(programId).toString()}`);
+            (0, debug_1.log)(`   Global PDA: ${(0, bc_helper_1.getGlobalPDA)(constants_1.PUMP_PROGRAM_ID).toString()}`);
             (0, debug_1.log)('   Status: Initialized');
         }
         catch (error) {
