@@ -63,6 +63,114 @@ async function getCreateInstructions(
     .transaction();
 }
 
+
+/**
+ * Create a real PumpFun token with bonding curve (appears on pump.fun)
+ * @param connection - Solana connection instance
+ * @param wallet - Keypair for the creator wallet
+ * @param tokenConfig - Configuration for the token to be created
+ * @param isMainnet - Whether to use mainnet (default: false for devnet)
+ * @returns Promise resolving to CreateTokenResult
+ */
+export async function createPumpFunTokenInstruction(
+  connection: Connection,
+  wallet: Keypair,
+  tokenConfig: TokenConfig,
+  mint: Keypair,
+): Promise<Transaction> {
+  log(`📝 Token: ${tokenConfig.name} (${tokenConfig.symbol})`);
+  log(`📄 Description: ${tokenConfig.description}`);
+
+  // Load image file if provided
+  let imageFile: File | undefined = undefined;
+  if (tokenConfig.imagePath) {
+    try {
+      imageFile = await loadImageFromPath(tokenConfig.imagePath);
+      log('✅ Image loaded successfully');
+    } catch (imageError) {
+      log('⚠️ Image loading failed, proceeding without image:', imageError);
+    }
+  }
+
+  log('🔨 Creating bonding curve token...');
+
+  // Check and initialize global account if needed
+  log('🌍 Checking global account initialization...')
+
+  if (!(await isGlobalAccountInitialized(connection, PUMP_PROGRAM_ID))) {
+    log('⚠️ Global account not initialized. Attempting to initialize...');
+    const globalInitResult = await initializeGlobalAccount(connection, wallet, PUMP_PROGRAM_ID);
+
+    if (!globalInitResult.success) {
+      log(`❌ Global account initialization failed: ${globalInitResult.error}`);
+      log(
+        '💡 The PumpFun program requires a global account to be initialized before creating tokens.'
+      );
+      log('💡 This is typically a one-time setup done by the protocol administrators.');
+      throw new Error('Global account not initialized and initialization failed');
+    }
+
+    log('✅ Global account initialized successfully!');
+  } else {
+    log('✅ Global account already initialized');
+  }
+
+  // Upload metadata using our custom function
+  let metadataUri: string;
+  try {
+    if (imageFile) {
+      const metadata = await uploadMetadata(
+        tokenConfig.name,
+        tokenConfig.symbol,
+        tokenConfig.description,
+        imageFile
+      );
+      metadataUri = metadata.metadataUri;
+      log('✅ Metadata uploaded successfully');
+    } else {
+      // Use fallback metadata URI if no image
+      metadataUri = `data:application/json,${encodeURIComponent(
+        JSON.stringify({
+          name: tokenConfig.name,
+          symbol: tokenConfig.symbol,
+        })
+      )}`;
+      log('📝 Using fallback metadata URI');
+    }
+  } catch (metadataError) {
+    log('⚠️ Metadata upload failed, using fallback URI:', metadataError);
+    // Use a fallback metadata URI if upload fails - keep it extremely short
+    metadataUri = `data:application/json,${encodeURIComponent(
+      JSON.stringify({
+        name: tokenConfig.name,
+        symbol: tokenConfig.symbol,
+      })
+    )}`;
+  }
+
+  // Create the token using local implementation
+  log('🔧 Creating token with local implementation...');
+
+  // Setup Anchor provider
+  const provider = new AnchorProvider(connection, new SimpleWallet(wallet), {
+    commitment: 'confirmed',
+  });
+
+  // Create program instance
+  const program = new Program(IDL as unknown, provider);
+
+  const createTx = await getCreateInstructions(
+    program,
+    wallet.publicKey,
+    tokenConfig.name,
+    tokenConfig.symbol,
+    metadataUri,
+    mint
+  );
+
+  return createTx;
+}
+
 /**
  * Create a real PumpFun token with bonding curve (appears on pump.fun)
  * @param connection - Solana connection instance
@@ -81,102 +189,17 @@ export async function createPumpFunToken(
     log('🚀 Creating PumpFun bonding curve token...');
     // Generate new mint keypair for the token
     const mint = Keypair.generate();
-
+  
     log(`🪙 Token Mint: ${mint.publicKey.toString()}`);
-    log(`📝 Token: ${tokenConfig.name} (${tokenConfig.symbol})`);
-    log(`📄 Description: ${tokenConfig.description}`);
-
-    // Load image file if provided
-    let imageFile: File | undefined = undefined;
-    if (tokenConfig.imagePath) {
-      try {
-        imageFile = await loadImageFromPath(tokenConfig.imagePath);
-        log('✅ Image loaded successfully');
-      } catch (imageError) {
-        log('⚠️ Image loading failed, proceeding without image:', imageError);
-      }
-    }
-
-    log('🔨 Creating bonding curve token...');
-
-    // Check and initialize global account if needed
-    log('🌍 Checking global account initialization...');
-    const programId = PUMP_PROGRAM_ID;
-
-    if (!(await isGlobalAccountInitialized(connection, programId))) {
-      log('⚠️ Global account not initialized. Attempting to initialize...');
-      const globalInitResult = await initializeGlobalAccount(connection, wallet, programId);
-
-      if (!globalInitResult.success) {
-        log(`❌ Global account initialization failed: ${globalInitResult.error}`);
-        log(
-          '💡 The PumpFun program requires a global account to be initialized before creating tokens.'
-        );
-        log('💡 This is typically a one-time setup done by the protocol administrators.');
-        throw new Error('Global account not initialized and initialization failed');
-      }
-
-      log('✅ Global account initialized successfully!');
-    } else {
-      log('✅ Global account already initialized');
-    }
-
-    let signature: string;
-
-    // Upload metadata using our custom function
-    let metadataUri: string;
-    try {
-      if (imageFile) {
-        const metadata = await uploadMetadata(
-          tokenConfig.name,
-          tokenConfig.symbol,
-          tokenConfig.description,
-          imageFile
-        );
-        metadataUri = metadata.metadataUri;
-        log('✅ Metadata uploaded successfully');
-      } else {
-        // Use fallback metadata URI if no image
-        metadataUri = `data:application/json,${encodeURIComponent(
-          JSON.stringify({
-            name: tokenConfig.name,
-            symbol: tokenConfig.symbol,
-          })
-        )}`;
-        log('📝 Using fallback metadata URI');
-      }
-    } catch (metadataError) {
-      log('⚠️ Metadata upload failed, using fallback URI:', metadataError);
-      // Use a fallback metadata URI if upload fails - keep it extremely short
-      metadataUri = `data:application/json,${encodeURIComponent(
-        JSON.stringify({
-          name: tokenConfig.name,
-          symbol: tokenConfig.symbol,
-        })
-      )}`;
-    }
-
-    // Create the token using local implementation
-    log('🔧 Creating token with local implementation...');
-
-    // Setup Anchor provider
-    const provider = new AnchorProvider(connection, new SimpleWallet(wallet), {
-      commitment: 'confirmed',
-    });
-
-    // Create program instance
-    const program = new Program(IDL as unknown, provider);
-
-    const createTx = await getCreateInstructions(
-      program,
-      wallet.publicKey,
-      tokenConfig.name,
-      tokenConfig.symbol,
-      metadataUri,
-      mint
+    const createTx = await createPumpFunTokenInstruction(
+      connection,
+      wallet,
+      tokenConfig,
+      mint,
     );
 
     log('✅ Create instructions generated!');
+    let signature: string;
 
     // First, create the token
     log('📝 Preparing and signing create transaction...');
@@ -280,7 +303,7 @@ export async function createPumpFunToken(
 
       // Show global account info
       log('🌍 Global Account Info:');
-      log(`   Global PDA: ${getGlobalPDA(programId).toString()}`);
+      log(`   Global PDA: ${getGlobalPDA(PUMP_PROGRAM_ID).toString()}`);
       log('   Status: Initialized');
     } catch (error) {
       log('⚠️  Could not fetch bonding curve state yet (normal for new tokens)');

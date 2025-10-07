@@ -166,6 +166,40 @@ const result = await createToken({
 console.log('Token created:', result.tokenMint);
 ```
 
+### Batch Token Creation
+
+For creating multiple tokens efficiently, use the new `createPumpFunTokenInstruction` function:
+
+```typescript
+import { createPumpFunTokenInstruction } from './src';
+import { Connection, Keypair, Transaction } from '@solana/web3.js';
+
+const connection = new Connection('https://api.devnet.solana.com');
+const wallet = Keypair.generate();
+
+// Create multiple tokens in a single transaction
+const tokenConfigs = [
+  { name: 'Token 1', symbol: 'T1', description: 'First token' },
+  { name: 'Token 2', symbol: 'T2', description: 'Second token' },
+  { name: 'Token 3', symbol: 'T3', description: 'Third token' }
+];
+
+const mints = tokenConfigs.map(() => Keypair.generate());
+const instructions = await Promise.all(
+  tokenConfigs.map((config, index) =>
+    createPumpFunTokenInstruction(connection, wallet, config, mints[index])
+  )
+);
+
+// Create batch transaction
+const batchTransaction = new Transaction();
+instructions.forEach(instruction => batchTransaction.add(...instruction.instructions));
+
+// Sign and send
+batchTransaction.partialSign(wallet, ...mints);
+const signature = await connection.sendTransaction(batchTransaction, [wallet, ...mints]);
+```
+
 ### Buying Tokens (Bonding Curve)
 
 ```typescript

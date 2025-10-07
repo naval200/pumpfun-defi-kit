@@ -55,7 +55,8 @@
     "docs/fee-payer-usage.md",
     "docs/debug-scripts-guide.md",
     "docs/pumpswap-documentation.md",
-    "docs/how-to-get-transactions.md"
+    "docs/how-to-get-transactions.md",
+    "docs/CLI_USAGE_GUIDE.md"
   ],
   "engines": {
     "node": ">=18.0.0"

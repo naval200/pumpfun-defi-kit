@@ -815,6 +815,57 @@ if (result.success) {
 }
 ```
 
+### `createPumpFunTokenInstruction`
+
+Creates a transaction instruction for creating a new PumpFun token. This function returns just the transaction, enabling batching and custom transaction handling.
+
+```typescript
+function createPumpFunTokenInstruction(
+  connection: Connection,
+  wallet: Keypair,
+  tokenConfig: TokenConfig,
+  mint: Keypair
+): Promise<Transaction>
+```
+
+**Parameters:**
+- `connection`: Solana Connection object
+- `wallet`: Keypair for the creator wallet
+- `tokenConfig`: Token configuration object
+- `mint`: Keypair for the token mint (must be generated beforehand)
+
+**Returns:** Promise<Transaction>
+
+**Example:**
+```typescript
+import { createPumpFunTokenInstruction } from '@pump-fun/defikit';
+
+const mint = Keypair.generate();
+const tokenConfig = {
+  name: "My Token",
+  symbol: "MTK",
+  description: "A test token",
+  imagePath: "path/to/image.png"
+};
+
+const transaction = await createPumpFunTokenInstruction(
+  connection, 
+  wallet, 
+  tokenConfig, 
+  mint
+);
+
+// Add to batch transaction or handle custom logic
+const batchTransaction = new Transaction();
+batchTransaction.add(...transaction.instructions);
+```
+
+**Use Cases:**
+- Batch token creation with multiple tokens
+- Custom transaction handling and signing
+- Integration with other transaction operations
+- Advanced transaction composition
+
 ### `buyPumpFunToken`
 
 Buys tokens from the PumpFun bonding curve.
