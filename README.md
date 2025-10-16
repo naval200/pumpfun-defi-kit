@@ -482,6 +482,48 @@ Sells tokens using bonding curve pricing.
 
 **Returns:** Promise with sale result
 
+### Instruction Builders
+
+#### `createSimpleBuyInstruction(connection, buyerKeypair, mint, amountLamports, slippageBasisPoints?, creator?)`
+
+**NEW!** Simplified wrapper for creating bonding curve buy instructions. Automatically calculates all required PDAs internally.
+
+**Parameters:**
+
+- `connection`: Solana connection instance
+- `buyerKeypair`: Keypair of the buyer
+- `mint`: PublicKey of the token mint
+- `amountLamports`: Amount of SOL to spend (in lamports)
+- `slippageBasisPoints`: Slippage tolerance (default: 1000 = 10%)
+- `creator`: Optional creator PublicKey (defaults to buyer if not provided)
+
+**Returns:** `Promise<TransactionInstruction>`
+
+**Example:**
+```typescript
+import { createSimpleBuyInstruction } from './src/bonding-curve';
+
+// Simple usage - no need to calculate PDAs manually!
+const buyInstruction = await createSimpleBuyInstruction(
+  connection,
+  buyerKeypair,
+  mint,
+  0.1e9, // 0.1 SOL
+  1000,  // 10% slippage
+  creator // Optional creator
+);
+
+// Add to transaction
+const transaction = new Transaction().add(buyInstruction);
+```
+
+**Benefits:**
+- ✅ **Zero RPC calls**: No blockchain lookups required
+- ✅ **Auto PDA calculation**: All Program Derived Addresses calculated internally
+- ✅ **Type safe**: Full TypeScript support
+- ✅ **Simple API**: Just provide basic parameters
+- ✅ **Jito compatible**: Works with Jito bundles and batch transactions
+
 ### AMM Functions
 
 #### `createPool(options)`
