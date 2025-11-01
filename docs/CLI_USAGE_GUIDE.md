@@ -276,6 +276,12 @@ npm run cli:conversion-rate -- \
   --token-amount 100 \
   --token-decimals 6
 
+# Works with bonding curve tokens (tokens not yet migrated to AMM)
+npm run cli:conversion-rate -- \
+  --mint <BONDING_CURVE_TOKEN_MINT> \
+  --token-amount 100 \
+  --token-decimals 6
+
 # Get SOL to token conversion rate
 npm run cli:conversion-rate -- \
   --input-token ./token-info.json \
