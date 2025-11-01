@@ -30,3 +30,4 @@ export * from './utils/connection';
 export * from './utils/image-loader';
 export * from './utils/trading-mode';
 export * from './utils/graduation-utils';
+export * from './utils/conversion-rate';

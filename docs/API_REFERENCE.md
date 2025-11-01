@@ -702,6 +702,91 @@ function removeLiquidity(
 
 ## Utility Functions
 
+### `getTokenToSolConversionRate`
+
+Gets the conversion rate from token to SOL using AMM pool reserves. This calculates how much SOL you would receive for a given amount of tokens.
+
+```typescript
+function getTokenToSolConversionRate(
+  connection: Connection,
+  tokenMint: PublicKey,
+  tokenAmount?: number,
+  tokenDecimals?: number,
+  slippage?: number,
+  poolKey?: PublicKey
+): Promise<number | null>
+```
+
+**Parameters:**
+- `connection`: Solana Connection object
+- `tokenMint`: Token mint address
+- `tokenAmount`: Amount of tokens (default: 1)
+- `tokenDecimals`: Token decimals (default: 0, assumes amount is already in base units)
+- `slippage`: Slippage tolerance as decimal (default: 0.005 = 0.5%)
+- `poolKey`: Optional pool key. If not provided, will search for pools
+
+**Returns:** Promise resolving to conversion rate (SOL per token) or null if unable to fetch
+
+**Example:**
+```typescript
+import { getTokenToSolConversionRate, solToLamports } from '@pump-fun/defikit';
+
+const rate = await getTokenToSolConversionRate(
+  connection,
+  tokenMint,
+  100,    // 100 tokens
+  6,      // 6 decimals
+  0.005   // 0.5% slippage
+);
+
+if (rate !== null) {
+  console.log(`1 token = ${rate} SOL`);
+  console.log(`100 tokens = ${rate * 100} SOL`);
+}
+```
+
+### `getSolToTokenConversionRate`
+
+Gets the conversion rate from SOL to token using AMM pool reserves. This calculates how many tokens you would receive for a given amount of SOL.
+
+```typescript
+function getSolToTokenConversionRate(
+  connection: Connection,
+  tokenMint: PublicKey,
+  solAmount?: number,
+  slippage?: number,
+  poolKey?: PublicKey
+): Promise<number | null>
+```
+
+**Parameters:**
+- `connection`: Solana Connection object
+- `tokenMint`: Token mint address
+- `solAmount`: Amount of SOL (default: 1)
+- `slippage`: Slippage tolerance as decimal (default: 0.005 = 0.5%)
+- `poolKey`: Optional pool key. If not provided, will search for pools
+
+**Returns:** Promise resolving to conversion rate (tokens per SOL) or null if unable to fetch
+
+**Example:**
+```typescript
+import { getSolToTokenConversionRate } from '@pump-fun/defikit';
+
+const tokensPerSol = await getSolToTokenConversionRate(
+  connection,
+  tokenMint,
+  1.0,    // 1 SOL
+  0.005   // 0.5% slippage
+);
+
+if (tokensPerSol !== null) {
+  console.log(`1 SOL = ${tokensPerSol} tokens`);
+  console.log(`0.1 SOL = ${tokensPerSol * 0.1} tokens`);
+}
+```
+
+**Note:** Both functions use the constant product AMM formula (x * y = k) to calculate conversion rates. They automatically find AMM pools for the token if no pool key is provided. The functions account for slippage tolerance and work only with tokens that have been migrated to AMM pools.
+
 ### `getOrCreateAssociatedTokenAccount`
 
 Gets or creates an Associated Token Account.

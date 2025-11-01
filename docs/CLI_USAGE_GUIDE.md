@@ -22,9 +22,10 @@ npm run cli:bond-buy -- --amount 0.1 --input-token ./token-info.json
 npm run cli:bond-sell -- --amount 1000 --input-token ./token-info.json
 
 # AMM Operations
-npm run cli:amm-buy -- --amount 0.1 --input-token ./token-info.json
-npm run cli:amm-sell -- --amount 1000 --input-token ./token-info.json
-npm run cli:amm-create-pool -- --base-amount 1000000 --quote-amount 0.1
+npm run cli:amm:buy -- --amount 0.1 --input-token ./token-info.json
+npm run cli:amm:sell -- --amount 1000 --input-token ./token-info.json
+npm run cli:amm:create-pool -- --base-amount 1000000 --quote-amount 0.1
+npm run cli:conversion-rate -- --input-token ./token-info.json --token-amount 100
 
 # Utilities
 npm run cli:check-balances -- --wallet ./wallet.json --input-token ./token-info.json
@@ -147,6 +148,7 @@ These commands are available globally when the package is installed:
 - `pumpfun-cli amm-create-pool` - Create new AMM liquidity pool
 - `pumpfun-cli amm-info` - Get AMM pool information
 - `pumpfun-cli amm-liquidity` - Add/remove liquidity from pool
+- `pumpfun-cli conversion-rate` - Get token to SOL conversion rates
 - `pumpfun-cli send-sol` - Send SOL between wallets
 - `pumpfun-cli send-token` - Send tokens between wallets
 - `pumpfun-cli check-balances` - Check wallet balances
@@ -172,6 +174,7 @@ When working with the source code directly:
 - `amm-create-pool` - Create new AMM liquidity pool
 - `amm-info` - Get AMM pool information
 - `amm-liquidity` - Add/remove liquidity from pool
+- `conversion-rate` - Get token to SOL conversion rates
 
 #### Utilities
 - `send-sol` - Send SOL between wallets
@@ -259,6 +262,41 @@ pumpfun-cli check-balances \
 npx pumpfun-cli check-balances \
   --wallet ./user-wallet.json \
   --input-token ./token-info.json
+```
+
+### Get Conversion Rates
+```bash
+# Get conversion rate for 1 token to SOL
+npm run cli:conversion-rate -- \
+  --input-token ./token-info.json
+
+# Get conversion rate for 100 tokens to SOL
+npm run cli:conversion-rate -- \
+  --input-token ./token-info.json \
+  --token-amount 100 \
+  --token-decimals 6
+
+# Get SOL to token conversion rate
+npm run cli:conversion-rate -- \
+  --input-token ./token-info.json \
+  --direction sol-to-token \
+  --sol-amount 1.0
+
+# Get both conversion rates
+npm run cli:conversion-rate -- \
+  --input-token ./token-info.json \
+  --both
+
+# Use mint address directly
+npm run cli:conversion-rate -- \
+  --mint 7JbsbKusEG4XRtg6XipzvpT4j7pLQEHmwHkF5Rooj4A8 \
+  --token-amount 100 \
+  --token-decimals 6
+
+# From parent repository
+npx pumpfun-cli conversion-rate -- \
+  --input-token ./token-info.json \
+  --token-amount 100
 ```
 
 ### Transaction Analysis

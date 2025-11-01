@@ -39,6 +39,11 @@ export interface CliArgs {
   operations?: string;
   type?: string;
   batchAnalysis?: boolean;
+  tokenAmount?: number;
+  solAmount?: number;
+  tokenDecimals?: number;
+  direction?: string;
+  both?: boolean;
 }
 
 export function parseArgs(): CliArgs {
@@ -163,6 +168,21 @@ export function parseArgs(): CliArgs {
         break;
       case '--batch-analysis':
         args.batchAnalysis = true;
+        break;
+      case '--token-amount':
+        args.tokenAmount = parseFloat(argv[++i]);
+        break;
+      case '--sol-amount':
+        args.solAmount = parseFloat(argv[++i]);
+        break;
+      case '--token-decimals':
+        args.tokenDecimals = parseInt(argv[++i]);
+        break;
+      case '--direction':
+        args.direction = argv[++i];
+        break;
+      case '--both':
+        args.both = true;
         break;
       case '--help':
       case '-h':
