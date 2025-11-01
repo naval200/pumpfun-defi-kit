@@ -10,6 +10,7 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 📈 **Bonding Curve Trading**: Execute trades using mathematical bonding curves
 - 🏊 **AMM Support**: Automated Market Maker functionality for liquidity pools
 - 💰 **Liquidity Management**: Add/remove liquidity from trading pools
+- 💱 **Conversion Rates**: Get real-time token to SOL conversion rates from AMM pools
 - 🔐 **Wallet Integration**: Seamless integration with Solana wallets
 - 📱 **TypeScript Support**: Full TypeScript support with comprehensive type definitions
 - 🧪 **Devnet Ready**: Test on Solana devnet before mainnet deployment
@@ -113,12 +114,12 @@ npx pumpfun-cli amm-buy --amount 0.1 --input-token ./token-info.json --wallet ./
 
 **Global Commands (when installed as npm module):**
 - **Main CLI**: `pumpfun-cli` - Command dispatcher (use subcommands below)
-- **Subcommands**: `bond-create-token`, `bond-buy`, `bond-sell`, `amm-buy`, `amm-sell`, `amm-create-pool`, `amm-info`, `amm-liquidity`, `send-sol`, `send-token`, `check-balances`, `create-ata`, `batch`
+- **Subcommands**: `bond-create-token`, `bond-buy`, `bond-sell`, `amm-buy`, `amm-sell`, `amm-create-pool`, `amm-info`, `amm-liquidity`, `conversion-rate`, `send-sol`, `send-token`, `check-balances`, `create-ata`, `batch`
 
 **Local Development Commands:**
 - **Bonding Curve**: `bond-create-token`, `bond-buy`, `bond-sell`, `bond-check-accounts`
 - **AMM**: `amm-buy`, `amm-sell`, `amm-create-pool`, `amm-info`, `amm-liquidity`
-- **Utilities**: `send-sol`, `send-token`, `check-balances`, `create-ata`
+- **Utilities**: `conversion-rate`, `send-sol`, `send-token`, `check-balances`, `create-ata`
 - **Batch**: `batch` (for batch operations)
 
 ### Testing with Debug Scripts
@@ -482,6 +483,68 @@ Sells tokens using bonding curve pricing.
 
 **Returns:** Promise with sale result
 
+#### `getTokenToSolConversionRate(connection, tokenMint, tokenAmount?, tokenDecimals?, slippage?, poolKey?)`
+
+Gets the conversion rate from token to SOL using AMM pool reserves.
+
+**Parameters:**
+
+- `connection`: Solana connection instance
+- `tokenMint`: Token mint address
+- `tokenAmount`: Amount of tokens (default: 1)
+- `tokenDecimals`: Token decimals (default: 0)
+- `slippage`: Slippage tolerance as decimal (default: 0.005 = 0.5%)
+- `poolKey`: Optional pool key (auto-discovered if not provided)
+
+**Returns:** Promise resolving to conversion rate (SOL per token) or null
+
+**Example:**
+```typescript
+import { getTokenToSolConversionRate } from '@pump-fun/defikit';
+
+const rate = await getTokenToSolConversionRate(
+  connection,
+  tokenMint,
+  100,  // 100 tokens
+  6,    // 6 decimals
+  0.005 // 0.5% slippage
+);
+
+if (rate !== null) {
+  console.log(`1 token = ${rate} SOL`);
+}
+```
+
+#### `getSolToTokenConversionRate(connection, tokenMint, solAmount?, slippage?, poolKey?)`
+
+Gets the conversion rate from SOL to token using AMM pool reserves.
+
+**Parameters:**
+
+- `connection`: Solana connection instance
+- `tokenMint`: Token mint address
+- `solAmount`: Amount of SOL (default: 1)
+- `slippage`: Slippage tolerance as decimal (default: 0.005 = 0.5%)
+- `poolKey`: Optional pool key (auto-discovered if not provided)
+
+**Returns:** Promise resolving to conversion rate (tokens per SOL) or null
+
+**Example:**
+```typescript
+import { getSolToTokenConversionRate } from '@pump-fun/defikit';
+
+const tokensPerSol = await getSolToTokenConversionRate(
+  connection,
+  tokenMint,
+  1.0,   // 1 SOL
+  0.005  // 0.5% slippage
+);
+
+if (tokensPerSol !== null) {
+  console.log(`1 SOL = ${tokensPerSol} tokens`);
+}
+```
+
 ### Instruction Builders
 
 #### `createSimpleBuyInstruction(connection, buyerKeypair, mint, amountLamports, slippageBasisPoints?, creator?)`
@@ -659,6 +722,7 @@ npm run cli:amm:liquidity -- --help         # Manage pool liquidity
 npm run cli:amm:add-only -- --help          # Add liquidity only
 
 # Utility Commands
+npm run cli:conversion-rate -- --help      # Get token to SOL conversion rates
 npm run cli:graduation-check                # Check token graduation status
 npm run cli:send-token -- --help           # Send tokens between wallets
 npm run help                                # Show all available CLI commands
