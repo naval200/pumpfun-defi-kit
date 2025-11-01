@@ -25,4 +25,5 @@ tslib_1.__exportStar(require("./utils/connection"), exports);
 tslib_1.__exportStar(require("./utils/image-loader"), exports);
 tslib_1.__exportStar(require("./utils/trading-mode"), exports);
 tslib_1.__exportStar(require("./utils/graduation-utils"), exports);
+tslib_1.__exportStar(require("./utils/conversion-rate"), exports);
 //# sourceMappingURL=index.js.map

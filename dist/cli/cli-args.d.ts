@@ -34,6 +34,11 @@ export interface CliArgs {
     operations?: string;
     type?: string;
     batchAnalysis?: boolean;
+    tokenAmount?: number;
+    solAmount?: number;
+    tokenDecimals?: number;
+    direction?: string;
+    both?: boolean;
 }
 export declare function parseArgs(): CliArgs;
 export declare function loadWallet(walletPath?: string): Keypair;
