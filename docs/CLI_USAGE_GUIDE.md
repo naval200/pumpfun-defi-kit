@@ -266,7 +266,7 @@ npx pumpfun-cli check-balances \
 
 ### Get Conversion Rates
 ```bash
-# Get conversion rate for 1 token to SOL
+# Get conversion rate for 1 token to SOL (works with both AMM pools and bonding curves)
 npm run cli:conversion-rate -- \
   --input-token ./token-info.json
 
