@@ -704,7 +704,7 @@ function removeLiquidity(
 
 ### `getTokenToSolConversionRate`
 
-Gets the conversion rate from token to SOL using AMM pool reserves. This calculates how much SOL you would receive for a given amount of tokens.
+Gets the conversion rate from token to SOL using AMM pools or bonding curves. This calculates how much SOL you would receive for a given amount of tokens. Automatically detects and uses AMM pools if available, otherwise falls back to bonding curve calculations.
 
 ```typescript
 function getTokenToSolConversionRate(
@@ -725,7 +725,7 @@ function getTokenToSolConversionRate(
 - `slippage`: Slippage tolerance as decimal (default: 0.005 = 0.5%)
 - `poolKey`: Optional pool key. If not provided, will search for pools
 
-**Returns:** Promise resolving to conversion rate (SOL per token) or null if unable to fetch
+**Returns:** Promise resolving to conversion rate (SOL per token) or null if unable to fetch. Works with both AMM pools and bonding curves.
 
 **Example:**
 ```typescript
@@ -747,7 +747,7 @@ if (rate !== null) {
 
 ### `getSolToTokenConversionRate`
 
-Gets the conversion rate from SOL to token using AMM pool reserves. This calculates how many tokens you would receive for a given amount of SOL.
+Gets the conversion rate from SOL to token using AMM pools or bonding curves. This calculates how many tokens you would receive for a given amount of SOL. Automatically detects and uses AMM pools if available, otherwise falls back to bonding curve calculations.
 
 ```typescript
 function getSolToTokenConversionRate(
@@ -766,7 +766,7 @@ function getSolToTokenConversionRate(
 - `slippage`: Slippage tolerance as decimal (default: 0.005 = 0.5%)
 - `poolKey`: Optional pool key. If not provided, will search for pools
 
-**Returns:** Promise resolving to conversion rate (tokens per SOL) or null if unable to fetch
+**Returns:** Promise resolving to conversion rate (tokens per SOL) or null if unable to fetch. Works with both AMM pools and bonding curves.
 
 **Example:**
 ```typescript
@@ -785,7 +785,13 @@ if (tokensPerSol !== null) {
 }
 ```
 
-**Note:** Both functions use the constant product AMM formula (x * y = k) to calculate conversion rates. They automatically find AMM pools for the token if no pool key is provided. The functions account for slippage tolerance and work only with tokens that have been migrated to AMM pools.
+**Note:** 
+- Both functions use the constant product formula (x * y = k) to calculate conversion rates
+- **AMM Mode**: Uses pool reserves (`poolBaseAmount * poolQuoteAmount = k`) for tokens that have been migrated to AMM
+- **Bonding Curve Mode**: Uses virtual reserves (`virtual_token_reserves * virtual_sol_reserves = k`) for tokens still on the bonding curve
+- Automatic fallback: Tries AMM pools first, then falls back to bonding curve if no pools exist
+- The functions automatically detect which mechanism to use based on available pools
+- Slippage tolerance is applied to both AMM and bonding curve calculations
 
 ### `getOrCreateAssociatedTokenAccount`
 

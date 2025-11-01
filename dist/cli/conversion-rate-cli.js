@@ -9,7 +9,7 @@ function showHelp() {
     console.log(`
 Usage: npm run cli:conversion-rate -- [options]
 
-Get conversion rates between PumpFun tokens and SOL using AMM pools.
+Get conversion rates between PumpFun tokens and SOL using AMM pools or bonding curves.
 
 Options:
   --help, -h                    Show this help message
@@ -127,7 +127,7 @@ async function main() {
             }
             else {
                 console.log('\n❌ Failed to get conversion rate');
-                console.log('💡 Make sure the token has been migrated to an AMM pool');
+                console.log('💡 Make sure the token exists and is either on a bonding curve or has been migrated to an AMM pool');
             }
             console.log('');
         }
@@ -149,7 +149,7 @@ async function main() {
             }
             else {
                 console.log('\n❌ Failed to get conversion rate');
-                console.log('💡 Make sure the token has been migrated to an AMM pool');
+                console.log('💡 Make sure the token exists and is either on a bonding curve or has been migrated to an AMM pool');
             }
             console.log('');
         }

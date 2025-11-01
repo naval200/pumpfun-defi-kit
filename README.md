@@ -10,7 +10,7 @@ A comprehensive DeFi toolkit for PumpFun tokens with bonding curve and AMM suppo
 - 📈 **Bonding Curve Trading**: Execute trades using mathematical bonding curves
 - 🏊 **AMM Support**: Automated Market Maker functionality for liquidity pools
 - 💰 **Liquidity Management**: Add/remove liquidity from trading pools
-- 💱 **Conversion Rates**: Get real-time token to SOL conversion rates from AMM pools
+- 💱 **Conversion Rates**: Get real-time token to SOL conversion rates from AMM pools or bonding curves
 - 🔐 **Wallet Integration**: Seamless integration with Solana wallets
 - 📱 **TypeScript Support**: Full TypeScript support with comprehensive type definitions
 - 🧪 **Devnet Ready**: Test on Solana devnet before mainnet deployment
@@ -485,7 +485,7 @@ Sells tokens using bonding curve pricing.
 
 #### `getTokenToSolConversionRate(connection, tokenMint, tokenAmount?, tokenDecimals?, slippage?, poolKey?)`
 
-Gets the conversion rate from token to SOL using AMM pool reserves.
+Gets the conversion rate from token to SOL using AMM pools or bonding curves. Automatically detects and uses AMM pools if available, otherwise falls back to bonding curve calculations.
 
 **Parameters:**
 
@@ -496,7 +496,7 @@ Gets the conversion rate from token to SOL using AMM pool reserves.
 - `slippage`: Slippage tolerance as decimal (default: 0.005 = 0.5%)
 - `poolKey`: Optional pool key (auto-discovered if not provided)
 
-**Returns:** Promise resolving to conversion rate (SOL per token) or null
+**Returns:** Promise resolving to conversion rate (SOL per token) or null. Works with both AMM pools and bonding curves.
 
 **Example:**
 ```typescript
@@ -517,7 +517,7 @@ if (rate !== null) {
 
 #### `getSolToTokenConversionRate(connection, tokenMint, solAmount?, slippage?, poolKey?)`
 
-Gets the conversion rate from SOL to token using AMM pool reserves.
+Gets the conversion rate from SOL to token using AMM pools or bonding curves. Automatically detects and uses AMM pools if available, otherwise falls back to bonding curve calculations.
 
 **Parameters:**
 
@@ -527,7 +527,7 @@ Gets the conversion rate from SOL to token using AMM pool reserves.
 - `slippage`: Slippage tolerance as decimal (default: 0.005 = 0.5%)
 - `poolKey`: Optional pool key (auto-discovered if not provided)
 
-**Returns:** Promise resolving to conversion rate (tokens per SOL) or null
+**Returns:** Promise resolving to conversion rate (tokens per SOL) or null. Works with both AMM pools and bonding curves.
 
 **Example:**
 ```typescript
