@@ -9,7 +9,6 @@ import {
 import {
   PUMP_PROGRAM_ID,
   COMPUTE_BUDGET_PROGRAM_ID,
-  GLOBAL_VOLUME_ACCUMULATOR,
   TOKEN_PROGRAM_ID,
   GLOBAL_SEED,
   BONDING_CURVE_SEED,
@@ -375,8 +374,8 @@ export function getAllRequiredPDAsForBuy(programId: PublicKey, mint: PublicKey, 
   // Event authority PDA - standard Anchor pattern
   const [eventAuthorityPDA] = PublicKey.findProgramAddressSync([EVENT_AUTHORITY_SEED], programId);
 
-  // Global volume accumulator - known constant
-  const globalVolumeAccumulatorPDA = new PublicKey(GLOBAL_VOLUME_ACCUMULATOR);
+  // Global volume accumulator - derive from seed instead of hardcoding
+  const [globalVolumeAccumulatorPDA] = deriveGlobalVolumeAccumulatorAddress();
 
   // User volume accumulator - use reverse engineered pattern
   const userVolumeAccumulatorPDA = getUserVolumeAccumulator(programId, user);
@@ -434,6 +433,38 @@ export async function getBondingCurvePDAs(
 export function getGlobalPDA(programId: PublicKey): PublicKey {
   const [globalPDA] = PublicKey.findProgramAddressSync([GLOBAL_SEED], programId);
   return globalPDA;
+}
+
+/**
+ * Fetch fee recipient from Global account
+ * The Global account structure (from IDL):
+ * - 8 bytes: discriminator
+ * - 1 byte: initialized (bool)
+ * - 32 bytes: authority (pubkey)
+ * - 32 bytes: fee_recipient (pubkey) <- This is what we need
+ */
+export async function getFeeRecipientFromGlobal(
+  connection: Connection,
+  programId: PublicKey
+): Promise<PublicKey> {
+  const globalPDA = getGlobalPDA(programId);
+  const globalAccount = await connection.getAccountInfo(globalPDA);
+  
+  if (!globalAccount) {
+    throw new Error(`Global account not found: ${globalPDA.toString()}`);
+  }
+  
+  if (globalAccount.data.length < 73) {
+    throw new Error(`Global account data too short: ${globalAccount.data.length} bytes`);
+  }
+  
+  // Fee recipient is at offset: 8 (discriminator) + 1 (initialized) + 32 (authority) = 41
+  const feeRecipientOffset = 41;
+  const feeRecipientBytes = globalAccount.data.slice(feeRecipientOffset, feeRecipientOffset + 32);
+  const feeRecipient = new PublicKey(feeRecipientBytes);
+  
+  log(`✅ Fetched fee recipient from Global account: ${feeRecipient.toString()}`);
+  return feeRecipient;
 }
 
 /**

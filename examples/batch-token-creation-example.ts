@@ -11,7 +11,7 @@ import { createTokenInstruction, createTokenTransaction } from '../src/bonding-c
 import { SimpleWallet } from '../src/utils/wallet';
 import { sendAndConfirmRawTransaction } from '../src/utils/transaction';
 import { log, logSuccess, logError } from '../src/utils/debug';
-import IDL from '../src/bonding-curve/idl/pump_program.json';
+import { loadIDL } from '../src/bonding-curve/idl/load-idl';
 
 // Example: Batch Token Creation
 async function batchTokenCreationExample() {
@@ -22,6 +22,13 @@ async function batchTokenCreationExample() {
   const provider = new AnchorProvider(connection, new SimpleWallet(creator), {
     commitment: 'confirmed',
   });
+  
+  // Detect network and load appropriate IDL
+  const rpcUrl = connection.rpcEndpoint;
+  const isMainnet = rpcUrl.includes('mainnet') || rpcUrl.includes('api.mainnet');
+  const network = isMainnet ? 'mainnet-beta' : 'devnet';
+  const IDL = loadIDL(network);
+  
   const program = new Program(IDL as unknown, provider);
 
   // Define multiple tokens to create
@@ -115,6 +122,13 @@ async function individualTokenCreationExample() {
   const provider = new AnchorProvider(connection, new SimpleWallet(creator), {
     commitment: 'confirmed',
   });
+  
+  // Detect network and load appropriate IDL
+  const rpcUrl = connection.rpcEndpoint;
+  const isMainnet = rpcUrl.includes('mainnet') || rpcUrl.includes('api.mainnet');
+  const network = isMainnet ? 'mainnet-beta' : 'devnet';
+  const IDL = loadIDL(network);
+  
   const program = new Program(IDL as unknown, provider);
 
   const tokenConfig = {
@@ -180,6 +194,13 @@ async function mixedOperationsWithTokenCreation() {
   const provider = new AnchorProvider(connection, new SimpleWallet(creator), {
     commitment: 'confirmed',
   });
+  
+  // Detect network and load appropriate IDL
+  const rpcUrl = connection.rpcEndpoint;
+  const isMainnet = rpcUrl.includes('mainnet') || rpcUrl.includes('api.mainnet');
+  const network = isMainnet ? 'mainnet-beta' : 'devnet';
+  const IDL = loadIDL(network);
+  
   const program = new Program(IDL as unknown, provider);
 
   try {

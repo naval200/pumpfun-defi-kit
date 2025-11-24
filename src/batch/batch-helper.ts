@@ -7,6 +7,8 @@ import {
   createBondingCurveBuyInstruction,
   createBondingCurveSellInstruction,
 } from '../bonding-curve';
+import { getFeeRecipientFromGlobal } from '../bonding-curve/bc-helper';
+import { PUMP_PROGRAM_ID } from '../bonding-curve/idl/constants';
 import { createAmmBuyInstructionsAssuming, createAmmSellInstructionsAssuming } from '../amm';
 import {
   createAssociatedTokenAccountInstruction,
@@ -90,11 +92,14 @@ export async function buildInstructionsForOperation(
         new PublicKey(mint),
         senderKeypair.publicKey
       );
+      // Fetch fee recipient from Global account (required, no hardcoded fallback)
+      const feeRecipient = await getFeeRecipientFromGlobal(connection, PUMP_PROGRAM_ID);
       const ix = createBondingCurveBuyInstruction(
         senderKeypair.publicKey,
         new PublicKey(mint),
         amount,
         pdas,
+        feeRecipient,
         1000
       );
       instructions.push(ix);
@@ -107,13 +112,16 @@ export async function buildInstructionsForOperation(
         new PublicKey(mint),
         senderKeypair.publicKey
       );
+      // Fetch fee recipient from Global account (required, no hardcoded fallback)
+      const feeRecipient = await getFeeRecipientFromGlobal(connection, PUMP_PROGRAM_ID);
       const minSolOutput = minSolLamports();
       const ix = createBondingCurveSellInstruction(
         senderKeypair.publicKey,
         new PublicKey(mint),
         amount,
         minSolOutput,
-        pdas
+        pdas,
+        feeRecipient
       );
       instructions.push(ix);
       break;

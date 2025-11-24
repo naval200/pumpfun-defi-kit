@@ -4,6 +4,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { buyPumpFunToken } from '../../src/bonding-curve/buy';
 import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
 import { solToLamports, formatLamportsAsSol } from '../../src/utils/amounts';
+import { createConnectionFromNetwork } from '../../src/utils/connection';
 
 /**
  * Buy PumpFun tokens via bonding curve with configurable parameters
@@ -18,6 +19,8 @@ export async function buyToken() {
       '  --input-token <path>        Path to token info JSON file',
       '  --wallet <path>             Path to wallet JSON file',
       '  --fee-payer <path>          Path to fee payer wallet JSON file (optional)',
+      '  --network <network>         Network to use (devnet/mainnet-beta/mainnet, default: devnet)',
+      '  --rpc-url <url>            Custom RPC URL (overrides --network)',
     ]);
     return;
   }
@@ -46,11 +49,15 @@ export async function buyToken() {
     console.log(`🎯 Token: ${tokenInfo.name || 'Unknown'} (${tokenInfo.symbol || 'Unknown'})`);
     console.log(`📍 Mint: ${tokenInfo.mint}`);
 
-    // Setup connection and wallet
-    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    // Setup connection and wallet with network support
+    const connection = createConnectionFromNetwork(args.network, args.rpcUrl);
     const wallet = loadWallet(args.wallet);
     const feePayer = loadFeePayerWallet(args.feePayer);
 
+    console.log(`🌐 Network: ${args.network || 'devnet (default)'}`);
+    if (args.rpcUrl) {
+      console.log(`🔗 RPC URL: ${args.rpcUrl}`);
+    }
     console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
     if (feePayer) {
       console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);

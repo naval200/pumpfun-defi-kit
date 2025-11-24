@@ -1,8 +1,7 @@
-import { PublicKey, TransactionInstruction } from '@solana/web3.js';
+import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { getAssociatedTokenAddressSync } from '@solana/spl-token';
 import {
   PUMP_PROGRAM_ID,
-  FEE_RECIPIENT,
   TOKEN_PROGRAM_ID,
   SYSTEM_PROGRAM_ID,
   BUY_INSTRUCTION_DISCRIMINATOR,
@@ -29,6 +28,7 @@ export function deriveFeeConfigPDA(): PublicKey {
 
 /**
  * Create Pump program BUY instruction with pre-resolved PDAs
+ * @param feeRecipient - Fee recipient derived from Global account (required, no hardcoded fallback)
  */
 export function createBondingCurveBuyInstruction(
   buyer: PublicKey,
@@ -42,6 +42,7 @@ export function createBondingCurveBuyInstruction(
     globalVolumeAccumulatorPDA: PublicKey;
     userVolumeAccumulatorPDA: PublicKey;
   },
+  feeRecipient: PublicKey,
   maxSlippageBasisPoints: number = 1000
 ): TransactionInstruction {
   const associatedBondingCurve = getAssociatedTokenAddressSync(mint, pdas.bondingCurvePDA, true);
@@ -65,7 +66,7 @@ export function createBondingCurveBuyInstruction(
   return new TransactionInstruction({
     keys: [
       { pubkey: pdas.globalPDA, isSigner: false, isWritable: true },
-      { pubkey: FEE_RECIPIENT, isSigner: false, isWritable: true },
+      { pubkey: feeRecipient, isSigner: false, isWritable: true },
       { pubkey: mint, isSigner: false, isWritable: false },
       { pubkey: pdas.bondingCurvePDA, isSigner: false, isWritable: true },
       { pubkey: associatedBondingCurve, isSigner: false, isWritable: true },
@@ -88,6 +89,7 @@ export function createBondingCurveBuyInstruction(
 
 /**
  * Create Pump program SELL instruction with pre-resolved PDAs
+ * @param feeRecipient - Fee recipient derived from Global account (required, no hardcoded fallback)
  */
 export function createBondingCurveSellInstruction(
   seller: PublicKey,
@@ -101,7 +103,8 @@ export function createBondingCurveSellInstruction(
     eventAuthorityPDA: PublicKey;
     globalVolumeAccumulatorPDA: PublicKey;
     userVolumeAccumulatorPDA: PublicKey;
-  }
+  },
+  feeRecipient: PublicKey
 ): TransactionInstruction {
   const associatedBondingCurve = getAssociatedTokenAddressSync(mint, pdas.bondingCurvePDA, true);
   const associatedUser = getAssociatedTokenAddressSync(mint, seller, false);
@@ -118,7 +121,7 @@ export function createBondingCurveSellInstruction(
   return new TransactionInstruction({
     keys: [
       { pubkey: pdas.globalPDA, isSigner: false, isWritable: true },
-      { pubkey: FEE_RECIPIENT, isSigner: false, isWritable: true },
+      { pubkey: feeRecipient, isSigner: false, isWritable: true },
       { pubkey: mint, isSigner: false, isWritable: false },
       { pubkey: pdas.bondingCurvePDA, isSigner: false, isWritable: true },
       { pubkey: associatedBondingCurve, isSigner: false, isWritable: true },

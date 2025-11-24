@@ -1,4 +1,4 @@
-import { getAllRequiredPDAsForBuyAsync } from './bc-helper';
+import { getAllRequiredPDAsForBuyAsync, getFeeRecipientFromGlobal } from './bc-helper';
 import { Connection, Keypair, PublicKey, Transaction, SendTransactionError } from '@solana/web3.js';
 import { debugLog, logError, log, logSuccess, logSignature } from '../utils/debug';
 import { formatLamportsAsSol } from '../utils/amounts';
@@ -9,6 +9,7 @@ import { createBondingCurveBuyInstruction } from './idl/instructions';
  * Buy PumpFun tokens with robust PDA resolution
  */
 export async function buyPumpFunToken(
+  
   connection: Connection,
   wallet: Keypair,
   mint: PublicKey,
@@ -26,12 +27,17 @@ export async function buyPumpFunToken(
       wallet.publicKey
     );
 
+    // Fetch fee recipient from Global account (required, no hardcoded fallback)
+    const feeRecipient = await getFeeRecipientFromGlobal(connection, PUMP_PROGRAM_ID);
+    debugLog(`✅ Using fee recipient from Global account: ${feeRecipient.toString()}`);
+
     // Create buy instruction using simple approach
     const buyInstruction = createBondingCurveBuyInstruction(
       wallet.publicKey,
       mint,
       amountLamports, // Already in lamports
       pdas,
+      feeRecipient,
       maxSlippageBasisPoints
     );
 

@@ -34,6 +34,7 @@ export interface CliArgs {
   limit?: number;
   output?: string;
   network?: string;
+  rpcUrl?: string;
   format?: string;
   signature?: string;
   operations?: string;
@@ -154,6 +155,10 @@ export function parseArgs(): CliArgs {
       case '--network':
         args.network = argv[++i];
         break;
+      case '--rpc-url':
+      case '--rpc':
+        args.rpcUrl = argv[++i];
+        break;
       case "--signature":
         args.signature = argv[++i];
         break;
@@ -268,7 +273,8 @@ export function printUsage(scriptName: string, options: string[] = []): void {
   console.log('  --address <public-key>        Public key to get transactions for');
   console.log('  --limit <number>              Number of transactions to fetch (default: 50)');
   console.log('  --output <file>               Save results to JSON file');
-  console.log('  --network <network>           Network to use (devnet/mainnet, default: devnet)');
+  console.log('  --network <network>           Network to use (devnet/mainnet-beta/mainnet, default: devnet)');
+  console.log('  --rpc-url <url>              Custom RPC URL (overrides --network)');
   console.log('  --format <format>             Output format (table/json, default: table)');
   console.log('  -h, --help                    Show this help message');
 

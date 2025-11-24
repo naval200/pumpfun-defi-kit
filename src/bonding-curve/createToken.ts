@@ -14,7 +14,7 @@ import { PUMP_PROGRAM_ID } from './idl/constants';
 import { createAssociatedTokenAccount } from '../createAccount';
 
 import { SimpleWallet } from '../utils/wallet';
-import IDL from './idl/pump_program.json';
+import { loadIDL } from './idl/load-idl';
 
 // Constants for token creation
 const MPL_TOKEN_METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
@@ -155,6 +155,14 @@ export async function createPumpFunTokenInstruction(
   const provider = new AnchorProvider(connection, new SimpleWallet(wallet), {
     commitment: 'confirmed',
   });
+
+  // Detect network from connection RPC URL
+  const rpcUrl = connection.rpcEndpoint;
+  const isMainnet = rpcUrl.includes('mainnet') || rpcUrl.includes('api.mainnet');
+  const network = isMainnet ? 'mainnet-beta' : 'devnet';
+  
+  // Load appropriate IDL based on network
+  const IDL = loadIDL(network);
 
   // Create program instance
   const program = new Program(IDL as unknown, provider);

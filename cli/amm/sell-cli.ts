@@ -4,6 +4,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { sellAmmTokens } from '../../src/amm/sell';
 import { findPoolsForToken } from '../../src/amm/amm';
 import { parseArgs, loadWallet, loadTokenInfo, loadFeePayerWallet, printUsage } from '../cli-args';
+import { createConnectionFromNetwork } from '../../src/utils/connection';
 
 /**
  * Sell tokens via AMM with configurable parameters
@@ -19,6 +20,8 @@ export async function sellTokensAMM() {
       '  --wallet <path>             Path to wallet JSON file',
       '  --pool-key <string>         Specific pool key to use (optional)',
       '  --fee-payer <path>          Path to fee payer wallet JSON file (optional)',
+      '  --network <network>         Network to use (devnet/mainnet-beta/mainnet, default: devnet)',
+      '  --rpc-url <url>            Custom RPC URL (overrides --network)',
     ]);
     return;
   }
@@ -41,11 +44,15 @@ export async function sellTokensAMM() {
     console.log(`🎯 Token: ${tokenInfo.name || 'Unknown'} (${tokenInfo.symbol || 'Unknown'})`);
     console.log(`📍 Mint: ${tokenInfo.mint}`);
 
-    // Setup connection and wallet
-    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    // Setup connection and wallet with network support
+    const connection = createConnectionFromNetwork(args.network, args.rpcUrl);
     const wallet = loadWallet(args.wallet);
     const feePayer = loadFeePayerWallet(args.feePayer);
 
+    console.log(`🌐 Network: ${args.network || 'devnet (default)'}`);
+    if (args.rpcUrl) {
+      console.log(`🔗 RPC URL: ${args.rpcUrl}`);
+    }
     console.log(`👛 Using wallet: ${wallet.publicKey.toString()}`);
     if (feePayer) {
       console.log(`💸 Using fee payer: ${feePayer.publicKey.toString()}`);

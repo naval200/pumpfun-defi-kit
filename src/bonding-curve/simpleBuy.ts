@@ -5,8 +5,10 @@ import {
   deriveCreatorVaultAddress,
   deriveGlobalVolumeAccumulatorAddress,
   getUserVolumeAccumulator,
-  getGlobalPDA
+  getGlobalPDA,
+  getFeeRecipientFromGlobal
 } from './bc-helper';
+import { PUMP_PROGRAM_ID } from './idl/constants';
 import { log, logSuccess, logError } from '../utils/debug';
 
 /**
@@ -53,7 +55,6 @@ export async function createSimpleBuyInstruction(
   log(`👤 Buyer: ${buyerKeypair.publicKey.toString()}`);
   
   try {
-    const PUMP_PROGRAM_ID = new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
     const EVENT_AUTHORITY_SEED = Buffer.from('__event_authority');
     
     // Use provided creator or default to buyer
@@ -81,12 +82,17 @@ export async function createSimpleBuyInstruction(
     
     log('✅ All PDAs calculated successfully');
     
+    // Fetch fee recipient from Global account (required, no hardcoded fallback)
+    const feeRecipient = await getFeeRecipientFromGlobal(connection, PUMP_PROGRAM_ID);
+    log(`✅ Using fee recipient from Global account: ${feeRecipient.toString()}`);
+    
     // Create the buy instruction using the existing function
     const buyInstruction = createBondingCurveBuyInstruction(
       buyerKeypair.publicKey,
       mint,
       amountLamports,
       pdas,
+      feeRecipient,
       slippageBasisPoints
     );
     

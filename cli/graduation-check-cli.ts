@@ -1,5 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { checkGraduationStatus, getGraduationAnalysis } from '../src/utils/graduation-utils';
+import { createConnectionFromNetwork } from '../src/utils/connection';
+import { parseArgs as parseCliArgs } from './cli-args';
 import fs from 'fs';
 import path from 'path';
 
@@ -11,6 +13,8 @@ Options:
   --help                    Show this help message
   --input-token <path>     Path to token info JSON file (default: token-info.json)
   --mint <address>         Token mint address (overrides input-token file)
+  --network <network>      Network to use (devnet/mainnet-beta/mainnet, default: devnet)
+  --rpc-url <url>          Custom RPC URL (overrides --network)
 
 Examples:
   npm run cli:graduation-check -- --help
@@ -37,6 +41,13 @@ function parseArgs() {
       case '--mint':
         args.mint = argv[++i];
         break;
+      case '--network':
+        args.network = argv[++i];
+        break;
+      case '--rpc-url':
+      case '--rpc':
+        args.rpcUrl = argv[++i];
+        break;
     }
   }
 
@@ -57,9 +68,13 @@ async function main() {
   try {
     console.log('🚀 Starting Token Graduation Status Check...\n');
 
-    // Setup connection to devnet
-    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-    console.log('✅ Connected to Solana devnet');
+    // Setup connection with network support
+    const connection = createConnectionFromNetwork(args.network, args.rpcUrl);
+    const networkName = args.network || 'devnet (default)';
+    console.log(`✅ Connected to Solana ${networkName}`);
+    if (args.rpcUrl) {
+      console.log(`🔗 RPC URL: ${args.rpcUrl}`);
+    }
 
     let tokenMint: PublicKey;
 
